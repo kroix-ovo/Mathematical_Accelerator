@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  software:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - name: Generated files up to date
+        run: python tools/gen_spec.py --check
+      - run: ruff check sw tools hw/tb
+      - run: pytest -q
+
+  rtl-sim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Verilator (OSS CAD Suite; cocotb 2.x needs Verilator >= 5.036)
+        uses: YosysHQ/setup-oss-cad-suite@v3
+      - run: pip install -e ".[dev]"
+      - name: cocotb golden-vector test (Verilator)
+        run: python hw/tb/cocotb/run.py --sim verilator

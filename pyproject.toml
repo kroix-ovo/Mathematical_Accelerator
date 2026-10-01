@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mathaccel"
+version = "0.1.0"
+description = "Host software for a Nexys A7 fp32 math accelerator with a local Ollama math agent"
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.26", "sympy>=1.12", "pyserial>=3.5"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5", "cocotb>=2.0"]
+
+[project.scripts]
+mathaccel = "mathaccel.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["sw"]
+
+[tool.pytest.ini_options]
+testpaths = ["sw/tests"]
+markers = ["hw: needs the board connected (pass --port COMx)"]
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["sw/mathaccel/_generated"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B027"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mathaccel"]
