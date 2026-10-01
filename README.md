@@ -1,79 +1,81 @@
 # Mathematical Accelerator
 
-A hardware/software co-design project: a custom **fp32 math coprocessor** on a Digilent **Nexys A7-100T** (Artix-7), driven by a from-scratch Python **math agent** running on a local Ollama model. It's built to answer EM/RF and semiconductor-physics questions: vector calculus, field sums, phasors, Laplace/Poisson problems and carrier statistics.
+I started this project to help with quick algebra and calculus calculations in my semiconductor physics, electromagnetics, and RF classes. I want a tool that is faster to use than a calculator and lets me check numerical results while I work through the problem myself. Using generative AI to solve those problems would take over work I am supposed to do. My goal here is to build a calculation tool I understand and can use within my classes' rules.
 
-```
-you ─► REPL ─► agent loop (Ollama, tool calls) ─► SymPy (symbolic setup, show work)
-                                               └► mathaccel driver ─► UART ─► FPGA coprocessor
-```
+The project combines SystemVerilog hardware for a Digilent Nexys A7-100T FPGA with a Python driver. The FPGA is intended to perform the numerical operations, while the host provides a way to enter calculations, move data, and read results. The calculation workflow will use explicit operations rather than an AI model generating solutions.
 
-* **FPGA does the numbers:** hand-written IEEE-754 fp32 units, CORDIC transcendentals, an expression-evaluation unit that runs host-compiled bytecode over quadrature grids, plus field, stencil and tridiagonal engines.
-* **The host does the language and the symbols:** the agent turns a question into tool calls, SymPy sets up the math, and the driver ships data and bytecode to the board.
-* **Every kernel is verified against a Python golden model:** the same reference model powers the simulator backend, the cocotb/xsim testbenches and the hardware-in-the-loop tests.
+## What works now
 
-An honest note on speed: over a 2 Mbaud UART, numpy on a laptop wins most small problems. The FPGA's value here is in the architecture, bit-exact verification and cycle-count benchmarks, and in compute-heavy kernels (N-body field sums, stencil relaxation, batched expression evaluation) where the data moved is small compared with the work done.
+The current implementation is phase 1: the communication and memory system that later arithmetic units will use. It does not yet perform floating-point algebra or calculus. The host can send commands to the FPGA design, read and write its scratchpad, and run two small kernels:
 
-## Status
+- `NOP` performs no memory operation and reports one kernel clock cycle.
+- `FILL` writes a chosen 32-bit value to a range of scratchpad words and reports the number of kernel clock cycles used.
 
-| Phase | Scope | State |
-|---|---|---|
-| 0 | Scaffold, toolchain, CI | ✅ |
-| 1 | UART link, COBS/CRC framing, command processor, 256 KiB scratchpad, NOP/FILL kernels, Python driver + simulator | ✅ verified in xsim against the golden model |
-| 2 | fp32 add/mul/div/sqrt/cvt, complex unit | next |
-| 3 | CORDIC sin/cos/atan2/exp/ln | |
-| 4 | Expression evaluation unit + SymPy→bytecode compiler + quadrature (Calc 3) | |
-| 5 | Ollama agent + REPL | |
-| 6 | EM/RF kernels: Coulomb/Biot-Savart field engine, Laplace/Poisson stencil, transmission lines | |
-| 7 | Semiconductor kernels: tridiagonal solver, pn-junction Poisson, Fermi–Dirac | |
-| 8 | Stretch: Ethernet/UDP, DDR2, web UI, systolic linear algebra | |
+The design has a 256 KiB scratchpad, a command processor, and a UART link configured for 2 Mbaud at a 100 MHz clock. Packets use COBS framing and CRC-16 checks. Commands with invalid lengths or addresses receive an error response; corrupted packets are dropped and counted. Replies include a tag so the host can match them to requests.
 
-## Layout
+The Python driver provides the same command interface through either a serial connection or a software simulator. I use a Python reference model to generate expected replies for the RTL testbenches. The existing checks cover memory transfers, NOP and FILL, malformed requests, corrupted packets, and recovery after link errors.
 
-```
-spec/accel.toml          single source of truth for opcodes, status codes, kernels
-tools/gen_spec.py        generates hw/rtl/pkg/accel_pkg.sv and sw/mathaccel/_generated/spec.py
-hw/rtl/                  SystemVerilog (io/, core/, top/, pkg/; fp/, cordic/, kernels/ to come)
-hw/constraints/          Nexys A7-100T XDC
-hw/scripts/              build.tcl (Vivado batch), program.tcl, run_xsim.py
-hw/tb/                   vectors.py (golden vectors), sv/ (xsim), cocotb/ (Verilator/Icarus)
-sw/mathaccel/            driver/ (framing, protocol, model, transports, Device API), cli.py
-sw/tests/                pytest, sim by default, `-m hw --port COMx` for the board
-docs/                    protocol.md, …
+The phase 1 checks have passed 25 Python tests and 33 request vectors in Vivado xsim. GitHub Actions also runs the software checks and the RTL vectors through cocotb with Verilator. These results verify the simulated design; physical board operation and calculation speed still need their own measurements. Being faster to use than a calculator is a goal, not a result demonstrated by the current version.
+
+## What the repository contains
+
+```text
+hw/rtl/          UART, packet framing, command processor, scratchpad,
+                 NOP/FILL engine, and core and board top modules
+hw/constraints/ Nexys A7-100T pin and clock constraints
+hw/scripts/     Vivado build, programming, and xsim scripts
+hw/tb/          Shared reference vectors and SystemVerilog/cocotb testbenches
+sw/mathaccel/   Python driver, serial and simulator transports, and CLI
+sw/tests/       Driver and framing tests
+spec/accel.toml Protocol constants shared by hardware and software
+tools/          Generator for the HDL and Python protocol constants
+docs/           Protocol description and HDL reading guide
+.github/        Software and RTL simulation workflow
 ```
 
-For a beginner-friendly path through the current SystemVerilog modules, start
-with [the HDL reading guide](docs/hdl-reading-guide.md).
+I have added comments throughout the HDL to explain the data flow, state machines, and clock timing for someone who knows basic digital logic. Start with the [HDL reading guide](docs/hdl-reading-guide.md), then follow a request through `accel_core` and `cmd_proc`. The [protocol document](docs/protocol.md) gives the exact packet and command formats.
 
-## Quick start
+## Next step: phase 2 arithmetic
+
+Phase 2 will add hand-written IEEE-754 single-precision (`fp32`) addition, multiplication, division, square root, and conversion units. These units are not implemented yet.
+
+My verification target is more than one million random test vectors for each unit, checked against NumPy for bit-exact results. That means comparing the 32-bit result patterns, rather than accepting values because they are numerically close. Directed tests will also cover rounding, signed zero, subnormal values, overflow, infinities, and NaNs. The conversion formats and expected special-case behavior need to be defined as part of that work.
+
+## Where I want to take it
+
+Once the arithmetic units work, I want to build a direct calculation interface for algebra and calculus, including expression evaluation and numerical integration. Later hardware could add functions such as sine, cosine, exponential, and logarithm, followed by operations that come up in my classes: phasor calculations, field sums, Laplace and Poisson problems, and semiconductor carrier calculations.
+
+The interface should make the requested operation and its inputs clear. I still need to choose the equations, set up the problem, and understand the result. I also want to measure the time spent transferring data and computing it, so any claim about speed comes from an actual calculation benchmark.
+
+## Run the current version
+
+Use Python 3.11 or newer. On macOS or Linux:
 
 ```bash
-python -m venv .venv
-# Activate it: .venv\Scripts\Activate.ps1 on Windows PowerShell,
-# or source .venv/bin/activate on macOS/Linux.
-pip install -e ".[dev]"
-pytest                                               # software tests on the simulator
-mathaccel --port sim bench                           # driver CLI against the model
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+pytest -q
+mathaccel --port sim bench
 ```
 
-RTL simulation:
+On Windows PowerShell, create the environment with `python -m venv .venv` and activate it with `.venv\Scripts\Activate.ps1`, then run the same install, test, and CLI commands.
+
+For RTL simulation, use one of the included runners:
 
 ```bash
-python hw/scripts/run_xsim.py                        # Vivado xsim, golden vectors
-python hw/tb/cocotb/run.py --sim verilator           # cocotb (needs Verilator >= 5.036)
+python hw/scripts/run_xsim.py              # Requires Vivado xsim
+python hw/tb/cocotb/run.py --sim verilator  # Requires Verilator >= 5.036
 ```
 
-Build and program the board (Vivado 2023.2):
+To build and program the Nexys A7-100T with Vivado 2023.2:
 
 ```bash
-vivado -mode batch -source hw/scripts/build.tcl      # bitstream + timing/utilisation in build/vivado/
+vivado -mode batch -source hw/scripts/build.tcl
 vivado -mode batch -source hw/scripts/program.tcl
-mathaccel --port COM5 ping                           # use your board's COM port
+mathaccel --port COM5 ping
 mathaccel --port COM5 memtest
 pytest -m hw --port COM5
 ```
 
-LEDs: LD0 heartbeat, LD1 command busy, LD2 link error seen, LD15 host RX activity.
-
-## Protocol
-
-COBS-framed packets with a CRC-16 over UART at 2 Mbaud. See [docs/protocol.md](docs/protocol.md).
+Replace `COM5` with the board's serial port. The build writes its output to `build/vivado/`. LED 0 shows the heartbeat, LED 1 shows command activity, LED 2 records link errors, and LED 15 shows host receive activity.
