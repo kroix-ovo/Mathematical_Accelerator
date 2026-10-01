@@ -53,6 +53,8 @@ module frame_rx
       crc_errors   <= '0;
       frame_errors <= '0;
     end else if (in_end) begin
+      // The delimiter ends collection. b1/b2 now hold the two transmitted
+      // CRC bytes, while crc covers all earlier decoded bytes.
       if (n != 0) begin
         if (dropping || in_err || overflow || n < 6 || frame_len > MAX_PAYLOAD || n != frame_len + 16'd6)
           frame_errors <= frame_errors + 1'b1;
@@ -61,11 +63,15 @@ module frame_rx
         else
           frame_valid <= 1'b1;
       end
+      // Always return collection state to its start after a delimiter,
+      // including after errors, so the next frame can resynchronize.
       n        <= '0;
       crc      <= 16'hFFFF;
       overflow <= 1'b0;
       dropping <= 1'b0;
     end else if (in_valid) begin
+      // Latch hold at the start: even if the command finishes halfway through
+      // this request, we must drop the whole request rather than its prefix.
       if (n == 0) dropping <= hold;
       if (n == MAX_RAW) overflow <= 1'b1;
       else n <= n + 1'b1;
@@ -76,6 +82,8 @@ module frame_rx
         16'd3: frame_len[15:8] <= in_data;
         default: ;
       endcase
+      // Delay each byte by two positions before adding it to the CRC. The
+      // final two bytes stay in b1/b2 and are compared, never accumulated.
       if (n >= 2) crc <= crc16_update(crc, b2);
       b2 <= b1;
       b1 <= in_data;

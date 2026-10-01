@@ -48,6 +48,8 @@ module cmd_proc
     output logic                  busy
 );
   localparam logic [32:0] WORDS = 33'(2 ** SCRATCH_AW);
+  // Bounds checks use 33-bit sums. A 32-bit sum could wrap an invalid high
+  // address back into the legal range before the comparison.
 
   typedef enum logic [3:0] {
     IDLE, CHECK, LOAD, EXEC, WR, RD_HDR, RD_ISSUE, RD_BYTES, KWAIT, COPY, SEND
@@ -123,6 +125,8 @@ module cmd_proc
           state <= CHECK;
         end
 
+        // Validate byte counts before LOAD interprets any payload arguments.
+        // Unknown opcodes still receive a reply because framing already passed.
         CHECK: begin
           idx <= '0;
           load_last <= nload - 1'b1;
@@ -166,6 +170,8 @@ module cmd_proc
             state <= COPY;
           end
           OP_READ_MEM: begin
+            // A reply needs one status byte plus four bytes per requested word.
+            // At most 255 words fit the 1024-byte payload limit.
             if (a4 == 0 || a4 > 255) respond_status(ST_BAD_LEN);
             else if ({1'b0, a0} + 33'(a4) > WORDS) respond_status(ST_BAD_ADDR);
             else begin
@@ -233,6 +239,8 @@ module cmd_proc
           end
         end
 
+        // The start pulse has already been sent. Wait for the engine's done
+        // pulse before using its final cycle register and reporting success.
         KWAIT: if (k_done) begin
           last_cycles <= k_cycles;
           rbuf[0] <= ST_OK;
@@ -242,6 +250,8 @@ module cmd_proc
           state <= COPY;
         end
 
+        // tb_we is high in COPY, so each clock commits one prepared rbuf byte.
+        // The last byte is stored before the SEND state starts the packet.
         COPY: begin
           tptr <= tptr + 1'b1;
           if (tptr == rlen - 1) state <= SEND;

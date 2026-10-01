@@ -15,6 +15,8 @@ module stream_reg #(
     output logic [W-1:0] out_data
 );
   assign in_ready = !out_valid;
+  // out_valid doubles as the occupied flag. This version cannot drain and
+  // refill on the same clock: a full slot must first become empty.
 
   always_ff @(posedge clk) begin
     if (rst) out_valid <= 1'b0;

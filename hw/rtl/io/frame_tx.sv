@@ -55,6 +55,8 @@ module frame_tx
         crc   <= 16'hFFFF;
       end
     end else if (out_ready) begin
+      // busy supplies out_valid. Update the CRC only when the next stage
+      // accepts a header/payload byte, so a stalled byte is not counted twice.
       if (idx < plen + 16'd4) crc <= crc16_update(crc, out_data);
       if (out_last) busy <= 1'b0;
       idx <= idx + 1'b1;

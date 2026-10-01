@@ -62,6 +62,8 @@ module cobs_encoder (
             end
           end
         end
+        // While ready is low, rd and the output byte stay unchanged. Advancing
+        // only on acceptance lets UART take hundreds of clocks per byte.
         EMIT: if (out_ready) begin
           if (rd == code - 1'b1) begin
             cnt <= '0;

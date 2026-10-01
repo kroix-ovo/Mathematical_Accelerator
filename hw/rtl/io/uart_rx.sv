@@ -37,6 +37,8 @@ module uart_rx #(
           state <= START;
           cnt   <= CW'(CLKS_PER_BIT / 2 - 1);
         end
+        // Recheck the low start level halfway through its bit period. A brief
+        // low glitch returns to IDLE instead of being treated as a character.
         START: if (cnt == 0) begin
           if (!rx_s1) begin
             state   <= DATA;
@@ -44,6 +46,8 @@ module uart_rx #(
             bit_idx <= '0;
           end else state <= IDLE;  // glitch
         end else cnt <= cnt - 1'b1;
+        // Sampling is now one full bit period apart. The UART sends bit zero
+        // first; shifting right makes the eighth sample finish the correct byte.
         DATA: if (cnt == 0) begin
           shreg <= {rx_s1, shreg[7:1]};
           cnt   <= CW'(CLKS_PER_BIT - 1);

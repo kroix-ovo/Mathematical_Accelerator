@@ -15,7 +15,7 @@ The design has a 256 KiB scratchpad, a command processor, and a UART link config
 
 The Python driver provides the same command interface through either a serial connection or a software simulator. I use a Python reference model to generate expected replies for the RTL testbenches. The existing checks cover memory transfers, NOP and FILL, malformed requests, corrupted packets, and recovery after link errors.
 
-The phase 1 checks have passed 25 Python tests and 33 request vectors in Vivado xsim. GitHub Actions also runs the software checks and the RTL vectors through cocotb with Verilator. These results verify the simulated design; physical board operation and calculation speed still need their own measurements. Being faster to use than a calculator is a goal, not a result demonstrated by the current version.
+The phase 1 checks have passed 30 Python tests and 33 request vectors in Vivado xsim. GitHub Actions also runs the software checks and the RTL vectors through cocotb with Verilator. These results verify the simulated design; physical board operation and calculation speed still need their own measurements. Being faster to use than a calculator is a goal, not a result demonstrated by the current version.
 
 ## What the repository contains
 

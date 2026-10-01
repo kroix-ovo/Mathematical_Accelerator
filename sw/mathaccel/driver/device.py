@@ -1,4 +1,10 @@
-"""High-level device API used by the tools and the agent."""
+"""Give callers a command interface to the board or its Python simulator.
+
+I keep packet matching, retries, and transfer sizes here, so the CLI can call
+read_words or fill without knowing how UART frames are built. Both transports
+use this same path. Floating-point helpers only store and retrieve fp32 bit
+patterns; the current hardware does not perform floating-point arithmetic.
+"""
 
 from __future__ import annotations
 
@@ -15,34 +21,46 @@ from mathaccel.driver.transport import SimTransport, Transport, UartTransport
 
 
 class DeviceTimeout(TimeoutError):
-    pass
+    """No matching reply arrived after all request attempts were exhausted."""
 
 
 @dataclass(frozen=True)
 class RunResult:
+    """Kernel time measured in core clocks, excluding UART transfer time."""
     cycles: int
 
     @property
     def seconds(self) -> float:
+        """Convert the reported clocks using the configured core frequency."""
         return self.cycles / spec.CLK_HZ
 
 
 class Device:
+    """Execute one request at a time through the supplied byte transport."""
+
     def __init__(self, transport: Transport, timeout: float = 0.5, retries: int = 3) -> None:
+        # retries counts extra attempts after the first send, not total sends.
         self.t = transport
         self.timeout = timeout
         self.retries = retries
         self._tag = 0
 
-    # -- plumbing -----------------------------------------------------------
+    # Packet handling shared by every public command.
 
     def _next_tag(self) -> int:
+        """Advance the one-byte request tag, wrapping after 255 like the FPGA."""
         self._tag = (self._tag + 1) & 0xFF
         return self._tag
 
     def request(self, op: int, payload: bytes, timeout: float | None = None) -> bytes:
-        """Send a request, wait for the matching response, return data after the status byte."""
+        """Send a command and return its reply data after checking the status.
+
+        Corrupt or stale replies are skipped. A transport receive timeout
+        starts a fresh attempt; the new tag distinguishes it from old replies.
+        An error status is a completed command and is raised immediately.
+        """
         for _ in range(self.retries + 1):
+            # A retry gets a new tag even though its opcode/payload are the same.
             tag = self._next_tag()
             self.t.send(Frame(op, tag, payload).encode())
             while True:
@@ -56,29 +74,37 @@ class Device:
                 if resp.tag != tag or resp.op != (op | P.RESP_BIT):
                     continue  # stale reply from an earlier attempt
                 if resp.status != Status.OK:
+                    # BAD_ADDR and similar errors do not become successful
+                    # just by resending the same request.
                     raise DeviceError(op, resp.status)
                 return resp.data
         raise DeviceTimeout(f"no response to op 0x{op:02X} after {self.retries + 1} attempts")
 
-    # -- commands -----------------------------------------------------------
+    # Public commands translate useful Python values into protocol payloads.
 
     def ping(self) -> P.PingInfo:
+        """Read configuration and reject a device with the wrong identity magic."""
         info = P.parse_ping(self.request(*P.ping()))
         if info.magic != spec.MAGIC:
             raise RuntimeError(f"bad magic 0x{info.magic:08X}")
         return info
 
     def status(self) -> P.StatusInfo:
+        """Read link errors and the last kernel cycle count without changing them."""
         return P.parse_status(self.request(*P.status()))
 
     def write_words(self, addr: int, words: np.ndarray | list[int]) -> None:
+        """Write an array in legal packet-sized chunks, advancing word addresses."""
         data = np.asarray(words, dtype=np.uint32)
         step = P.MAX_WORDS_PER_FRAME
         for i in range(0, len(data), step):
+            # Explicit little-endian bytes keep the wire format independent
+            # of the host machine's native byte order.
             chunk = data[i:i + step].astype("<u4").tobytes()
             self.request(*P.write_mem(addr + i, chunk))
 
     def read_words(self, addr: int, count: int) -> np.ndarray:
+        """Read several packet-sized spans into one unsigned 32-bit array."""
         out = np.empty(count, dtype=np.uint32)
         step = P.MAX_WORDS_PER_FRAME
         for i in range(0, count, step):
@@ -87,32 +113,46 @@ class Device:
         return out
 
     def write_f32(self, addr: int, values) -> None:
+        """Store fp32 representations without numerically converting them to ints."""
+        # view reinterprets the same bits. Casting a float to uint32 instead
+        # would store its integer value and lose the IEEE-754 representation.
         self.write_words(addr, np.asarray(values, dtype=np.float32).view(np.uint32))
 
     def read_f32(self, addr: int, count: int) -> np.ndarray:
+        """Interpret returned word bits as fp32 values, without changing the bits."""
         return self.read_words(addr, count).view(np.float32)
 
     def run(self, kernel: int, args: bytes = b"", timeout: float = 5.0) -> RunResult:
+        """Wait for a kernel reply; kernels get a longer timeout than link commands."""
         return RunResult(P.parse_cycles(self.request(*P.run(kernel, args), timeout=timeout)))
 
     def nop(self) -> RunResult:
+        """Run the no-operation kernel to check dispatch and cycle reporting."""
         return self.run(Kernel.NOP)
 
     def fill(self, base: int, count: int, value: int) -> RunResult:
+        """Write value to count words beginning at base, then return kernel time."""
         return self.run(Kernel.FILL, struct.pack("<III", base, count, value))
 
     def close(self) -> None:
+        """Release resources owned by the transport, including a real serial port."""
         self.t.close()
 
     def __enter__(self):
+        """Allow `with connect(...) as dev` to expose this command interface."""
         return self
 
     def __exit__(self, *exc):
+        """Close the transport on normal exit or an exception from the with block."""
         self.close()
 
 
 def connect(port: str | None = None, **kw) -> Device:
-    """Open the board on `port` (e.g. "COM5"), or the simulator when port is None or "sim"."""
+    """Select simulator or serial by port name and pass driver options through.
+
+    None or "sim" needs no board. Any other name, such as "COM5" or a macOS
+    /dev/cu.* device, is opened as a real serial port by UartTransport.
+    """
     if port in (None, "sim"):
         return Device(SimTransport(), **kw)
     return Device(UartTransport(port), **kw)

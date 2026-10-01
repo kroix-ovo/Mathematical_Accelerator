@@ -1,5 +1,8 @@
 name: ci
 
+permissions:
+  contents: read
+
 on:
   push:
   pull_request:
@@ -15,7 +18,7 @@ jobs:
       - run: pip install -e ".[dev]"
       - name: Generated files up to date
         run: python tools/gen_spec.py --check
-      - run: ruff check sw tools hw/tb
+      - run: ruff check sw tools hw/tb hw/scripts
       - run: pytest -q
 
   rtl-sim:
@@ -27,6 +30,9 @@ jobs:
           python-version: "3.11"
       - name: Install Verilator (OSS CAD Suite; cocotb 2.x needs Verilator >= 5.036)
         uses: YosysHQ/setup-oss-cad-suite@v3
+        with:
+          # Release lookup otherwise uses the runner's shared anonymous API limit.
+          github-token: ${{ github.token }}
       - run: pip install -e ".[dev]"
       - name: cocotb golden-vector test (Verilator)
         run: python hw/tb/cocotb/run.py --sim verilator

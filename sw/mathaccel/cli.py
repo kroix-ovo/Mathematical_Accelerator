@@ -1,4 +1,10 @@
-"""Bring-up CLI: `mathaccel ping --port COM5`, `mathaccel bench --port sim`, ..."""
+"""Command-line checks for the current communication and memory system.
+
+I use this entry point to identify the board, inspect link errors, test memory,
+and compare request latency with reported kernel time. Put the global --port
+option before the command: `mathaccel --port COM5 ping` or `--port sim bench`.
+The simulator uses the same driver calls but does not measure FPGA hardware.
+"""
 
 from __future__ import annotations
 
@@ -11,16 +17,23 @@ from mathaccel.driver.device import connect
 
 
 def cmd_ping(dev, _args) -> None:
+    """Display the configuration returned after Device checks the identity magic."""
     info = dev.ping()
     print(f"magic ok, v{info.version[0]}.{info.version[1]}, "
           f"{1 << info.scratch_addr_bits} scratch words, clk {info.clk_hz / 1e6:.0f} MHz")
 
 
 def cmd_status(dev, _args) -> None:
+    """Show the link counters and most recent kernel cycle count."""
     print(dev.status())
 
 
 def cmd_memtest(dev, args) -> None:
+    """Write reproducible random words, read them back, and count mismatches.
+
+    This overwrites the requested scratchpad span. The measured wall time
+    includes packet transfers and host work as well as memory operations.
+    """
     rng = np.random.default_rng(args.seed)
     data = rng.integers(0, 2**32, args.words, dtype=np.uint32)
     t0 = time.perf_counter()
@@ -28,23 +41,30 @@ def cmd_memtest(dev, args) -> None:
     back = dev.read_words(args.addr, args.words)
     dt = time.perf_counter() - t0
     bad = int(np.count_nonzero(back != data))
+    # Both a write and a read move four bytes per word. This payload rate
+    # excludes framing overhead, although the elapsed time includes it.
     rate = 2 * 4 * args.words / dt / 1e3
     print(f"{args.words} words round trip in {dt * 1e3:.1f} ms ({rate:.0f} kB/s), mismatches: {bad}")
     if bad:
+        # A failing memory check must also fail a shell command or CI step.
         raise SystemExit(1)
 
 
 def cmd_bench(dev, _args) -> None:
+    """Measure NOP request latency, then display device-reported FILL time."""
     n = 50
     t0 = time.perf_counter()
     for _ in range(n):
         dev.nop()
     rtt = (time.perf_counter() - t0) / n
+    # rtt includes host and link costs. r.seconds below converts only the
+    # kernel's reported busy clocks; these are different measurements.
     r = dev.fill(0, 4096, 0xDEADBEEF)
     print(f"NOP round trip: {rtt * 1e6:.0f} us   FILL 4096 words: {r.cycles} cycles ({r.seconds * 1e6:.1f} us)")
 
 
 def main(argv: list[str] | None = None) -> None:
+    """Parse a subcommand and keep its connection open for the whole operation."""
     ap = argparse.ArgumentParser(prog="mathaccel")
     ap.add_argument("--port", default="sim", help='serial port like COM5, or "sim" (default)')
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -56,6 +76,8 @@ def main(argv: list[str] | None = None) -> None:
     mt.add_argument("--seed", type=int, default=1)
     sub.add_parser("bench")
     args = ap.parse_args(argv)
+    # The context manager closes a physical serial port even if a command
+    # raises. A dictionary selects the handler with no separate CLI branches.
     with connect(args.port) as dev:
         {"ping": cmd_ping, "status": cmd_status, "memtest": cmd_memtest, "bench": cmd_bench}[args.cmd](dev, args)
 

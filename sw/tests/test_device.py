@@ -1,4 +1,10 @@
-"""Device API tests. Run against the simulator by default, or the board with `-m hw --port COMx`."""
+"""Check phase 1 commands through the public Device API.
+
+Tests taking the dev fixture use a fresh simulator unless --port is supplied.
+The lower tests create their own model to inspect state directly. I check
+returned data and error codes here; UART bit timing belongs to the HDL tests.
+Writes/FILL overwrite the selected memory span when run on a physical board.
+"""
 
 import struct
 
@@ -14,24 +20,28 @@ from mathaccel.driver.transport import SimTransport
 
 
 def test_ping(dev):
+    """Verify the driver can identify the configured protocol version and clock."""
     info = dev.ping()
     assert info.version == (spec.VERSION_MAJOR, spec.VERSION_MINOR)
     assert info.clk_hz == spec.CLK_HZ
 
 
 def test_memory_roundtrip_multi_frame(dev):
+    """Transfer more than 255 words to exercise driver chunking and address steps."""
     data = np.random.default_rng(3).integers(0, 2**32, 1000, dtype=np.uint32)
     dev.write_words(100, data)
     np.testing.assert_array_equal(dev.read_words(100, 1000), data)
 
 
 def test_f32_roundtrip(dev):
+    """Store and recover float representations; this does not test fp32 arithmetic."""
     vals = np.array([0.0, -1.5, 3.14159, 1e30, -1e-30], dtype=np.float32)
     dev.write_f32(0, vals)
     np.testing.assert_array_equal(dev.read_f32(0, len(vals)), vals)
 
 
 def test_top_of_memory(dev):
+    """Accept a write ending at the last word, and reject spans crossing that end."""
     top = spec.SCRATCH_WORDS - 3
     dev.write_words(top, [1, 2, 3])
     assert list(dev.read_words(top, 3)) == [1, 2, 3]
@@ -42,15 +52,19 @@ def test_top_of_memory(dev):
 
 
 def test_fill_and_cycles(dev):
+    """Check FILL data and its completion clock, then verify NOP updates STATUS."""
     r = dev.fill(10, 20, 0xCAFEF00D)
     assert r.cycles == 21
     words = dev.read_words(9, 22)
+    # The interior slice is exactly the requested fill span. A later test
+    # separately checks that neighboring words retain known sentinel values.
     assert all(w == 0xCAFEF00D for w in words[1:21])
     assert dev.nop().cycles == 1
     assert dev.status().last_cycles == 1
 
 
 def test_bad_kernel_and_len(dev):
+    """Distinguish an unsupported kernel from incomplete arguments or zero reads."""
     with pytest.raises(DeviceError, match="BAD_KERNEL"):
         dev.run(0x7E)
     with pytest.raises(DeviceError, match="BAD_LEN"):
@@ -60,18 +74,23 @@ def test_bad_kernel_and_len(dev):
 
 
 def test_unknown_opcode(dev):
+    """Reject a packet with a valid layout but an unrecognized command ID."""
     with pytest.raises(DeviceError, match="BAD_OP"):
         dev.request(0x33, b"")
 
 
-# ---- simulator-only tests (inspect the model's error counters) -------------
+# These tests create their own backend so they can inspect model state without
+# relying on a board's earlier commands or accessing hardware internals.
 
 def test_corrupt_frames_counted_and_dropped():
+    """Drop malformed wire data, count one link error, and accept the next PING."""
     model = DeviceModel()
     t = SimTransport(model)
     dev = Device(t, retries=0)
     raw = bytearray(Frame(Op.PING, 1).to_raw())
     raw[-1] ^= 0xFF
+    # This intentionally sends garbage encoding. It can fail at framing or CRC,
+    # so the test checks the combined counter rather than claiming a CRC-only error.
     t.send(bytes(raw).replace(b"\x00", b"\x01") + b"\x00")  # garbage, not valid COBS of a good frame
     assert t.recv_frame(0) is None
     assert model.crc_errors + model.frame_errors == 1
@@ -79,6 +98,7 @@ def test_corrupt_frames_counted_and_dropped():
 
 
 def test_neighbour_words_untouched():
+    """Use sentinel values to detect FILL writes before or after its requested span."""
     dev = Device(SimTransport())
     dev.write_words(0, [7] * 40)
     dev.fill(10, 20, 1)
@@ -87,6 +107,7 @@ def test_neighbour_words_untouched():
 
 
 def test_status_payload_len_checked():
+    """Verify BAD_LEN arrives as a DeviceError with its numeric status retained."""
     dev = Device(SimTransport())
     with pytest.raises(DeviceError) as e:
         dev.request(Op.PING, b"\x01")

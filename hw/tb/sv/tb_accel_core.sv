@@ -1,22 +1,26 @@
-// Vector-driven testbench for accel_core (Vivado xsim).
-// Replays request frames over the UART pin and compares the response bytes
-// with the Python reference model's output (hw/tb/vectors.py).
+// This is the xsim version of the UART integration test. I drive requests
+// into accel_core's serial input and collect serial reply bytes independently.
+// The Python model writes the expected bytes into vectors.txt. Matching the
+// full reply tests header fields, COBS, CRC, payload data, and kernel clocks.
+// Testbench tasks, queues, and delays describe simulation, not FPGA hardware.
 module tb_accel_core;
   localparam int CPB = 8;  // fast UART for simulation
   string vec_file = "vectors.txt";
 
   logic clk = 0, rst = 1, rx = 1, tx;
-  always #5 clk = ~clk;
+  always #5 clk = ~clk;  // Toggle every 5 ns: one complete clock is 10 ns.
 
   accel_core #(.CLKS_PER_BIT(CPB)) dut (
       .clk, .rst, .uart_rx_i(rx), .uart_tx_o(tx), .busy_o(), .err_o());
 
-  // ---- UART monitor: collect bytes sent by the DUT ----
+  // This initial block runs alongside the stimulus block. rxq is a growing
+  // queue of reply bytes; it does not impose a packet interpretation on them.
   byte unsigned rxq[$];
   initial begin
     forever begin
       byte unsigned b;
       @(negedge tx);
+      // Center in the start bit, then sample each data bit one bit time later.
       repeat (CPB / 2) @(posedge clk);
       for (int i = 0; i < 8; i++) begin
         repeat (CPB) @(posedge clk);
@@ -29,6 +33,8 @@ module tb_accel_core;
   end
 
   task automatic send_byte(input byte unsigned b);
+    // An automatic task has its own local arguments for each call. Drive the
+    // low start bit, eight least-significant-first data bits, then high stop.
     rx = 0;
     repeat (CPB) @(posedge clk);
     for (int i = 0; i < 8; i++) begin
@@ -45,6 +51,8 @@ module tb_accel_core;
     byte unsigned exp[$];
     int unsigned v;
 
+    // +VEC=<path> can override the vector file; otherwise use the runner's
+    // vectors.txt in build/xsim. Missing input must fail immediately.
     if ($value$plusargs("VEC=%s", vec_file)) ;
     fd = $fopen(vec_file, "r");
     if (fd == 0) $fatal(1, "cannot open %s", vec_file);
@@ -56,6 +64,8 @@ module tb_accel_core;
     errors = 0;
     vec = 0;
     while (!$feof(fd)) begin
+      // The file has S(send), E(expect), and N(no reply) records. n is the
+      // number of hexadecimal bytes after the record's label and count.
       code = $fscanf(fd, "%s %d", kind, n);
       if (code != 2) break;
       exp.delete();
@@ -64,10 +74,13 @@ module tb_accel_core;
         exp.push_back(v[7:0]);
       end
       if (kind == "S") begin
+        // Keep DUT state across vectors, but discard the previous reply queue.
         vec++;
         rxq.delete();
         foreach (exp[i]) send_byte(exp[i]);
       end else if (kind == "E") begin
+        // Race reply completion against a bounded timeout. join_any resumes
+        // after either finishes; disable cancels the still-waiting branch.
         fork : wait_resp
           wait (rxq.size() >= n);
           begin
@@ -82,6 +95,8 @@ module tb_accel_core;
           $error("vector %0d: expected %0d bytes, got %0d", vec, n, rxq.size());
           errors++;
         end else begin
+          // Full wire-byte equality catches errors even if decoded payloads
+          // happen to agree. Print a small prefix to help locate a mismatch.
           foreach (exp[i])
             if (rxq[i] != exp[i]) begin
               $error("vector %0d byte %0d: expected %02x got %02x", vec, i, exp[i], rxq[i]);
@@ -91,6 +106,8 @@ module tb_accel_core;
             end
         end
       end else begin  // "N": no response expected
+        // Bad link frames are dropped without a reply. Give a late response
+        // enough UART time to appear before declaring the expected silence.
         repeat (40 * CPB * 10) @(posedge clk);
         if (rxq.size() != 0) begin
           $error("vector %0d: expected no response, got %0d bytes", vec, rxq.size());
@@ -99,6 +116,7 @@ module tb_accel_core;
       end
     end
     $fclose(fd);
+    // The Python xsim runner uses these final markers to set its exit status.
     if (errors == 0) $display("PASS: %0d vectors", vec);
     else $display("FAIL: %0d errors over %0d vectors", errors, vec);
     $finish;

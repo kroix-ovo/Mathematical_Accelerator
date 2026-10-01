@@ -4,6 +4,10 @@ Each vector is (request_wire, expected_response_wire | None). Expected bytes
 come from the Python reference model, so the RTL is checked against it
 byte-for-byte, including COBS, CRC, status codes and kernel cycle counts.
 
+I replay these vectors in order with one persistent model and one persistent
+RTL instance. A later read can therefore verify an earlier write or FILL. None
+means the receiver should drop a packet without replying, not an empty reply.
+
     python hw/tb/vectors.py build/vectors.txt   # write the xsim vector file
 """
 
@@ -23,12 +27,14 @@ from mathaccel.driver.protocol import Frame
 
 
 def build_vectors(seed: int = 0) -> list[tuple[bytes, bytes | None]]:
+    """Create a repeatable sequence of requests and complete expected wire replies."""
     rng = np.random.default_rng(seed)
     model = DeviceModel()
     vecs: list[tuple[bytes, bytes | None]] = []
     tag = 0
 
     def req(op: int, payload: bytes = b"") -> None:
+        """Encode a normal command, update the model, and record its response."""
         nonlocal tag
         tag = (tag + 1) & 0xFF
         wire = Frame(op, tag, payload).encode()
@@ -36,11 +42,14 @@ def build_vectors(seed: int = 0) -> list[tuple[bytes, bytes | None]]:
         vecs.append((wire, resp))
 
     def raw(wire: bytes) -> None:
+        """Record deliberately malformed wire bytes without repairing their encoding."""
         vecs.append((wire, model.handle_wire(wire[:-1])))
 
     req(*P.ping())
     req(*P.status())
 
+    # Split a write at the maximum legal payload, then read across that split.
+    # This exercises packet buffering as well as scratchpad addressing.
     data = rng.integers(0, 2**32, 300, dtype=np.uint32)
     req(*P.write_mem(5, data[:255].tobytes()))           # max-size frame
     req(*P.write_mem(260, data[255:].tobytes()))
@@ -53,13 +62,16 @@ def build_vectors(seed: int = 0) -> list[tuple[bytes, bytes | None]]:
     req(*P.write_mem(spec.SCRATCH_WORDS - 2, [7, 8]))    # top of memory
     req(*P.read_mem(spec.SCRATCH_WORDS - 2, 2))
 
+    # Kernel replies include busy clocks. Reading just outside the fill span
+    # also gives the testbenches evidence of unwanted neighboring writes.
     req(*P.run(Kernel.NOP))
     req(*P.run(Kernel.FILL, struct.pack("<III", 3000, 37, 0xDEADBEEF)))
     req(*P.read_mem(2999, 39))
     req(*P.run(Kernel.FILL, struct.pack("<III", 0, 0, 1)))  # empty fill
     req(*P.status())
 
-    # error paths
+    # These packets still have valid framing/CRC. The command processor must
+    # return the particular opcode, length, address, or kernel error status.
     req(0x33)                                                 # BAD_OP
     req(Op.PING, b"\x00")                                     # BAD_LEN
     req(*P.read_mem(0, 0))                                    # BAD_LEN (count 0)
@@ -71,7 +83,8 @@ def build_vectors(seed: int = 0) -> list[tuple[bytes, bytes | None]]:
     req(*P.run(Kernel.FILL, b"\x00" * 4))                     # BAD_LEN
     req(*P.run(Kernel.FILL, struct.pack("<III", spec.SCRATCH_WORDS - 1, 2, 0)))  # BAD_ADDR
 
-    # link errors: no response, counters advance
+    # Link errors are rejected before command execution, so no reply should
+    # arrive. STATUS afterward checks counters; PING checks resynchronization.
     good = bytearray(Frame(Op.PING, 0x55).to_raw())
     good[-1] ^= 0x5A
     from mathaccel.driver.framing import cobs_encode
@@ -85,6 +98,11 @@ def build_vectors(seed: int = 0) -> list[tuple[bytes, bytes | None]]:
 
 
 def write_vector_file(path: Path) -> int:
+    """Write the small text format read by the SystemVerilog xsim testbench.
+
+    S sends bytes, E compares expected reply bytes, and N expects silence.
+    Each line includes a byte count followed by hexadecimal byte values.
+    """
     vecs = build_vectors()
     with path.open("w") as f:
         for wire, resp in vecs:

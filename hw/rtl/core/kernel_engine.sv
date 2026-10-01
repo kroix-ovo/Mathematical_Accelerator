@@ -55,6 +55,8 @@ module kernel_engine
           i   <= i + 1'b1;
           if (i == count - 1) state <= FIN;
         end
+        // cycles becomes valid with done. Before completion, callers should
+        // wait rather than read a result left over from a previous kernel.
         FIN: begin
           cycles <= cyc + 1'b1;
           done   <= 1'b1;
