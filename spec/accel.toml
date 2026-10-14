@@ -6,7 +6,7 @@
 [device]
 magic = 0x4D414343          # "MACC"
 version_major = 0
-version_minor = 1
+version_minor = 2
 clk_hz = 100_000_000
 baud = 2_000_000            # exact divider at 100 MHz (50 clocks/bit)
 scratch_addr_bits = 16      # 64 Ki words x 32 bit = 256 KiB scratchpad
@@ -28,8 +28,34 @@ BAD_LEN    = 0x02
 BAD_ADDR   = 0x03
 BUSY       = 0x04
 BAD_KERNEL = 0x05
+BAD_ARG    = 0x06       # kernel argument out of range (e.g. FPU op code > 11)
 
 # Kernel ids for RUN.
 [kernels]
 NOP  = 0x00     # args: none; measures dispatch overhead
 FILL = 0x01     # args: base u32, count u32, value u32
+FPU  = 0x02     # args: fop u8, count u32, a u32, b u32, r u32, f u32 (see docs/protocol.md)
+
+# FPU operation codes (4 bits). Used by the FPU kernel and the fpu block.
+# Unary operations (SQRT, I2F, F2I) ignore operand b.
+[fpu_ops]
+ADD  = 0x0
+SUB  = 0x1
+MUL  = 0x2
+DIV  = 0x3
+SQRT = 0x4
+I2F  = 0x5      # signed int32 -> fp32
+F2I  = 0x6      # fp32 -> signed int32, round to nearest even, saturating
+MIN  = 0x7
+MAX  = 0x8
+EQ   = 0x9      # compare results are the integers 0 or 1
+LT   = 0xA
+LE   = 0xB
+
+# IEEE-754 exception flags (5-bit mask, same bit order as RISC-V fflags).
+[fpu_flags]
+NX = 0x01       # inexact
+UF = 0x02       # underflow (tiny after rounding and inexact)
+OF = 0x04       # overflow
+DZ = 0x08       # divide by zero
+NV = 0x10       # invalid operation

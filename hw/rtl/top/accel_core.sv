@@ -57,7 +57,11 @@ module accel_core
   logic [31:0]           c_wdata, k_wdata, m_rdata;
   logic                  k_start, k_busy, k_done;
   logic [7:0]            k_kernel;
-  logic [31:0]           k_arg0, k_arg1, k_arg2, k_cycles;
+  logic [8*21-1:0]       k_args;
+  logic [31:0]           k_cycles, k_aux;
+  logic                  kb_we;
+  logic [SCRATCH_AW-1:0] kb_addr;
+  logic [31:0]           kb_wdata;
 
   scratch_mem #(.AW(SCRATCH_AW)) u_mem (
       .clk,
@@ -65,12 +69,15 @@ module accel_core
       .we   (k_busy ? k_we    : c_we),
       .addr (k_busy ? k_addr  : c_addr),
       .wdata(k_busy ? k_wdata : c_wdata),
-      .rdata(m_rdata));
+      .rdata(m_rdata),
+      // Port B belongs to the kernel engine (FPU result write-back).
+      .b_we(kb_we), .b_addr(kb_addr), .b_wdata(kb_wdata));
 
   kernel_engine u_kern (
-      .clk, .rst, .start(k_start), .kernel(k_kernel), .arg0(k_arg0), .arg1(k_arg1), .arg2(k_arg2),
-      .busy(k_busy), .done(k_done), .cycles(k_cycles),
-      .m_en(k_en), .m_we(k_we), .m_addr(k_addr), .m_wdata(k_wdata));
+      .clk, .rst, .start(k_start), .kernel(k_kernel), .args(k_args),
+      .busy(k_busy), .done(k_done), .cycles(k_cycles), .aux(k_aux),
+      .m_en(k_en), .m_we(k_we), .m_addr(k_addr), .m_wdata(k_wdata), .m_rdata,
+      .b_we(kb_we), .b_addr(kb_addr), .b_wdata(kb_wdata));
 
   // This state machine interprets validated opcodes and prepares replies.
   logic        tx_start, tx_busy;
@@ -83,7 +90,7 @@ module accel_core
       .tb_we, .tb_addr(tb_waddr), .tb_wdata,
       .tx_start, .tx_op, .tx_tag, .tx_len, .tx_busy,
       .m_en(c_en), .m_we(c_we), .m_addr(c_addr), .m_wdata(c_wdata), .m_rdata,
-      .k_start, .k_kernel, .k_arg0, .k_arg1, .k_arg2, .k_done, .k_cycles,
+      .k_start, .k_kernel, .k_args, .k_done, .k_cycles, .k_aux,
       .crc_errors, .frame_errors, .busy(cmd_busy));
 
   // Reply bytes travel through framing, a one-entry register, COBS encoding,

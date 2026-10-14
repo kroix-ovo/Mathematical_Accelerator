@@ -37,11 +37,10 @@ module cmd_proc
     // kernel engine
     output logic                  k_start,
     output logic [7:0]            k_kernel,
-    output logic [31:0]           k_arg0,
-    output logic [31:0]           k_arg1,
-    output logic [31:0]           k_arg2,
+    output logic [8*21-1:0]       k_args,     // RUN payload bytes 1..21
     input  logic                  k_done,
     input  logic [31:0]           k_cycles,
+    input  logic [31:0]           k_aux,
     // stats
     input  logic [15:0]           crc_errors,
     input  logic [15:0]           frame_errors,
@@ -58,7 +57,7 @@ module cmd_proc
 
   logic [7:0]  op, tag;
   logic [15:0] len, idx, cnt, rlen, tptr, nload;
-  logic [7:0]  args [16];
+  logic [7:0]  args [32];       // RUN can carry up to 22 payload bytes
   logic [7:0]  rbuf [16];
   logic [1:0]  bsel;
   logic [31:0] addr, word, last_cycles;
@@ -69,13 +68,24 @@ module cmd_proc
   wire [15:0] a4 = {args[5], args[4]};
   wire [31:0] r0 = {args[4], args[3], args[2], args[1]};
   wire [31:0] r1 = {args[8], args[7], args[6], args[5]};
-  wire [31:0] r2 = {args[12], args[11], args[10], args[9]};
+  // FPU kernel arguments: op code, count, then base addresses of a, b, r, f.
+  wire [7:0]  fpu_fop   = args[1];
+  wire [31:0] fpu_count = {args[5], args[4], args[3], args[2]};
+  wire [31:0] fpu_a     = {args[9], args[8], args[7], args[6]};
+  wire [31:0] fpu_b     = {args[13], args[12], args[11], args[10]};
+  wire [31:0] fpu_r     = {args[17], args[16], args[15], args[14]};
+  wire [31:0] fpu_f     = {args[21], args[20], args[19], args[18]};
+  // Each of the four arrays must lie inside the scratchpad.
+  wire fpu_in_range = ({1'b0, fpu_a} + {1'b0, fpu_count} <= WORDS) &&
+                      ({1'b0, fpu_b} + {1'b0, fpu_count} <= WORDS) &&
+                      ({1'b0, fpu_r} + {1'b0, fpu_count} <= WORDS) &&
+                      ({1'b0, fpu_f} + {1'b0, fpu_count} <= WORDS);
   wire [15:0] nwords = (len - 16'd4) >> 2;
 
   // Register loop limits before entering a byte-by-byte state. This also
   // keeps length arithmetic out of the memory write timing path.
   logic [15:0] load_last, wr_last;
-  assign nload = (op == OP_WRITE_MEM) ? 16'd4 : (len > 16 ? 16'd16 : len);
+  assign nload = (op == OP_WRITE_MEM) ? 16'd4 : (len > 32 ? 16'd32 : len);
 
   assign rb_addr  = (state == LOAD) ? RX_AW'(idx + 16'd4) : RX_AW'(idx);
   // Four incoming bytes make one 32-bit word. wr_pend delays its write one
@@ -96,9 +106,9 @@ module cmd_proc
   assign tx_len   = rlen;
   assign busy     = (state != IDLE) || tx_busy;
   assign k_kernel = args[0];
-  assign k_arg0   = r0;
-  assign k_arg1   = r1;
-  assign k_arg2   = r2;
+  // Pass payload bytes 1..21 to the kernel engine as one packed vector,
+  // byte k of the vector being payload byte k+1.
+  always_comb for (int k = 0; k < 21; k++) k_args[8*k +: 8] = args[k + 1];
 
   task automatic respond_status(input logic [7:0] st);
     // Error replies contain just the status byte; COPY moves it to tx_buf.
@@ -134,7 +144,7 @@ module cmd_proc
             OP_PING, OP_STATUS: if (len == 0) state <= EXEC; else respond_status(ST_BAD_LEN);
             OP_READ_MEM:  if (len == 6) state <= LOAD; else respond_status(ST_BAD_LEN);
             OP_WRITE_MEM: if (len >= 8 && len[1:0] == 2'b00) state <= LOAD; else respond_status(ST_BAD_LEN);
-            OP_RUN:       if (len >= 1 && len <= 13) state <= LOAD; else respond_status(ST_BAD_LEN);
+            OP_RUN:       if (len >= 1 && len <= 22) state <= LOAD; else respond_status(ST_BAD_LEN);
             default:      respond_status(ST_BAD_OP);
           endcase
         end
@@ -142,7 +152,7 @@ module cmd_proc
         // LOAD copies only the argument bytes needed for the selected opcode.
         // WRITE_MEM later streams its data directly from the receive buffer.
         LOAD: begin
-          args[idx[3:0]] <= rb_data;
+          args[idx[4:0]] <= rb_data;
           idx <= idx + 1'b1;
           if (idx == load_last) state <= EXEC;
         end
@@ -198,6 +208,13 @@ module cmd_proc
               if (len != 13) respond_status(ST_BAD_LEN);
               else if ({1'b0, r0} + {1'b0, r1} > WORDS) respond_status(ST_BAD_ADDR);
               else begin k_start <= 1'b1; state <= KWAIT; end
+            end else if (args[0] == K_FPU) begin
+              // Checks in the same order as the Python model: length, then
+              // op code, then address ranges.
+              if (len != 22) respond_status(ST_BAD_LEN);
+              else if (fpu_fop > 8'd11) respond_status(ST_BAD_ARG);
+              else if (!fpu_in_range) respond_status(ST_BAD_ADDR);
+              else begin k_start <= 1'b1; state <= KWAIT; end
             end else respond_status(ST_BAD_KERNEL);
           end
           default: respond_status(ST_BAD_OP);
@@ -245,7 +262,8 @@ module cmd_proc
           last_cycles <= k_cycles;
           rbuf[0] <= ST_OK;
           {rbuf[4], rbuf[3], rbuf[2], rbuf[1]} <= k_cycles;
-          rlen  <= 16'd5;
+          {rbuf[8], rbuf[7], rbuf[6], rbuf[5]} <= k_aux;
+          rlen  <= 16'd9;
           tptr  <= '0;
           state <= COPY;
         end

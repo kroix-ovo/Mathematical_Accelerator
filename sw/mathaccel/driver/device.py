@@ -26,8 +26,13 @@ class DeviceTimeout(TimeoutError):
 
 @dataclass(frozen=True)
 class RunResult:
-    """Kernel time measured in core clocks, excluding UART transfer time."""
+    """Kernel time measured in core clocks, excluding UART transfer time.
+
+    aux is kernel specific: the OR of all element flags for the FPU kernel,
+    zero for NOP and FILL.
+    """
     cycles: int
+    aux: int = 0
 
     @property
     def seconds(self) -> float:
@@ -124,7 +129,7 @@ class Device:
 
     def run(self, kernel: int, args: bytes = b"", timeout: float = 5.0) -> RunResult:
         """Wait for a kernel reply; kernels get a longer timeout than link commands."""
-        return RunResult(P.parse_cycles(self.request(*P.run(kernel, args), timeout=timeout)))
+        return RunResult(*P.parse_run(self.request(*P.run(kernel, args), timeout=timeout)))
 
     def nop(self) -> RunResult:
         """Run the no-operation kernel to check dispatch and cycle reporting."""
@@ -133,6 +138,32 @@ class Device:
     def fill(self, base: int, count: int, value: int) -> RunResult:
         """Write value to count words beginning at base, then return kernel time."""
         return self.run(Kernel.FILL, struct.pack("<III", base, count, value))
+
+    def fpu_kernel(self, fop: int, count: int, a: int, b: int, r: int, f: int,
+                   timeout: float = 10.0) -> RunResult:
+        """Run r[i], f[i] = fop(a[i], b[i]) over word arrays already in the scratchpad.
+
+        a, b, r and f are word addresses. RunResult.aux holds the OR of all flags.
+        """
+        return self.run(Kernel.FPU, P.fpu_args(fop, count, a, b, r, f), timeout=timeout)
+
+    def fpu(self, fop: int, a_bits, b_bits=None, base: int = 0) -> tuple[np.ndarray, np.ndarray, RunResult]:
+        """Compute fop elementwise on raw fp32 bit arrays and return (results, flags, run).
+
+        Uses four consecutive arrays starting at word `base` for a, b, r and f.
+        For unary ops b may be omitted. Values are raw uint32 bit patterns, so
+        NaN payloads and signed zeros pass through unchanged.
+        """
+        a = np.atleast_1d(np.asarray(a_bits, dtype=np.uint32))
+        b = np.zeros_like(a) if b_bits is None else np.atleast_1d(np.asarray(b_bits, dtype=np.uint32))
+        n = len(a)
+        if len(b) != n:
+            raise ValueError("a and b must have the same length")
+        addr_a, addr_b, addr_r, addr_f = base, base + n, base + 2 * n, base + 3 * n
+        self.write_words(addr_a, a)
+        self.write_words(addr_b, b)
+        run = self.fpu_kernel(fop, n, addr_a, addr_b, addr_r, addr_f)
+        return self.read_words(addr_r, n), self.read_words(addr_f, n), run
 
     def close(self) -> None:
         """Release resources owned by the transport, including a real serial port."""

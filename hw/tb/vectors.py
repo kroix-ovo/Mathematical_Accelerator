@@ -70,6 +70,23 @@ def build_vectors(seed: int = 0) -> list[tuple[bytes, bytes | None]]:
     req(*P.run(Kernel.FILL, struct.pack("<III", 0, 0, 1)))  # empty fill
     req(*P.status())
 
+    # FPU kernel, end to end through the UART. Operands come from the shared
+    # LCG generator, so they include NaNs, subnormals, infinities and ties.
+    # Each op runs over a small array; READ_MEM then returns results and flags.
+    from mathaccel.fpgen import stream
+    n = 9
+    A, B, R, F = 4000, 4100, 4200, 4300
+    for fop in range(12):
+        ops = list(stream(0x600D + fop, n, fop))
+        req(*P.write_mem(A, [a for _, a, _ in ops]))
+        req(*P.write_mem(B, [b for _, _, b in ops]))
+        req(*P.run(Kernel.FPU, P.fpu_args(fop, n, A, B, R, F)))
+        req(*P.read_mem(R, n))
+        req(*P.read_mem(F, n))
+    req(*P.run(Kernel.FPU, P.fpu_args(0, 0, A, B, R, F)))          # empty: 1 cycle
+    req(*P.run(Kernel.FPU, P.fpu_args(2, 3, A, A, A, F)))          # in place: r == a
+    req(*P.read_mem(A, 3))
+
     # These packets still have valid framing/CRC. The command processor must
     # return the particular opcode, length, address, or kernel error status.
     req(0x33)                                                 # BAD_OP
@@ -82,6 +99,10 @@ def build_vectors(seed: int = 0) -> list[tuple[bytes, bytes | None]]:
     req(*P.run(0x7E))                                         # BAD_KERNEL
     req(*P.run(Kernel.FILL, b"\x00" * 4))                     # BAD_LEN
     req(*P.run(Kernel.FILL, struct.pack("<III", spec.SCRATCH_WORDS - 1, 2, 0)))  # BAD_ADDR
+    req(*P.run(Kernel.FPU, b"\x00" * 20))                         # BAD_LEN
+    req(*P.run(Kernel.FPU, P.fpu_args(12, 1, 0, 0, 0, 0)))         # BAD_ARG (op code)
+    req(*P.run(Kernel.FPU, P.fpu_args(0, 2, 0, 0, 0, spec.SCRATCH_WORDS - 1)))  # BAD_ADDR (f)
+    req(*P.run(Kernel.FPU, P.fpu_args(0, 0xFFFFFFFF, 0, 0, 0, 0)))  # BAD_ADDR (count)
 
     # Link errors are rejected before command execution, so no reply should
     # arrive. STATUS afterward checks counters; PING checks resynchronization.

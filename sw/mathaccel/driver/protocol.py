@@ -156,6 +156,11 @@ def parse_status(data: bytes) -> StatusInfo:
     return StatusInfo(*struct.unpack("<HHI", data))
 
 
-def parse_cycles(data: bytes) -> int:
-    """Read the 32-bit busy-cycle count returned by RUN."""
-    return struct.unpack("<I", data)[0]
+def parse_run(data: bytes) -> tuple[int, int]:
+    """Read RUN's reply: 32-bit busy-cycle count and 32-bit kernel aux word."""
+    return struct.unpack("<II", data)
+
+
+def fpu_args(fop: int, count: int, a: int, b: int, r: int, f: int) -> bytes:
+    """Pack FPU kernel arguments: op code byte, then five 32-bit words."""
+    return struct.pack("<BIIIII", fop, count, a, b, r, f)

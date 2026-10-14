@@ -9,7 +9,7 @@ from enum import IntEnum
 # Device identity, version, clock, baud, and packet/memory sizes.
 MAGIC = 0x4d414343
 VERSION_MAJOR = 0
-VERSION_MINOR = 1
+VERSION_MINOR = 2
 CLK_HZ = 100000000
 BAUD = 2000000
 SCRATCH_ADDR_BITS = 16
@@ -37,6 +37,7 @@ class Status(IntEnum):
     BAD_ADDR = 0x03
     BUSY = 0x04
     BAD_KERNEL = 0x05
+    BAD_ARG = 0x06
 
 
 class Kernel(IntEnum):
@@ -44,3 +45,31 @@ class Kernel(IntEnum):
 
     NOP = 0x00
     FILL = 0x01
+    FPU = 0x02
+
+
+class FpuOp(IntEnum):
+    """FPU operation codes used by the FPU kernel and fpu.sv."""
+
+    ADD = 0x00
+    SUB = 0x01
+    MUL = 0x02
+    DIV = 0x03
+    SQRT = 0x04
+    I2F = 0x05
+    F2I = 0x06
+    MIN = 0x07
+    MAX = 0x08
+    EQ = 0x09
+    LT = 0x0A
+    LE = 0x0B
+
+
+class FpuFlag(IntEnum):
+    """IEEE exception flag bit masks (RISC-V fflags order)."""
+
+    NX = 0x01
+    UF = 0x02
+    OF = 0x04
+    DZ = 0x08
+    NV = 0x10

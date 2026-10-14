@@ -36,3 +36,9 @@ jobs:
       - run: pip install -e ".[dev]"
       - name: cocotb golden-vector test (Verilator)
         run: python hw/tb/cocotb/run.py --sim verilator
+      - name: pyuvm FPU block regression (Verilator)
+        run: python hw/tb/pyuvm/run.py fpu --test FpuRegressTest --n 3000
+      - name: pyuvm top-level regression (Verilator)
+        run: python hw/tb/pyuvm/run.py top --test TopRegressTest
+      - name: pyuvm FPU corner matrix (Icarus, 4-state)
+        run: python hw/tb/pyuvm/run.py fpu --sim icarus --test FpuCornerTest

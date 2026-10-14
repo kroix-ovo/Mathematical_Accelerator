@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 dependencies = ["numpy>=1.26", "sympy>=1.12", "pyserial>=3.5"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.5", "cocotb>=2.0"]
+dev = ["pytest>=8", "ruff>=0.5", "cocotb>=2.0", "pyuvm>=4.0"]
 
 [project.scripts]
 mathaccel = "mathaccel.cli:main"

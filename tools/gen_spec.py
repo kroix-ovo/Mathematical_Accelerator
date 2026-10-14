@@ -20,6 +20,17 @@ SPEC = ROOT / "spec" / "accel.toml"
 SV_OUT = ROOT / "hw" / "rtl" / "pkg" / "accel_pkg.sv"
 PY_OUT = ROOT / "sw" / "mathaccel" / "_generated" / "spec.py"
 
+# (TOML section, SystemVerilog name prefix, bit width, Python enum class name)
+SECTIONS = (
+    ("opcodes", "OP_", 8),
+    ("status", "ST_", 8),
+    ("kernels", "K_", 8),
+    ("fpu_ops", "FOP_", 4),
+    ("fpu_flags", "FFLAG_", 5),
+)
+PY_CLASSES = {"opcodes": "Op", "status": "Status", "kernels": "Kernel",
+              "fpu_ops": "FpuOp", "fpu_flags": "FpuFlag"}
+
 HEADER = "AUTO-GENERATED from spec/accel.toml by tools/gen_spec.py -- do not edit."
 
 
@@ -47,11 +58,16 @@ def render_sv(spec: dict) -> str:
         "opcodes": "Request opcodes; a reply sets bit 7 of the same opcode.",
         "status": "First byte of every reply payload; zero means success.",
         "kernels": "Kernel IDs carried in the first byte of a RUN request payload.",
+        "fpu_ops": "FPU operation codes, four bits wide (fpu.sv op input).",
+        "fpu_flags": "IEEE exception flag masks, five bits wide (RISC-V fflags order).",
     }
-    for section, prefix in (("opcodes", "OP_"), ("status", "ST_"), ("kernels", "K_")):
+    # Each section gets its own name prefix and bit width. The width makes the
+    # constant the same size as the port it is compared with, so tools do not
+    # warn about silently truncated constants.
+    for section, prefix, width in SECTIONS:
         lines += ["", f"  // {descriptions[section]}"]
         for name, val in spec[section].items():
-            lines.append(f"  localparam logic [7:0] {prefix}{name} = 8'h{val:02X};")
+            lines.append(f"  localparam logic [{width - 1}:0] {prefix}{name} = {width}'h{val:0{(width + 3) // 4}X};")
     lines += ["", "endpackage", ""]
     return "\n".join(lines)
 
@@ -79,8 +95,11 @@ def render_py(spec: dict) -> str:
         "Op": "Request IDs; replies use these values with bit 7 set.",
         "Status": "First reply payload byte; OK is the successful result.",
         "Kernel": "RUN payload IDs selecting a hardware kernel.",
+        "FpuOp": "FPU operation codes used by the FPU kernel and fpu.sv.",
+        "FpuFlag": "IEEE exception flag bit masks (RISC-V fflags order).",
     }
-    for section, cls in (("opcodes", "Op"), ("status", "Status"), ("kernels", "Kernel")):
+    for section, _prefix, _width in SECTIONS:
+        cls = PY_CLASSES[section]
         # IntEnum keeps readable names while still packing as integer fields.
         lines += ["", "", f"class {cls}(IntEnum):", f'    """{descriptions[cls]}"""', ""]
         for name, val in spec[section].items():

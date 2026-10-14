@@ -1,5 +1,6 @@
 hw/rtl/pkg/accel_pkg.sv
 hw/rtl/pkg/util_pkg.sv
+hw/rtl/fp/fp_pkg.sv
 hw/rtl/io/uart_rx.sv
 hw/rtl/io/uart_tx.sv
 hw/rtl/io/cobs_decoder.sv
@@ -7,6 +8,11 @@ hw/rtl/io/cobs_encoder.sv
 hw/rtl/io/frame_rx.sv
 hw/rtl/io/frame_tx.sv
 hw/rtl/io/stream_reg.sv
+hw/rtl/fp/fp_addsub.sv
+hw/rtl/fp/fp_mul.sv
+hw/rtl/fp/fp_misc.sv
+hw/rtl/fp/fp_divsqrt.sv
+hw/rtl/fp/fpu.sv
 hw/rtl/core/scratch_mem.sv
 hw/rtl/core/kernel_engine.sv
 hw/rtl/core/cmd_proc.sv
