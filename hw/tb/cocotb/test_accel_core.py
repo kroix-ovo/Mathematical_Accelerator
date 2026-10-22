@@ -51,6 +51,13 @@ async def uart_monitor(dut, out: list[int]) -> None:
 async def reset(dut) -> list[int]:
     """Start a 100 MHz clock, reset the core, and launch its UART reply monitor."""
     Clock(dut.clk, 10, unit="ns").start()
+    # The Ethernet side stays idle in this test: a running 50 MHz clock and
+    # no carrier. Both clocks start together, so their edges line up as they
+    # do when one MMCM makes them on the board.
+    Clock(dut.clk_rmii, 20, unit="ns").start()
+    dut.rmii_crs_dv.value = 0
+    dut.rmii_rxd.value = 0
+    dut.rmii_rx_er.value = 0
     dut.uart_rx_i.value = 1
     dut.rst.value = 1
     await ClockCycles(dut.clk, 10)

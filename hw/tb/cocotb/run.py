@@ -41,6 +41,8 @@ def main() -> int:
         build_args=build_args,
         build_dir=ROOT / "build" / f"cocotb_{args.sim}",
         always=True,
+        # Icarus otherwise runs with 1 s precision and cannot make a 10 ns clock.
+        timescale=("1ns", "1ps"),
     )
     results = runner.test(
         hdl_toplevel="accel_core",

@@ -8,6 +8,11 @@ hw/rtl/io/cobs_encoder.sv
 hw/rtl/io/frame_rx.sv
 hw/rtl/io/frame_tx.sv
 hw/rtl/io/stream_reg.sv
+hw/rtl/eth/rmii_rx.sv
+hw/rtl/eth/rmii_tx.sv
+hw/rtl/eth/eth_rx.sv
+hw/rtl/eth/eth_tx.sv
+hw/rtl/eth/eth_stack.sv
 hw/rtl/fp/fp_addsub.sv
 hw/rtl/fp/fp_mul.sv
 hw/rtl/fp/fp_misc.sv

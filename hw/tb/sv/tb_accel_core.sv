@@ -9,9 +9,15 @@ module tb_accel_core;
 
   logic clk = 0, rst = 1, rx = 1, tx;
   always #5 clk = ~clk;  // Toggle every 5 ns: one complete clock is 10 ns.
+  // The Ethernet side is idle in this test. Its 50 MHz clock toggles every
+  // 10 ns from time 0, so its rising edges coincide with every other clk edge.
+  logic clk_rmii = 0;
+  always #10 clk_rmii = ~clk_rmii;
 
   accel_core #(.CLKS_PER_BIT(CPB)) dut (
-      .clk, .rst, .uart_rx_i(rx), .uart_tx_o(tx), .busy_o(), .err_o());
+      .clk, .rst, .uart_rx_i(rx), .uart_tx_o(tx),
+      .clk_rmii, .rmii_rxd(2'b00), .rmii_crs_dv(1'b0), .rmii_rx_er(1'b0), .rmii_txd(), .rmii_tx_en(),
+      .busy_o(), .err_o(), .eth_rx_o(), .eth_tx_o(), .eth_err_o(), .eth_drop_o());
 
   // This initial block runs alongside the stimulus block. rxq is a growing
   // queue of reply bytes; it does not impose a packet interpretation on them.

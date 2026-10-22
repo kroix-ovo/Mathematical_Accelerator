@@ -1,16 +1,17 @@
-"""Move encoded packets through either a serial cable or the Python model.
+"""Move encoded packets through a serial cable, UDP, or the Python model.
 
 I keep byte movement separate from command interpretation: a transport knows
 where a packet ends, while protocol.py checks its contents. Sends include the
-zero delimiter; receives strip it so both backends present the same interface.
+zero delimiter; receives strip it so every backend presents the same interface.
 """
 
 from __future__ import annotations
 
+import socket
 import time
 from abc import ABC, abstractmethod
 
-from mathaccel._generated.spec import BAUD
+from mathaccel._generated.spec import BAUD, UDP_PORT
 from mathaccel.driver.model import DeviceModel
 
 
@@ -105,3 +106,51 @@ class UartTransport(Transport):
     def close(self) -> None:
         """Release the serial handle so another program can open the port."""
         self.ser.close()
+
+
+class UdpTransport(Transport):
+    """Send each wire frame as one UDP datagram to the board and read replies.
+
+    The bytes inside a datagram are exactly the bytes UartTransport would put
+    on the serial line, delimiter included, so Device and protocol.py do not
+    change. The board answers each command with one datagram from its own
+    port back to the port this socket uses.
+
+    connect() on a UDP socket does not send anything. It fixes the default
+    destination and tells the operating system to deliver only datagrams that
+    come from that address and port, so stray traffic never reaches Device.
+    """
+
+    def __init__(self, host: str, port: int = UDP_PORT) -> None:
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.connect((host, port))
+        self._pending: list[bytes] = []
+
+    def send(self, wire: bytes) -> None:
+        """One frame, one datagram (the board accepts several, but needs none)."""
+        self.sock.send(wire)
+
+    def recv_frame(self, timeout: float) -> bytes | None:
+        """Return the next reply frame, or None when the deadline passes."""
+        deadline = time.monotonic() + timeout
+        while not self._pending:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return None
+            self.sock.settimeout(remaining)
+            try:
+                data = self.sock.recv(2048)
+            except TimeoutError:
+                return None
+            except ConnectionResetError:
+                # Windows reports an ICMP "port unreachable" from an earlier
+                # send this way. It says nothing about the next reply.
+                continue
+            # A datagram can hold several frames; empty pieces between
+            # back-to-back delimiters are ignored, as on the UART.
+            self._pending += [f for f in data.split(b"\x00") if f]
+        return self._pending.pop(0)
+
+    def close(self) -> None:
+        """Release the local UDP port."""
+        self.sock.close()

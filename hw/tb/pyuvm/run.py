@@ -2,6 +2,7 @@
 
     python hw/tb/pyuvm/run.py fpu --test FpuRegressTest --n 3000
     python hw/tb/pyuvm/run.py top --test TopRegressTest
+    python hw/tb/pyuvm/run.py eth --test EthRegressTest --seed 3
     python hw/tb/pyuvm/run.py fpu --sim icarus
 
 From Windows, hw/scripts/run_pyuvm.py runs this inside WSL for you.
@@ -31,6 +32,8 @@ ENVS = {
     "fpu": {"top": "fpu", "module": "test_fpu_uvm", "dir": HERE / "fpu", "rtl": FP_RTL, "params": {}},
     "top": {"top": "accel_core", "module": "test_top_uvm", "dir": HERE / "top", "rtl": None,
             "params": {"CLKS_PER_BIT": 8}},
+    "eth": {"top": "accel_core", "module": "test_eth_uvm", "dir": HERE / "eth", "rtl": None,
+            "params": {"CLKS_PER_BIT": 8}},
 }
 
 
@@ -42,6 +45,7 @@ def main() -> int:
     ap.add_argument("--n", type=int, help="FPU_N item count")
     ap.add_argument("--lcg-seed", help="LCG_SEED (hex)")
     ap.add_argument("--op", type=int, help="FPU_OP for FpuLcgTest")
+    ap.add_argument("--seed", type=int, help="ETH_SEED for the Ethernet PHY randomization")
     args = ap.parse_args()
 
     cfg = ENVS[args.env]
@@ -60,6 +64,8 @@ def main() -> int:
         env["LCG_SEED"] = args.lcg_seed
     if args.op is not None:
         env["FPU_OP"] = str(args.op)
+    if args.seed is not None:
+        env["ETH_SEED"] = str(args.seed)
     os.environ.update(env)
 
     runner = get_runner(args.sim)

@@ -17,7 +17,7 @@ from mathaccel._generated import spec
 from mathaccel._generated.spec import Kernel, Status
 from mathaccel.driver import protocol as P
 from mathaccel.driver.protocol import DeviceError, Frame, FrameError
-from mathaccel.driver.transport import SimTransport, Transport, UartTransport
+from mathaccel.driver.transport import SimTransport, Transport, UartTransport, UdpTransport
 
 
 class DeviceTimeout(TimeoutError):
@@ -179,11 +179,22 @@ class Device:
 
 
 def connect(port: str | None = None, **kw) -> Device:
-    """Select simulator or serial by port name and pass driver options through.
+    """Select simulator, UDP or serial by port name and pass driver options through.
 
-    None or "sim" needs no board. Any other name, such as "COM5" or a macOS
-    /dev/cu.* device, is opened as a real serial port by UartTransport.
+    None or "sim" needs no board. "udp:192.168.10.2" (optionally with ":port")
+    talks to the board over Ethernet. "udpsim" starts the Python model behind a
+    local UDP socket, which exercises UdpTransport without hardware. Any other
+    name, such as "COM5" or a macOS /dev/cu.* device, is opened as a real
+    serial port by UartTransport.
     """
     if port in (None, "sim"):
         return Device(SimTransport(), **kw)
+    if port == "udpsim":
+        from mathaccel.driver.udpsim import UdpSimServer
+
+        server = UdpSimServer()
+        return Device(server.transport(), **kw)
+    if port.startswith("udp:"):
+        host, _, num = port[4:].partition(":")
+        return Device(UdpTransport(host, int(num) if num else spec.UDP_PORT), **kw)
     return Device(UartTransport(port), **kw)

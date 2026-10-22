@@ -355,6 +355,12 @@ class TopBaseTest(uvm_test):
         dut = cocotb.top
         self.raise_objection()
         Clock(dut.clk, 10, unit="ns").start()
+        # The Ethernet side is idle here (hw/tb/pyuvm/eth tests it): the
+        # 50 MHz clock runs edge-aligned with clk and there is no carrier.
+        Clock(dut.clk_rmii, 20, unit="ns").start()
+        dut.rmii_crs_dv.value = 0
+        dut.rmii_rxd.value = 0
+        dut.rmii_rx_er.value = 0
         dut.rst.value = 1
         dut.uart_rx_i.value = 1
         await ClockCycles(dut.clk, 10)

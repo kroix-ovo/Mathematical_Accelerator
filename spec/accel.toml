@@ -59,3 +59,14 @@ UF = 0x02       # underflow (tiny after rounding and inexact)
 OF = 0x04       # overflow
 DZ = 0x08       # divide by zero
 NV = 0x10       # invalid operation
+
+# UDP transport over the onboard LAN8720A (RMII, 100 Mbit/s, direct cable).
+# The board answers ARP and ICMP echo for `ip` and accepts command frames as
+# UDP datagrams sent to `udp_port`. `host_ip` is the laptop's static address;
+# the hardware never uses it (replies go to whoever sent the request), it is
+# here so the docs and the Python default agree with one place.
+[ethernet]
+mac = "02:4D:41:43:43:01"   # locally administered (bit 1 of the first byte); 4D 41 43 43 = "MACC"
+ip = "192.168.10.2"
+host_ip = "192.168.10.1"
+udp_port = 50000

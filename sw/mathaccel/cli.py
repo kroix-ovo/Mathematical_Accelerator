@@ -3,7 +3,8 @@
 I use this entry point to identify the board, inspect link errors, test memory,
 compare request latency with reported kernel time, and check the FPU on real
 hardware. Put the global --port option before the command:
-`mathaccel --port COM5 ping`, `--port COM5 fptest`, `--port sim fp div 1 3`.
+`mathaccel --port COM5 ping`, `--port udp:192.168.10.2 bench`,
+`--port COM5 fptest`, `--port sim fp div 1 3`.
 The simulator uses the same driver calls but does not measure FPGA hardware.
 """
 
@@ -134,7 +135,8 @@ def cmd_fptest(dev, args) -> None:
 def main(argv: list[str] | None = None) -> None:
     """Parse a subcommand and keep its connection open for the whole operation."""
     ap = argparse.ArgumentParser(prog="mathaccel")
-    ap.add_argument("--port", default="sim", help='serial port like COM5, or "sim" (default)')
+    ap.add_argument("--port", default="sim",
+                    help='serial port like COM5, udp:192.168.10.2 for Ethernet, "udpsim", or "sim" (default)')
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("ping")
     sub.add_parser("status")

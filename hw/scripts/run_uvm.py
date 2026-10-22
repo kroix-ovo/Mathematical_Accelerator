@@ -2,6 +2,8 @@
 
     python hw/scripts/run_uvm.py fpu --test fpu_regress_test --n 20000 --seed 7
     python hw/scripts/run_uvm.py top --test top_regress_test
+    python hw/scripts/run_uvm.py eth --test eth_regress_test --seed 4
+    python hw/scripts/run_uvm.py board
 
 Steps, all inside build/uvm_<env>/:
   1. xsc compiles the DPI-C reference model (hw/tb/uvm/dpi/fp_ref.c) into a
@@ -50,6 +52,29 @@ ENVS = {
         "default_test": "top_regress_test",
         "marker": "TOP_UVM_PASS",
     },
+    "eth": {
+        "rtl": None,
+        "tb": ["hw/tb/uvm/common/fp_common_pkg.sv", "hw/tb/uvm/top/top_if.sv", "hw/tb/common/rmii_phy_if.sv",
+               "hw/tb/uvm/top/top_uvm_pkg.sv", "hw/tb/uvm/eth/eth_uvm_pkg.sv", "hw/tb/uvm/eth/tb_eth_uvm.sv"],
+        "inc": ["hw/tb/uvm/top", "hw/tb/uvm/eth"],
+        "top": "tb_eth_uvm",
+        "default_test": "eth_regress_test",
+        "marker": "ETH_UVM_PASS",
+    },
+    # Not a UVM test: nexys_top with Xilinx's unisim models (MMCM, BUFG, ODDR)
+    # and the PHY model, run as a directed test. It borrows the SV reference
+    # models from the UVM packages, so it is built the same way.
+    "board": {
+        "rtl": None,
+        "tb": ["hw/tb/uvm/common/fp_common_pkg.sv", "hw/tb/uvm/top/top_if.sv", "hw/tb/common/rmii_phy_if.sv",
+               "hw/tb/uvm/top/top_uvm_pkg.sv", "hw/tb/uvm/eth/eth_uvm_pkg.sv", "hw/rtl/top/nexys_top.sv",
+               "hw/tb/sv/tb_nexys_eth.sv"],
+        "inc": ["hw/tb/uvm/top", "hw/tb/uvm/eth"],
+        "top": "tb_nexys_eth",
+        "unisim": True,
+        "default_test": "board",
+        "marker": "BOARD_ETH_PASS",
+    },
 }
 
 
@@ -87,8 +112,18 @@ def main() -> int:
     incs = [x for d in cfg["inc"] for x in ("-i", (ROOT / d).as_posix())]
     srcs = [(ROOT / s).as_posix() for s in [*rtl, *cfg["tb"]]]
     run([find_bin(args.vivado, "xvlog"), "-sv", "-L", "uvm", *incs, *srcs], "xvlog.log")
-    run([find_bin(args.vivado, "xelab"), "-L", "uvm", "-sv_lib", "dpi", "-timescale", "1ns/1ps",
-         "-debug", "off", cfg["top"], "-s", cfg["top"]], "xelab.log")
+    tops = [cfg["top"]]
+    libs = ["-L", "uvm"]
+    if cfg.get("unisim"):
+        # glbl.v models the device-wide reset that every unisim primitive
+        # listens to; it must be elaborated as a second top module.
+        xvlog = Path(find_bin(args.vivado, "xvlog"))
+        glbl = xvlog.parents[1] / "data" / "verilog" / "src" / "glbl.v"
+        run([str(xvlog), glbl.as_posix()], "xvlog_glbl.log")
+        tops.append("glbl")
+        libs += ["-L", "unisims_ver"]
+    run([find_bin(args.vivado, "xelab"), *libs, "-sv_lib", "dpi", "-timescale", "1ns/1ps",
+         "-debug", "off", *tops, "-s", cfg["top"]], "xelab.log")
 
     test = args.test or cfg["default_test"]
     # The Vivado tools are .bat files. cmd.exe splits arguments at "=", so
@@ -114,7 +149,13 @@ def main() -> int:
     print("\n".join(keep[-60:]))
     errs = re.search(r"UVM_ERROR\s*:\s*(\d+)", out)
     fats = re.search(r"UVM_FATAL\s*:\s*(\d+)", out)
-    ok = cfg["marker"] in out and errs and int(errs.group(1)) == 0 and fats and int(fats.group(1)) == 0
+    if cfg.get("unisim"):
+        # The directed board test has no UVM report; it prints its own marker
+        # and any $error lines.
+        print("\n".join(ln for ln in out.splitlines() if ln.startswith("  [") or "Error" in ln or "ETH_" in ln))
+        ok = cfg["marker"] in out and "Error:" not in out
+    else:
+        ok = cfg["marker"] in out and errs and int(errs.group(1)) == 0 and fats and int(fats.group(1)) == 0
     print(f"{'PASS' if ok else 'FAIL'}: {args.env}/{test} sv_seed={args.seed}")
     return 0 if ok else 1
 

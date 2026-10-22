@@ -34,6 +34,17 @@ PY_CLASSES = {"opcodes": "Op", "status": "Status", "kernels": "Kernel",
 HEADER = "AUTO-GENERATED from spec/accel.toml by tools/gen_spec.py -- do not edit."
 
 
+def mac_int(text: str) -> int:
+    """Turn "02:4D:41:43:43:01" into one 48-bit integer, first byte highest."""
+    return int(text.replace(":", ""), 16)
+
+
+def ip_int(text: str) -> int:
+    """Turn dotted IPv4 notation into one 32-bit integer, first byte highest."""
+    a, b, c, d = (int(x) for x in text.split("."))
+    return (a << 24) | (b << 16) | (c << 8) | d
+
+
 def render_sv(spec: dict) -> str:
     """Render constant declarations consumed by the synthesizable RTL modules."""
     d = spec["device"]
@@ -53,6 +64,15 @@ def render_sv(spec: dict) -> str:
     lines.append(f"  localparam int          BAUD          = {d['baud']};")
     lines.append(f"  localparam int          SCRATCH_AW    = {d['scratch_addr_bits']};")
     lines.append(f"  localparam int          MAX_PAYLOAD   = {d['max_payload']};")
+    # The Ethernet identity is written as packed hex so the RTL can compare a
+    # received byte with one slice of it, e.g. ETH_MAC[47 -: 8] is the first
+    # byte on the wire. Dotted and colon notation stay in the TOML for people.
+    e = spec["ethernet"]
+    lines += ["", "  // Ethernet/UDP transport: board MAC and IPv4 address, UDP command port.",
+              "  // The first byte on the wire is the most significant byte here."]
+    lines.append(f"  localparam logic [47:0] ETH_MAC       = 48'h{mac_int(e['mac']):012X};")
+    lines.append(f"  localparam logic [31:0] ETH_IP        = 32'h{ip_int(e['ip']):08X};")
+    lines.append(f"  localparam logic [15:0] ETH_UDP_PORT  = 16'd{e['udp_port']};")
     # A section's prefix keeps opcode, reply status, and kernel names distinct.
     descriptions = {
         "opcodes": "Request opcodes; a reply sets bit 7 of the same opcode.",
@@ -90,6 +110,15 @@ def render_py(spec: dict) -> str:
     lines += [
         "# N address bits select 2**N words, each containing 32 data bits.",
         "SCRATCH_WORDS = 1 << SCRATCH_ADDR_BITS",
+    ]
+    e = spec["ethernet"]
+    lines += [
+        "",
+        "# Ethernet/UDP transport: board identity, laptop address, command port.",
+        f"ETH_MAC = {e['mac']!r}",
+        f"ETH_IP = {e['ip']!r}",
+        f"HOST_IP = {e['host_ip']!r}",
+        f"UDP_PORT = {e['udp_port']}",
     ]
     descriptions = {
         "Op": "Request IDs; replies use these values with bit 7 set.",

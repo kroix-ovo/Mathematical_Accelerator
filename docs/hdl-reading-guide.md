@@ -21,9 +21,10 @@ expression engine, and the physics kernels in the project plan are future work.
 
 ## Follow a request
 
-1. [`nexys_top.sv`](../hw/rtl/top/nexys_top.sv) connects the 100 MHz board
-   clock, reset button, UART pins, and LEDs to `accel_core`. Simulation uses
-   `accel_core` directly.
+1. [`nexys_top.sv`](../hw/rtl/top/nexys_top.sv) makes the 100 MHz core clock
+   and the 50 MHz Ethernet clocks with an MMCM, and connects the reset
+   button, UART pins, Ethernet PHY pins and LEDs to `accel_core`. Most
+   simulations use `accel_core` directly.
 2. [`uart_rx.sv`](../hw/rtl/io/uart_rx.sv) samples serial bits and pulses
    `valid` for each complete byte.
 3. [`cobs_decoder.sv`](../hw/rtl/io/cobs_decoder.sv) restores zeros inside a
@@ -40,6 +41,20 @@ expression engine, and the physics kernels in the project plan are future work.
    [`stream_reg.sv`](../hw/rtl/io/stream_reg.sv) holds each byte between
    stages; [`cobs_encoder.sv`](../hw/rtl/io/cobs_encoder.sv) removes wire
    zeros; [`uart_tx.sv`](../hw/rtl/io/uart_tx.sv) sends the serial bits.
+
+A request over Ethernet takes a detour at the start and the end. In
+[`eth_stack.sv`](../hw/rtl/eth/eth_stack.sv),
+[`rmii_rx.sv`](../hw/rtl/eth/rmii_rx.sv) turns the PHY's two-bit RMII
+signals into bytes, and [`eth_rx.sv`](../hw/rtl/eth/eth_rx.sv) checks the
+Ethernet CRC, stores the frame and reads its ARP, IPv4, ICMP and UDP headers.
+The UDP payload is then handed, one byte per pulse, to a second
+`cobs_decoder` and `frame_rx` in `accel_core`, and from there it follows steps
+3 to 6 like a UART request. A small arbiter in `accel_core` picks which
+`frame_rx` feeds `cmd_proc` and remembers it, so the encoded reply goes to
+[`eth_tx.sv`](../hw/rtl/eth/eth_tx.sv) instead of `uart_tx`. `eth_tx` wraps
+the reply in UDP, IPv4 and Ethernet headers, and
+[`rmii_tx.sv`](../hw/rtl/eth/rmii_tx.sv) sends it to the PHY.
+[`protocol.md`](protocol.md#udp-transport) describes what the board accepts.
 
 For a concrete example, a FILL request contains a base word address, a count,
 and a value. `cmd_proc` rejects an out-of-range span, then pulses `k_start`.

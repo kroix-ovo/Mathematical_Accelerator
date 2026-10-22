@@ -14,6 +14,12 @@ package accel_pkg;
   localparam int          SCRATCH_AW    = 16;
   localparam int          MAX_PAYLOAD   = 1024;
 
+  // Ethernet/UDP transport: board MAC and IPv4 address, UDP command port.
+  // The first byte on the wire is the most significant byte here.
+  localparam logic [47:0] ETH_MAC       = 48'h024D41434301;
+  localparam logic [31:0] ETH_IP        = 32'hC0A80A02;
+  localparam logic [15:0] ETH_UDP_PORT  = 16'd50000;
+
   // Request opcodes; a reply sets bit 7 of the same opcode.
   localparam logic [7:0] OP_PING = 8'h01;
   localparam logic [7:0] OP_WRITE_MEM = 8'h02;

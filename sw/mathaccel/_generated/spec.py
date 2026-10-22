@@ -17,6 +17,12 @@ MAX_PAYLOAD = 1024
 # N address bits select 2**N words, each containing 32 data bits.
 SCRATCH_WORDS = 1 << SCRATCH_ADDR_BITS
 
+# Ethernet/UDP transport: board identity, laptop address, command port.
+ETH_MAC = '02:4D:41:43:43:01'
+ETH_IP = '192.168.10.2'
+HOST_IP = '192.168.10.1'
+UDP_PORT = 50000
+
 
 class Op(IntEnum):
     """Request IDs; replies use these values with bit 7 set."""
