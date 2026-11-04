@@ -35,14 +35,14 @@
 // changed; the 100 MHz receive logic detects that change and consumes the
 // accompanying event kind and byte under this design's related-clock timing.
 module rmii_rx (
-    input  logic       clk_rmii,     // 50 MHz, same clock the PHY uses
-    input  logic       rst,
-    input  logic [1:0] rxd,
-    input  logic       crs_dv,
-    input  logic       rx_er,
-    output logic       ev_tgl,       // flips once per event
-    output logic [1:0] ev_kind,      // EV_DATA, EV_END_OK, EV_END_ERR
-    output logic [7:0] ev_data
+    input  logic       clk_rmii,                 // Reduced media independent interface clock: 50 MHz, phase-related to the 100 MHz core clock. Rising edges sample receive pins.
+    input  logic       rst,                      // Reset: active high, sampled on the 50 MHz rising edge to clear receive assembly and event state.
+    input  logic [1:0] rxd,                      // Receive data: two reduced-media-interface bits from the physical-layer device, least-significant pair first.
+    input  logic       crs_dv,                   // Carrier sense/data valid: combined receive indication; current and previous samples qualify the received dibit.
+    input  logic       rx_er,                    // Receive error: high marks an invalid received symbol and causes an error event at frame end.
+    output logic       ev_tgl,                   // Receive event toggle: changes for each new byte or end-of-frame event; the receiver detects the transition.
+    output logic [1:0] ev_kind,                  // Receive event kind: selects a data byte, a clean frame end or a frame end with a receive error.
+    output logic [7:0] ev_data                   // Receive event data: assembled byte held beside the event toggle; meaningful for a data-byte event.
 );
   localparam logic [1:0] EV_DATA = 2'd0, EV_END_OK = 2'd1, EV_END_ERR = 2'd2;
 

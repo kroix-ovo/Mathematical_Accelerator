@@ -15,17 +15,17 @@
 module scratch_mem #(
     parameter int AW = 16
 ) (
-    input  logic          clk,
+    input  logic          clk,                   // Clock: rising edge updates this module's registers; 100 MHz in the board design.
     // port A: read / write
-    input  logic          en,
-    input  logic          we,
-    input  logic [AW-1:0] addr,
-    input  logic [31:0]   wdata,
-    output logic [31:0]   rdata,
+    input  logic          en,                    // Memory port A enable: high allows a registered read and, if write enable is high, a write on the rising edge.
+    input  logic          we,                    // Memory port A write enable: high writes the addressed word when port A enable is also high.
+    input  logic [AW-1:0] addr,                  // Memory port A address: word index used for the enabled read and optional write.
+    input  logic [31:0]   wdata,                 // Memory port A write data: 32-bit value stored at the selected word index on an enabled write.
+    output logic [31:0]   rdata,                 // Memory port A read data: registered word from the last enabled read; a same-edge write returns the old word.
     // port B: write only
-    input  logic          b_we,
-    input  logic [AW-1:0] b_addr,
-    input  logic [31:0]   b_wdata
+    input  logic          b_we,                  // Memory port B write enable: high independently stores one word on the rising clock edge.
+    input  logic [AW-1:0] b_addr,                // Memory port B address: word index for the second port's independent write.
+    input  logic [31:0]   b_wdata                // Memory port B write data: 32-bit value stored when port B write enable is high.
 );
   logic [31:0] mem [2**AW];
 

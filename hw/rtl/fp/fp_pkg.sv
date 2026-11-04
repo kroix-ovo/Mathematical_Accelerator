@@ -33,31 +33,31 @@ package fp_pkg;
 
   // ---- classification -----------------------------------------------------
   // Each helper looks only at bit fields, so it becomes a few gates.
-  function automatic logic is_zero(input logic [31:0] x);
+  function automatic logic is_zero(input logic [31:0] x); // x: floating-point input encoding tested for either signed zero.
     return x[30:0] == '0;
   endfunction
-  function automatic logic is_sub(input logic [31:0] x);     // subnormal
+  function automatic logic is_sub(input logic [31:0] x); // x: floating-point input encoding tested for a nonzero subnormal value.
     return x[30:23] == 8'h00 && x[22:0] != '0;
   endfunction
-  function automatic logic is_inf(input logic [31:0] x);
+  function automatic logic is_inf(input logic [31:0] x); // x: floating-point input encoding tested for positive or negative infinity.
     return x[30:23] == 8'hFF && x[22:0] == '0;
   endfunction
-  function automatic logic is_nan(input logic [31:0] x);
+  function automatic logic is_nan(input logic [31:0] x); // x: floating-point input encoding tested for a not-a-number value.
     return x[30:23] == 8'hFF && x[22:0] != '0;
   endfunction
-  function automatic logic is_snan(input logic [31:0] x);
+  function automatic logic is_snan(input logic [31:0] x); // x: floating-point input encoding tested for a signaling not-a-number value.
     return is_nan(x) && !x[22];
   endfunction
 
   // Significand with the hidden bit made explicit (24 bits). A subnormal has
   // no hidden 1, so bit 23 is just "exponent field is nonzero".
-  function automatic logic [23:0] mant24(input logic [31:0] x);
+  function automatic logic [23:0] mant24(input logic [31:0] x); // x: floating-point input encoding whose significand is returned with its implicit leading bit.
     return {x[30:23] != 8'h00, x[22:0]};
   endfunction
 
   // Exponent to use in arithmetic. A subnormal behaves as if its exponent
   // were 1 (it shares 2^-126 with the smallest normal numbers).
-  function automatic logic signed [EW-1:0] exp_eff(input logic [31:0] x);
+  function automatic logic signed [EW-1:0] exp_eff(input logic [31:0] x); // x: floating-point input encoding whose effective biased exponent is returned; subnormals use one.
     return (x[30:23] == 8'h00) ? EW'(1) : EW'({1'b0, x[30:23]});
   endfunction
 
@@ -65,19 +65,19 @@ package fp_pkg;
   // Counts zeros above the first 1. Written as a loop over bit positions; the
   // synthesis tool turns it into a priority encoder (no loop exists in the
   // hardware). Returns N when the input is all zeros.
-  function automatic logic [5:0] lzc24(input logic [23:0] x);
+  function automatic logic [5:0] lzc24(input logic [23:0] x); // x: 24-bit input value whose zeros before the leading one are counted.
     logic [5:0] n;
     n = 6'd24;
     for (int i = 0; i < 24; i++) if (x[i]) n = 6'(23 - i);
     return n;
   endfunction
-  function automatic logic [5:0] lzc28(input logic [27:0] x);
+  function automatic logic [5:0] lzc28(input logic [27:0] x); // x: 28-bit input value whose zeros before the leading one are counted.
     logic [5:0] n;
     n = 6'd28;
     for (int i = 0; i < 28; i++) if (x[i]) n = 6'(27 - i);
     return n;
   endfunction
-  function automatic logic [5:0] lzc32(input logic [31:0] x);
+  function automatic logic [5:0] lzc32(input logic [31:0] x); // x: 32-bit input value whose zeros before the leading one are counted.
     logic [5:0] n;
     n = 6'd32;
     for (int i = 0; i < 32; i++) if (x[i]) n = 6'(31 - i);
@@ -88,7 +88,7 @@ package fp_pkg;
   // Shifting a value right throws away low bits. Rounding only needs to know
   // whether anything nonzero was thrown away, so those bits are ORed into
   // bit 0 (the "sticky" bit). A shift of 26 or more leaves only the sticky.
-  function automatic logic [25:0] shr_sticky26(input logic [25:0] x, input logic [EW-1:0] sh);
+  function automatic logic [25:0] shr_sticky26(input logic [25:0] x, input logic [EW-1:0] sh); // x: significand with rounding bits; sh: right-shift amount, folding discarded ones into the sticky bit.
     logic [25:0] out;
     logic        lost;
     if (sh >= 26) begin
@@ -131,9 +131,9 @@ package fp_pkg;
   //   [25:0]   s     significand, already shifted if subnormal
   typedef logic [40:0] round_mid_t;
 
-  function automatic round_mid_t round_pre(input logic sign,
-                                           input logic signed [EW-1:0] exp,
-                                           input logic [25:0] sig);
+  function automatic round_mid_t round_pre(input logic sign, // sign: sign bit retained for the final result; high means negative.
+                                           input logic signed [EW-1:0] exp, // Exponent: signed biased exponent before final rounding and subnormal adjustment.
+                                           input logic [25:0] sig); // Significand: leading one, 23 fraction bits, one guard bit and one sticky bit.
     logic        sub, tiny;
     logic [25:0] s;
     sub  = (exp < 1);
@@ -153,7 +153,7 @@ package fp_pkg;
     return {sign, sub, tiny, exp, s};
   endfunction
 
-  function automatic logic [36:0] round_post(input round_mid_t m);
+  function automatic logic [36:0] round_post(input round_mid_t m); // m: intermediate rounding bundle containing sign, exponent, significand and rounding/tininess information.
     logic                 sign, sub, tiny;
     logic [25:0]          s;
     logic [24:0]          q;        // 24-bit significand + carry-out bit
@@ -182,9 +182,9 @@ package fp_pkg;
   endfunction
 
   // Both halves in one call, for code that is not timing critical.
-  function automatic logic [36:0] round_pack(input logic sign,
-                                             input logic signed [EW-1:0] exp,
-                                             input logic [25:0] sig);
+  function automatic logic [36:0] round_pack(input logic sign, // sign: sign bit retained for the final result; high means negative.
+                                             input logic signed [EW-1:0] exp, // Exponent: signed biased exponent before final rounding and subnormal adjustment.
+                                             input logic [25:0] sig); // Significand: leading one, 23 fraction bits, one guard bit and one sticky bit.
     return round_post(round_pre(sign, exp, sig));
   endfunction
 

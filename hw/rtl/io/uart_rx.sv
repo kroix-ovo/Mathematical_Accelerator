@@ -8,11 +8,11 @@
 module uart_rx #(
     parameter int CLKS_PER_BIT = 50
 ) (
-    input  logic       clk,
-    input  logic       rst,
-    input  logic       rx,
-    output logic       valid,
-    output logic [7:0] data
+    input  logic       clk,                      // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic       rst,                      // Reset: active high, sampled on the clock edge to clear control state and pending validity.
+    input  logic       rx,                       // Universal asynchronous receiver/transmitter receive input: asynchronous host serial line, idle high.
+    output logic       valid,                    // Received-byte valid: one-clock pulse after eight data bits and a correct high stop bit are sampled.
+    output logic [7:0] data                      // Received-byte data: reconstructed eight-bit character, meaningful when received-byte valid is high.
 );
   localparam int CW = $clog2(CLKS_PER_BIT + 1);
 

@@ -8,14 +8,14 @@
 // code byte arrives, its clock can emit a pending zero; subsequent clocks
 // emit the block's data. This is why an implied zero needs no extra cycle.
 module cobs_decoder (
-    input  logic       clk,
-    input  logic       rst,
-    input  logic       in_valid,
-    input  logic [7:0] in_data,
-    output logic       out_valid,
-    output logic [7:0] out_data,
-    output logic       frame_end,  // pulse on the delimiter
-    output logic       frame_err   // qualifies frame_end: block overran the frame
+    input  logic       clk,                      // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic       rst,                      // Reset: active high, sampled on the clock edge to clear control state and pending validity.
+    input  logic       in_valid,                 // Input valid: one-clock pulse presenting a new Consistent Overhead Byte Stuffing wire byte; there is no backpressure.
+    input  logic [7:0] in_data,                  // Input data: encoded wire byte; a zero terminates the current command frame.
+    output logic       out_valid,                // Output valid: one-clock pulse qualifying a decoded packet byte, including any restored zero.
+    output logic [7:0] out_data,                 // Output data: decoded packet byte that the receive buffer must accept when output valid is high.
+    output logic       frame_end,                // Frame end: one-clock pulse on a received zero delimiter; the delimiter itself is not payload data.
+    output logic       frame_err                 // Frame error: qualifies frame end when the encoded block ended before all of its declared bytes arrived.
 );
   logic       expect_code;   // next byte is a code byte
   logic [7:0] remaining;     // data bytes left in the current block

@@ -8,12 +8,12 @@
 module uart_tx #(
     parameter int CLKS_PER_BIT = 50
 ) (
-    input  logic       clk,
-    input  logic       rst,
-    input  logic       valid,
-    output logic       ready,
-    input  logic [7:0] data,
-    output logic       tx
+    input  logic       clk,                      // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic       rst,                      // Reset: active high, sampled on the clock edge to clear control state and pending validity.
+    input  logic       valid,                    // Transmit-byte valid: caller offers a character; accepted on a rising edge only while ready is high.
+    output logic       ready,                    // Transmit-byte ready: high when idle and able to capture the next character.
+    input  logic [7:0] data,                     // Transmit-byte data: eight-bit character captured on the valid/ready handshake and sent least-significant bit first.
+    output logic       tx                        // Universal asynchronous receiver/transmitter transmit output: serial start, data and stop bits, idle high.
 );
   localparam int CW = $clog2(CLKS_PER_BIT + 1);
 

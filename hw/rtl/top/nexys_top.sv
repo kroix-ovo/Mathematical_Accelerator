@@ -35,20 +35,20 @@ module nexys_top #(
     // shortens it so the test does not spend a millisecond waiting.
     parameter int PHY_RST_BITS = 17
 ) (
-    input  logic        CLK100MHZ,
-    input  logic        CPU_RESETN,
-    input  logic        UART_TXD_IN,   // from the FT2232 (host -> FPGA)
-    output logic        UART_RXD_OUT,  // to the FT2232   (FPGA -> host)
+    input  logic        CLK100MHZ,               // 100 megahertz clock input: board oscillator feeding the clock manager that generates core and Ethernet clocks.
+    input  logic        CPU_RESETN,              // Central processing unit reset, active low: board pushbutton asserts core reset; it does not restart the Ethernet physical layer.
+    input  logic        UART_TXD_IN,             // Universal asynchronous receiver/transmitter transmitted-data input: USB bridge's transmit line carrying host commands into the FPGA.
+    output logic        UART_RXD_OUT,            // Universal asynchronous receiver/transmitter received-data output: reply line from the FPGA into the USB bridge's receiver.
     // LAN8720A Ethernet PHY (RMII)
-    output logic        ETH_REFCLK,
-    output logic        ETH_RSTN,
-    output logic        ETH_MDC,
-    input  logic [1:0]  ETH_RXD,
-    input  logic        ETH_CRSDV,
-    input  logic        ETH_RXERR,
-    output logic [1:0]  ETH_TXD,
-    output logic        ETH_TXEN,
-    output logic [15:0] LED
+    output logic        ETH_REFCLK,              // Ethernet reference clock: phase-shifted 50 MHz clock forwarded to the LAN8720A physical-layer device.
+    output logic        ETH_RSTN,                // Ethernet reset, active low: holds the physical-layer device in reset until its startup clock interval has elapsed.
+    output logic        ETH_MDC,                 // Ethernet management data clock: held low because this design uses the physical layer's default configuration without management transactions.
+    input  logic [1:0]  ETH_RXD,                 // Ethernet receive data: two-bit reduced-media-interface input from the physical-layer device.
+    input  logic        ETH_CRSDV,               // Ethernet carrier sense/data valid: combined receive-activity indication from the physical-layer device.
+    input  logic        ETH_RXERR,               // Ethernet receive error: physical-layer input reporting invalid symbols in a received frame.
+    output logic [1:0]  ETH_TXD,                 // Ethernet transmit data: two-bit reduced-media-interface output toward the physical-layer device.
+    output logic        ETH_TXEN,                // Ethernet transmit enable: high while the physical-layer device should transmit the accompanying two data bits.
+    output logic [15:0] LED                      // Light-emitting diode outputs: sixteen board indicators for heartbeat, command/link activity, errors and Ethernet debug state.
 );
   localparam real REFCLK_PHASE = 321.75;   // a multiple of the MMCM's 2.25 degree step here
 

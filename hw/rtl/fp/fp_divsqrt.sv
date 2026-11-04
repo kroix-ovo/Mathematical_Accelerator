@@ -30,19 +30,19 @@ module fp_divsqrt
 #(
     parameter int TW = 8
 ) (
-    input  logic          clk,
-    input  logic          rst,
-    input  logic          in_valid,
-    output logic          in_ready,
-    input  logic          in_sqrt,   // 1: sqrt(a), 0: a / b
-    input  logic [31:0]   in_a,
-    input  logic [31:0]   in_b,
-    input  logic [TW-1:0] in_tag,
-    output logic          out_valid,
-    input  logic          out_ack,
-    output logic [31:0]   out_result,
-    output logic [4:0]    out_flags,
-    output logic [TW-1:0] out_tag
+    input  logic          clk,                   // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic          rst,                   // Reset: active high, sampled on the clock edge to clear control state and pending validity.
+    input  logic          in_valid,              // Input valid: operation is accepted only when input ready is also high on the rising edge.
+    output logic          in_ready,              // Input ready: high while idle, allowing a new divide or square-root request to be captured.
+    input  logic          in_sqrt,               // Input square-root select: high computes the square root of A; low computes A divided by B.
+    input  logic [31:0]   in_a,                  // Input operand A: floating-point dividend for division, or radicand for square root.
+    input  logic [31:0]   in_b,                  // Input operand B: floating-point divisor; ignored when square root is selected.
+    input  logic [TW-1:0] in_tag,                // Input request tag: identifier carried beside the operands so the caller can match the result.
+    output logic          out_valid,             // Output valid: completed result, flags and tag remain available until output acknowledgement.
+    input  logic          out_ack,               // Output acknowledgement: high accepts the waiting result on the rising edge and frees the unit.
+    output logic [31:0]   out_result,            // Output result: 32-bit encoded answer; meaningful only while output valid is high.
+    output logic [4:0]    out_flags,             // Output exception flags: bits 4..0 mean invalid, divide by zero, overflow, underflow and inexact.
+    output logic [TW-1:0] out_tag                // Output request tag: unchanged identifier of the operation that produced this result.
 );
   localparam int ITERS = 27;
 

@@ -23,17 +23,17 @@ module fp_misc
 #(
     parameter int TW = 8
 ) (
-    input  logic          clk,
-    input  logic          rst,
-    input  logic          in_valid,
-    input  logic [4:0]    in_op,      // ops this unit does not know give NaN + NV
-    input  logic [31:0]   in_a,
-    input  logic [31:0]   in_b,
-    input  logic [TW-1:0] in_tag,
-    output logic          out_valid,
-    output logic [31:0]   out_result,
-    output logic [4:0]    out_flags,
-    output logic [TW-1:0] out_tag
+    input  logic          clk,                   // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic          rst,                   // Reset: active high, sampled on the clock edge to clear control state and pending validity.
+    input  logic          in_valid,              // Input valid: a high level presents a new operation for acceptance on the rising clock edge.
+    input  logic [4:0]    in_op,                 // Input operation code: selects conversion, minimum/maximum or comparison; unsupported codes return invalid NaN.
+    input  logic [31:0]   in_a,                  // Input operand A: floating-point bits, or a signed 32-bit integer for integer-to-float conversion.
+    input  logic [31:0]   in_b,                  // Input operand B: floating-point comparison/minimum/maximum operand; ignored for conversions.
+    input  logic [TW-1:0] in_tag,                // Input request tag: identifier carried beside the operands so the caller can match the result.
+    output logic          out_valid,             // Output valid: result, exception flags and tag describe a completed operation on this clock.
+    output logic [31:0]   out_result,            // Output result: floating-point bits, signed integer bits for float-to-integer, or integer 0/1 for comparisons.
+    output logic [4:0]    out_flags,             // Output exception flags: bits 4..0 mean invalid, divide by zero, overflow, underflow and inexact.
+    output logic [TW-1:0] out_tag                // Output request tag: unchanged identifier of the operation that produced this result.
 );
   // ---------------------------------------------------------------- stage 1
   // Everything here only looks at bit fields or does one shift/compare.

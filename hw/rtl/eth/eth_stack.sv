@@ -27,34 +27,34 @@
 module eth_stack
   import accel_pkg::*;
 (
-    input  logic        clk,
-    input  logic        clk_rmii,
-    input  logic        rst,
+    input  logic        clk,                     // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic        clk_rmii,                // Reduced media independent interface clock: 50 MHz, phase-related to the 100 MHz core clock.
+    input  logic        rst,                     // Reset: active high, sampled on the clock edge to clear control state and pending validity.
     // RMII pins
-    input  logic [1:0]  rmii_rxd,
-    input  logic        rmii_crs_dv,
-    input  logic        rmii_rx_er,
-    output logic [1:0]  rmii_txd,
-    output logic        rmii_tx_en,
+    input  logic [1:0]  rmii_rxd,                // Reduced media independent interface receive data: two bits from the Ethernet physical-layer device per clock.
+    input  logic        rmii_crs_dv,             // Reduced media independent interface carrier sense/data valid: combined receive activity and data-valid indication.
+    input  logic        rmii_rx_er,              // Reduced media independent interface receive error: physical-layer device reports a bad received symbol.
+    output logic [1:0]  rmii_txd,                // Reduced media independent interface transmit data: two bits driven toward the Ethernet physical-layer device.
+    output logic        rmii_tx_en,              // Reduced media independent interface transmit enable: high while the two transmit data bits are part of a frame.
     // command bytes toward the core
-    output logic        out_valid,
-    output logic [7:0]  out_data,
-    input  logic        core_idle,     // cmd_proc idle and no reply still on its way out
+    output logic        out_valid,               // Output command-byte valid: one-clock pulse to the core decoder; that decoder must accept the byte immediately.
+    output logic [7:0]  out_data,                // Output command-byte data: stored datagram payload byte, with a zero delimiter added at the end if needed.
+    input  logic        core_idle,               // Core idle: high when command execution and reply encoding are clear, permitting the next command frame to replay.
     // reply bytes from the core
-    input  logic        in_valid,
-    output logic        in_ready,
-    input  logic [7:0]  in_data,
+    input  logic        in_valid,                // Input reply-byte valid: core encoder offers a byte; acceptance requires input ready on the rising edge.
+    output logic        in_ready,                // Input reply-byte ready: high while the transmit reply buffer accepts the core's encoded bytes.
+    input  logic [7:0]  in_data,                 // Input reply-byte data: encoded command response; its final zero closes one outgoing reply datagram.
     // status for LEDs and debug
-    output logic [15:0] rx_errors,
-    output logic [15:0] rx_drops,
-    output logic        rx_frame,      // pulse per received frame
-    output logic        tx_frame,      // pulse per sent frame
+    output logic [15:0] rx_errors,               // Receive error count: wrapping 16-bit total of physical errors, bad frame checksums or undersized frames.
+    output logic [15:0] rx_drops,                // Receive drop count: wrapping 16-bit total of oversized frames or useful frames discarded for lack of storage.
+    output logic        rx_frame,                // Receive frame event: one-clock pulse when an incoming Ethernet frame ends, even if later rejected.
+    output logic        tx_frame,                // Transmit frame event: one-clock pulse after the final byte of an Ethernet reply is handed to the serializer.
     // Debug view for LEDs. Bits 2:0 are live: replay engine inside a
     // datagram, reply buffer occupied, transmitter busy. Bits 5:3 latch
     // (until reset) when the same three conditions last longer than 10 ms,
     // which never happens when things work: a reply normally leaves within
     // about 0.1 ms.
-    output logic [5:0]  dbg
+    output logic [5:0]  dbg                      // Debug status: bits 2..0 show replay/reply-buffer/transmitter activity; bits 5..3 latch those activities exceeding 10 ms.
 );
   localparam logic [1:0] K_UDP = 2'd2, K_ICMP = 2'd3;
 

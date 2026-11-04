@@ -43,37 +43,37 @@ module eth_rx
   import accel_pkg::*;
   import util_pkg::*;
 (
-    input  logic        clk,
-    input  logic        rst,
+    input  logic        clk,                     // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic        rst,                     // Reset: active high, sampled on the clock edge to clear control state and pending validity.
     // events from rmii_rx (50 MHz domain, edge-aligned with clk)
-    input  logic        ev_tgl,
-    input  logic [1:0]  ev_kind,
-    input  logic [7:0]  ev_data,
+    input  logic        ev_tgl,                  // Receive event toggle: changes for each new byte or end-of-frame event; the receiver detects the transition.
+    input  logic [1:0]  ev_kind,                 // Receive event kind: selects a data byte, a clean frame end or a frame end with a receive error.
+    input  logic [7:0]  ev_data,                 // Receive event data: assembled byte held beside the event toggle; meaningful for a data-byte event.
     // slot state: 0 free, 1 being written, 2 UDP datagram, 3 ping request
-    output logic [1:0]  slot_kind [2],
-    output logic [47:0] slot_mac  [2],   // Ethernet source of the request
-    output logic [31:0] slot_ip   [2],   // IPv4 source of the request
-    output logic [15:0] slot_port [2],   // UDP source port
-    output logic [15:0] slot_len  [2],   // UDP payload bytes, or IPv4 total length for a ping
-    output logic [15:0] slot_csum [2],   // checksum to put in the echo reply
-    output logic        first_udp,       // the older of two waiting UDP slots
-    input  logic        udp_free,        // pulse: release slot first_udp
-    input  logic        icmp_free,       // pulse: release the ping slot
+    output logic [1:0]  slot_kind [2],           // Stored-frame slot kind: per-slot state, 0 free, 1 receiving, 2 User Datagram Protocol, 3 echo request.
+    output logic [47:0] slot_mac  [2],           // Stored-frame source media-access-control address: requester's Ethernet address retained separately for each slot.
+    output logic [31:0] slot_ip   [2],           // Stored-frame source Internet Protocol version 4 address: requester's address retained for each reply.
+    output logic [15:0] slot_port [2],           // Stored-frame source User Datagram Protocol port: requester's return port retained for each datagram slot.
+    output logic [15:0] slot_len  [2],           // Stored-frame length: datagram payload bytes, or the complete Internet Protocol packet length for an echo request.
+    output logic [15:0] slot_csum [2],           // Stored-frame echo-reply checksum: precomputed Internet Control Message Protocol checksum retained for each slot.
+    output logic        first_udp,               // First User Datagram Protocol slot: index of the older queued command datagram to replay next.
+    input  logic        udp_free,                // User Datagram Protocol slot release: one-clock pulse freeing the slot selected by first_udp.
+    input  logic        icmp_free,               // Internet Control Message Protocol slot release: one-clock pulse freeing the retained ping-request slot.
     // stored frames, two synchronous read ports: address {slot, byte}
-    input  logic [11:0] rd_addr_a,
-    output logic [7:0]  rd_data_a,
-    input  logic [11:0] rd_addr_b,
-    output logic [7:0]  rd_data_b,
+    input  logic [11:0] rd_addr_a,               // Frame-memory read address A: twelve-bit byte address packing the slot index above its eleven-bit byte offset.
+    output logic [7:0]  rd_data_a,               // Frame-memory read data A: registered byte used by the command-datagram replay engine.
+    input  logic [11:0] rd_addr_b,               // Frame-memory read address B: independent byte address selecting stored echo-request data for the transmitter.
+    output logic [7:0]  rd_data_b,               // Frame-memory read data B: registered byte returned to the echo-reply transmitter.
     // ARP reply job
-    output logic        arp_pending,
-    output logic [47:0] arp_eth_dst,     // Ethernet source of the request
-    output logic [47:0] arp_sha,         // sender MAC inside the ARP body
-    output logic [31:0] arp_spa,         // sender IP inside the ARP body
-    input  logic        arp_done,
+    output logic        arp_pending,             // Address Resolution Protocol reply pending: high while a saved address-query request still needs a reply.
+    output logic [47:0] arp_eth_dst,             // Address Resolution Protocol Ethernet destination: requester's source media-access-control address for the reply header.
+    output logic [47:0] arp_sha,                 // Address Resolution Protocol sender hardware address: requester's media-access-control address copied into the reply target field.
+    output logic [31:0] arp_spa,                 // Address Resolution Protocol sender protocol address: requester's Internet Protocol version 4 address for the reply target field.
+    input  logic        arp_done,                // Address Resolution Protocol reply done: completion pulse that releases the saved address-query job.
     // statistics
-    output logic [15:0] rx_errors,
-    output logic [15:0] rx_drops,
-    output logic        rx_frame         // pulse at the end of every frame
+    output logic [15:0] rx_errors,               // Receive error count: wrapping 16-bit total of physical errors, bad frame checksums or undersized frames.
+    output logic [15:0] rx_drops,                // Receive drop count: wrapping 16-bit total of oversized frames or useful frames discarded for lack of storage.
+    output logic        rx_frame                 // Receive frame event: one-clock pulse when an incoming Ethernet frame ends, even if later rejected.
 );
   localparam logic [1:0] EV_DATA = 2'd0, EV_END_OK = 2'd1, EV_END_ERR = 2'd2;
   localparam logic [1:0] K_FREE = 2'd0, K_WRITE = 2'd1, K_UDP = 2'd2, K_ICMP = 2'd3;
@@ -123,14 +123,14 @@ module eth_rx
   logic [7:0]  icmp_hi;
 
   // The 48-bit MAC and 32-bit IP constants, one byte per wire position.
-  function automatic logic [7:0] mac_byte(input logic [11:0] i);
+  function automatic logic [7:0] mac_byte(input logic [11:0] i); // i: frame byte index selecting a byte of the local media-access-control address.
     return ETH_MAC[47 - 8*i[2:0] -: 8];
   endfunction
-  function automatic logic [7:0] ip_byte(input logic [11:0] i);
+  function automatic logic [7:0] ip_byte(input logic [11:0] i); // i: address byte index, 0..3, selecting the local Internet Protocol version 4 address from most-significant byte first.
     return ETH_IP[31 - 8*i[1:0] -: 8];
   endfunction
   // Bytes 14..21 of an ARP request: 0001 0800 06 04 0001.
-  function automatic logic [7:0] arp_fixed(input logic [11:0] i);
+  function automatic logic [7:0] arp_fixed(input logic [11:0] i); // i: frame byte index selecting the expected Address Resolution Protocol header constant.
     case (i)
       12'd15, 12'd21: return 8'h01;
       12'd16:         return 8'h08;

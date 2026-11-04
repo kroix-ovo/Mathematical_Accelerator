@@ -72,18 +72,18 @@ module fpu
     // the range of the 8-bit arrival time stamps.
     parameter int AGE_MAX = 32
 ) (
-    input  logic          clk,
-    input  logic          rst,
-    input  logic          req_valid,
-    output logic          req_ready,
-    input  logic [4:0]    req_op,
-    input  logic [31:0]   req_a,
-    input  logic [31:0]   req_b,
-    input  logic [TW-1:0] req_tag,
-    output logic          rsp_valid,
-    output logic [31:0]   rsp_result,
-    output logic [4:0]    rsp_flags,
-    output logic [TW-1:0] rsp_tag
+    input  logic          clk,                   // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic          rst,                   // Reset: active high, sampled on the clock edge to clear control state and pending validity.
+    input  logic          req_valid,             // Request valid: caller holds operation, operands and tag steady until request ready accepts them.
+    output logic          req_ready,             // Request ready: high permits acceptance on the rising edge; low asks the caller to retain the request.
+    input  logic [4:0]    req_op,                // Request operation code: five-bit selector for arithmetic, conversion, comparison or a phase 3 function.
+    input  logic [31:0]   req_a,                 // Request operand A: 32-bit encoded first operand; interpreted as a signed integer only for integer-to-float.
+    input  logic [31:0]   req_b,                 // Request operand B: 32-bit encoded second operand; ignored by unary operations.
+    input  logic [TW-1:0] req_tag,               // Request tag: caller-provided identifier returned with the result, including when operations finish out of order.
+    output logic          rsp_valid,             // Response valid: result, flags and tag are available now; the caller must accept them without a ready signal.
+    output logic [31:0]   rsp_result,            // Response result: floating-point answer, converted signed integer, or integer 0/1 for a comparison.
+    output logic [4:0]    rsp_flags,             // Response exception flags: bits 4..0 mean invalid, divide by zero, overflow, underflow and inexact.
+    output logic [TW-1:0] rsp_tag                // Response tag: request identifier used to associate this answer with the original operands.
 );
   localparam int FA = $clog2(FD);      // FIFO pointer width
 

@@ -23,22 +23,22 @@
 // The three timing values are variables rather than parameters, because a
 // virtual interface handle must have exactly the parameters of the instance
 // it points to; a testbench changes them with e.g. `phy.tx_hold = 0ns;`.
-interface rmii_phy_if (input logic ref_clk);
-  realtime tco      = 6ns;      // RX output delay after ref_clk
-  realtime tx_setup = 4ns;      // LAN8720A datasheet, REF_CLK-in mode
-  realtime tx_hold  = 1.5ns;
+interface rmii_phy_if (input logic ref_clk); // Reference clock input: 50 MHz timing reference for the simulated Ethernet physical-layer device.
+  realtime tco      = 6ns;   // Clock-to-output delay: time after a rising reference edge before the model changes receive pins.
+  realtime tx_setup = 4ns;   // Transmit setup time: interval that outgoing data/enable must be stable before the sampling edge.
+  realtime tx_hold  = 1.5ns; // Transmit hold time: interval that outgoing data/enable must remain stable after the sampling edge.
 
-  logic [1:0] rxd    = 2'b00;
-  logic       crs_dv = 1'b0;
-  logic       rx_er  = 1'b0;
-  logic [1:0] txd;
-  logic       tx_en;
+  logic [1:0] rxd    = 2'b00; // Receive data: model drives two reduced-media-interface bits toward the accelerator.
+  logic       crs_dv = 1'b0;  // Carrier sense/data valid: model drives the physical layer's combined receive indication.
+  logic       rx_er  = 1'b0;  // Receive error: model raises this to inject a bad received symbol into a frame.
+  logic [1:0] txd;           // Transmit data: model samples two outgoing reduced-media-interface bits from the accelerator.
+  logic       tx_en;         // Transmit enable: model observes high while the accelerator is sending a frame's symbols.
 
-  int unsigned tx_timing_errors = 0;
-  int unsigned frames_sent = 0;
+  int unsigned tx_timing_errors = 0; // Transmit timing error count: number of observed setup/hold violations at the physical-layer pins.
+  int unsigned frames_sent = 0;      // Sent-frame count: number of receive-direction frames injected by the physical-layer model.
 
   // One dibit, tco after the next rising edge.
-  task automatic put(input logic crs, input logic [1:0] d, input logic er = 1'b0);
+  task automatic put(input logic crs, input logic [1:0] d, input logic er = 1'b0); // crs: carrier-sense/data-valid level; d: two receive data bits; er: receive-error level to inject.
     @(posedge ref_clk);
     #(tco);
     crs_dv = crs;
@@ -47,8 +47,12 @@ interface rmii_phy_if (input logic ref_clk);
   endtask
 
   // Send one frame (destination MAC .. FCS). rx_er_at < 0 means no error.
-  task automatic send_frame(input byte unsigned data[$], input int lead_in = 0, input int pre_dibits = 28,
-                            input int toggle_nibbles = 0, input int rx_er_at = -1, input int gap = 48);
+  task automatic send_frame(input byte unsigned data[$], // Frame data: byte queue from destination address through frame check sequence, excluding preamble.
+                            input int lead_in = 0, // Carrier lead-in: number of zero dibits presented before the preamble while carrier sense is high.
+                            input int pre_dibits = 28, // Preamble dibit count: number of 01 bit pairs before the start-of-frame delimiter.
+                            input int toggle_nibbles = 0, // Carrier-toggle nibble count: final four-bit groups whose data-valid indication alternates.
+                            input int rx_er_at = -1, // Receive-error position: data dibit index where the error input is high; negative disables injection.
+                            input int gap = 48); // Inter-frame gap: idle reference-clock cycles after the frame, with a minimum of 48.
     int n = 4 * data.size();
     int toggle_from = n - 2 * toggle_nibbles;
     repeat (lead_in) put(1'b1, 2'b00);
@@ -66,7 +70,8 @@ interface rmii_phy_if (input logic ref_clk);
 
   // Wait for the next transmitted frame and return its bytes after the SFD.
   // ok is 0 if the preamble was wrong or the frame was not whole bytes.
-  task automatic recv_frame(output byte unsigned frame[$], output bit ok);
+  task automatic recv_frame(output byte unsigned frame[$], // Received frame bytes: observed outgoing frame after the start delimiter, including its frame check sequence.
+                            output bit ok); // Frame shape valid: high when preamble/delimiter are correct and the data has a whole number of bytes.
     logic [1:0] dib[$];
     byte unsigned raw[$];
     frame.delete();

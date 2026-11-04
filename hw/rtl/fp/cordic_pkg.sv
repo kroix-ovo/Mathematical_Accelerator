@@ -66,7 +66,7 @@ package cordic_pkg;
   //   atanh_l  atanh(2^-hshift(i)) in units of ln2 (exp)
   //   atanh_n  atanh(2^-hshift(i)) in natural units (ln)
   // All have CZ fraction bits and are rounded to nearest.
-  function automatic logic [ZW-1:0] atan_q(input int i);
+  function automatic logic [ZW-1:0] atan_q(input int i); // Iteration index: selects this generated stage's fixed angle or hyperbolic shift amount.
     case (i)
        0: return 51'h0080000000000;
        1: return 51'h004B90147677D;
@@ -114,7 +114,7 @@ package cordic_pkg;
     endcase
   endfunction
 
-  function automatic logic [ZW-1:0] atan_r(input int i);
+  function automatic logic [ZW-1:0] atan_r(input int i); // Iteration index: selects this generated stage's fixed angle or hyperbolic shift amount.
     case (i)
        0: return 51'h00C90FDAA2217;
        1: return 51'h0076B19C1586F;
@@ -162,7 +162,7 @@ package cordic_pkg;
     endcase
   endfunction
 
-  function automatic logic [ZW-1:0] atanh_l(input int i);
+  function automatic logic [ZW-1:0] atanh_l(input int i); // Iteration index: selects this generated stage's fixed angle or hyperbolic shift amount.
     case (i)
        0: return 51'h00CAE00D1CFDF;
        1: return 51'h005E54E37A9C5;
@@ -210,7 +210,7 @@ package cordic_pkg;
     endcase
   endfunction
 
-  function automatic logic [ZW-1:0] atanh_n(input int i);
+  function automatic logic [ZW-1:0] atanh_n(input int i); // Iteration index: selects this generated stage's fixed angle or hyperbolic shift amount.
     case (i)
        0: return 51'h008C9F53D5682;
        1: return 51'h004162BBEA045;
@@ -258,7 +258,7 @@ package cordic_pkg;
     endcase
   endfunction
 
-  function automatic int hshift(input int i);
+  function automatic int hshift(input int i); // Iteration index: selects this generated stage's fixed angle or hyperbolic shift amount.
     case (i)
        0: return 1;
        1: return 2;
@@ -312,7 +312,7 @@ package cordic_pkg;
   // matter. Windows for small exponents start before b_1 and so begin with
   // zeros. Only exponents TINY_E .. 254 reach the reduction. Synthesis
   // turns this case statement into a ROM of LUTs addressed by e.
-  function automatic logic [PH_L-1:0] ph_window(input logic [7:0] e);
+  function automatic logic [PH_L-1:0] ph_window(input logic [7:0] e); // Biased exponent: selects the 2/pi bit window used to reduce the input angle.
     case (e)
       8'd115: return 96'h000000000517CC1B727220A9;
       8'd116: return 96'h000000000A2F9836E4E44152;
@@ -461,7 +461,7 @@ package cordic_pkg;
   // exp's window ROM, used by the same multiplier. For biased exponent e the
   // entry is 2^(e-64)/ln2, rounded, so that significand times entry is
   // |x|/ln2 with 86 fraction bits (and stays below 2^94, no wrap).
-  function automatic logic [PH_L-1:0] exp_window(input logic [7:0] e);
+  function automatic logic [PH_L-1:0] exp_window(input logic [7:0] e); // Biased exponent: aligns the 1/ln2 constant for exponential argument reduction.
     case (e)
       8'd102: return 96'h000000000000005C551D94AE;
       8'd103: return 96'h00000000000000B8AA3B295C;

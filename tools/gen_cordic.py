@@ -119,7 +119,8 @@ def render() -> str:
 
     def table(name: str, values, width: int, ret: str) -> None:
         """Emit a constant-index function so each unrolled CORDIC stage gets its own fixed value."""
-        lines.append(f"  function automatic {ret} {name}(input int i);")
+        lines.append(f"  function automatic {ret} {name}(input int i);"
+                     " // Iteration index: selects this generated stage's fixed angle or hyperbolic shift amount.")
         lines.append("    case (i)")
         for i, v in enumerate(values):
             lines.append(f"      {i:2d}: return {hexw(v, width) if width else v};")
@@ -137,7 +138,8 @@ def render() -> str:
         "  // matter. Windows for small exponents start before b_1 and so begin with",
         "  // zeros. Only exponents TINY_E .. 254 reach the reduction. Synthesis",
         "  // turns this case statement into a ROM of LUTs addressed by e.",
-        "  function automatic logic [PH_L-1:0] ph_window(input logic [7:0] e);",
+        "  function automatic logic [PH_L-1:0] ph_window(input logic [7:0] e);"
+        " // Biased exponent: selects the 2/pi bit window used to reduce the input angle.",
         "    case (e)",
     ]
     for i, w in enumerate(rom):
@@ -150,7 +152,8 @@ def render() -> str:
         "  // exp's window ROM, used by the same multiplier. For biased exponent e the",
         "  // entry is 2^(e-64)/ln2, rounded, so that significand times entry is",
         "  // |x|/ln2 with 86 fraction bits (and stays below 2^94, no wrap).",
-        "  function automatic logic [PH_L-1:0] exp_window(input logic [7:0] e);",
+        "  function automatic logic [PH_L-1:0] exp_window(input logic [7:0] e);"
+        " // Biased exponent: aligns the 1/ln2 constant for exponential argument reduction.",
         "    case (e)",
     ]
     for i, w in enumerate(erom):

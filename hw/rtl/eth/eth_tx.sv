@@ -28,39 +28,39 @@ module eth_tx
   import accel_pkg::*;
   import util_pkg::*;
 (
-    input  logic        clk,
-    input  logic        rst,
+    input  logic        clk,                     // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic        rst,                     // Reset: active high, sampled on the clock edge to clear control state and pending validity.
     // ARP job from eth_rx
-    input  logic        arp_pending,
-    input  logic [47:0] arp_eth_dst,
-    input  logic [47:0] arp_sha,
-    input  logic [31:0] arp_spa,
-    output logic        arp_done,
+    input  logic        arp_pending,             // Address Resolution Protocol reply pending: high while a saved address-query request still needs a reply.
+    input  logic [47:0] arp_eth_dst,             // Address Resolution Protocol Ethernet destination: requester's source media-access-control address for the reply header.
+    input  logic [47:0] arp_sha,                 // Address Resolution Protocol sender hardware address: requester's media-access-control address copied into the reply target field.
+    input  logic [31:0] arp_spa,                 // Address Resolution Protocol sender protocol address: requester's Internet Protocol version 4 address for the reply target field.
+    output logic        arp_done,                // Address Resolution Protocol reply done: completion pulse that releases the saved address-query job.
     // ICMP job from eth_rx: the stored request is in slot icmp_slot
-    input  logic        icmp_pending,
-    input  logic        icmp_slot,
-    input  logic [47:0] icmp_mac,
-    input  logic [31:0] icmp_ip,
-    input  logic [15:0] icmp_tlen,
-    input  logic [15:0] icmp_csum,
-    output logic        icmp_done,
-    output logic [11:0] rx_rd_addr,      // eth_rx frame memory, port b
-    input  logic [7:0]  rx_rd_data,
+    input  logic        icmp_pending,            // Internet Control Message Protocol reply pending: high while a stored ping request awaits transmission.
+    input  logic        icmp_slot,               // Internet Control Message Protocol slot index: selects the stored ping request whose payload will be echoed.
+    input  logic [47:0] icmp_mac,                // Internet Control Message Protocol destination media-access-control address: requester's Ethernet address for the echo reply.
+    input  logic [31:0] icmp_ip,                 // Internet Control Message Protocol destination Internet Protocol version 4 address: requester's address for the echo reply.
+    input  logic [15:0] icmp_tlen,               // Internet Control Message Protocol total length: stored request's Internet Protocol packet byte count, including its header.
+    input  logic [15:0] icmp_csum,               // Internet Control Message Protocol checksum: precomputed checksum inserted into the outgoing echo reply.
+    output logic        icmp_done,               // Internet Control Message Protocol reply done: pulse releasing the stored ping request after final-byte handoff.
+    output logic [11:0] rx_rd_addr,              // Receive-frame memory read address: slot plus byte offset selecting echo payload on eth_rx read port B.
+    input  logic [7:0]  rx_rd_data,              // Receive-frame memory read data: registered echo-request byte returned by eth_rx port B.
     // UDP reply bytes from the core's COBS encoder, and where they go
-    input  logic        in_valid,
-    output logic        in_ready,
-    input  logic [7:0]  in_data,
-    input  logic [47:0] udp_mac,
-    input  logic [31:0] udp_ip,
-    input  logic [15:0] udp_port,
-    output logic        udp_busy,        // reply buffer not empty yet
+    input  logic        in_valid,                // Input reply-byte valid: core offers an encoded command-reply byte for acceptance with input ready.
+    output logic        in_ready,                // Input reply-byte ready: high while the command-reply buffer can collect the next encoded byte.
+    input  logic [7:0]  in_data,                 // Input reply-byte data: encoded command byte; zero completes one User Datagram Protocol reply payload.
+    input  logic [47:0] udp_mac,                 // User Datagram Protocol destination media-access-control address: saved requester's Ethernet address for this reply.
+    input  logic [31:0] udp_ip,                  // User Datagram Protocol destination Internet Protocol version 4 address: saved requester's address for this reply.
+    input  logic [15:0] udp_port,                // User Datagram Protocol destination port: saved requester's socket port for this reply.
+    output logic        udp_busy,                // User Datagram Protocol reply busy: high while a partial or complete reply occupies the command-reply buffer.
     // byte hand-off to rmii_tx (50 MHz domain, edge-aligned with clk)
-    output logic        tx_tgl,
-    output logic [7:0]  tx_data,
-    output logic        tx_last,
-    input  logic        tx_ack,
-    output logic        tx_frame,        // pulse when a frame has been handed over
-    output logic        tx_active        // a frame is being prepared or sent (debug LED)
+    output logic        tx_tgl,                  // Transmit byte toggle: changes to offer the next held byte to the 50 MHz serializer.
+    output logic [7:0]  tx_data,                 // Transmit byte data: selected preamble, header, payload, padding or checksum byte held until acknowledgement.
+    output logic        tx_last,                 // Transmit last-byte marker: high beside the final frame-check-sequence byte offered to the serializer.
+    input  logic        tx_ack,                  // Transmit byte acknowledgement: serializer copies the offered toggle when it captures that byte.
+    output logic        tx_frame,                // Transmit frame event: one-clock pulse after the serializer accepts the frame's final byte.
+    output logic        tx_active                // Transmit active: high while a frame is being prepared, handed off or completing; used for debug status.
 );
   // ---------------------------------------------------------------------
   // Reply buffer. Bytes arrive one per handshake until the 0x00 delimiter.
@@ -130,7 +130,7 @@ module eth_tx
   logic        settle;            // memory read for byte k has had its clock
 
   // Byte k of the frame as it should go on the wire.
-  function automatic logic [7:0] byte_at(input logic [11:0] i);
+  function automatic logic [7:0] byte_at(input logic [11:0] i); // i: outgoing frame byte index selecting a header, stored payload, padding or checksum byte.
     if (i < 12'(hdr_len))  return hdr[i[5:0]];
     if (i < pay_end)       return (job == J_UDP) ? rbuf_q : rx_rd_data;
     if (i < data_end)      return 8'h00;
@@ -159,7 +159,7 @@ module eth_tx
   wire [15:0] j_tlen = icmp_pending ? icmp_tlen : 16'd28 + 16'(plen);
 
   // One IPv4 header word or one UDP checksum term per PREP step.
-  function automatic logic [15:0] ip_word(input logic [4:0] s);
+  function automatic logic [15:0] ip_word(input logic [4:0] s); // s: checksum step index selecting a 16-bit Internet Protocol version 4 header word.
     return {hdr[14 + 2*s], hdr[15 + 2*s]};
   endfunction
 

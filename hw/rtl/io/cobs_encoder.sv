@@ -9,15 +9,15 @@
 // can accept another byte; out_ready tells this encoder when its selected
 // output byte has actually been consumed.
 module cobs_encoder (
-    input  logic       clk,
-    input  logic       rst,
-    input  logic       in_valid,
-    output logic       in_ready,
-    input  logic [7:0] in_data,
-    input  logic       in_last,
-    output logic       out_valid,
-    input  logic       out_ready,
-    output logic [7:0] out_data
+    input  logic       clk,                      // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic       rst,                      // Reset: active high, sampled on the clock edge to clear control state and pending validity.
+    input  logic       in_valid,                 // Input valid: upstream presents data; a transfer occurs on a rising edge with input ready also high.
+    output logic       in_ready,                 // Input ready: high means storage is available to accept the presented input item on the rising edge.
+    input  logic [7:0] in_data,                  // Input data: unencoded packet byte; a zero ends the current Consistent Overhead Byte Stuffing block.
+    input  logic       in_last,                  // Input last-byte marker: high with the final accepted raw byte requests the final block and wire delimiter.
+    output logic       out_valid,                // Output valid: the selected output item is available and remains stable until accepted.
+    input  logic       out_ready,                // Output ready: downstream accepts the current item on a rising edge when output valid is also high.
+    output logic [7:0] out_data                  // Output data: Consistent Overhead Byte Stuffing code/data byte, or the final zero frame delimiter.
 );
   logic [7:0] blk [254];
   logic [7:0] cnt;        // bytes stored in the open block

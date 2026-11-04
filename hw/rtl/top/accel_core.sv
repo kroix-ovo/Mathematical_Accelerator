@@ -19,27 +19,27 @@ module accel_core
 #(
     parameter int CLKS_PER_BIT = CLK_HZ / BAUD
 ) (
-    input  logic       clk,
-    input  logic       rst,
-    input  logic       uart_rx_i,
-    output logic       uart_tx_o,
+    input  logic       clk,                      // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic       rst,                      // Reset: active high, sampled on the clock edge to clear control state and pending validity.
+    input  logic       uart_rx_i,                // Universal asynchronous receiver/transmitter receive input: host serial command line entering the core.
+    output logic       uart_tx_o,                // Universal asynchronous receiver/transmitter transmit output: serialized command replies sent back to the host.
     // RMII to the Ethernet PHY. clk_rmii is the 50 MHz reference clock, made
     // by the same MMCM as clk with aligned edges (see nexys_top).
-    input  logic       clk_rmii,
-    input  logic [1:0] rmii_rxd,
-    input  logic       rmii_crs_dv,
-    input  logic       rmii_rx_er,
-    output logic [1:0] rmii_txd,
-    output logic       rmii_tx_en,
-    output logic       busy_o,
-    output logic       err_o,
+    input  logic       clk_rmii,                 // Reduced media independent interface clock: 50 MHz, phase-related to the 100 MHz core clock.
+    input  logic [1:0] rmii_rxd,                 // Reduced media independent interface receive data: two bits from the Ethernet physical-layer device per clock.
+    input  logic       rmii_crs_dv,              // Reduced media independent interface carrier sense/data valid: combined receive activity and data-valid indication.
+    input  logic       rmii_rx_er,               // Reduced media independent interface receive error: physical-layer device reports a bad received symbol.
+    output logic [1:0] rmii_txd,                 // Reduced media independent interface transmit data: two bits driven toward the Ethernet physical-layer device.
+    output logic       rmii_tx_en,               // Reduced media independent interface transmit enable: high while the two transmit data bits are part of a frame.
+    output logic       busy_o,                   // Command busy output: high while the command processor executes a request or its raw reply is being built.
+    output logic       err_o,                    // Command error output: high whenever the combined command-frame checksum or framing counters are nonzero.
     // Ethernet status for LEDs: frame pulses and "has ever happened" flags.
-    output logic       eth_rx_o,
-    output logic       eth_tx_o,
-    output logic       eth_err_o,
-    output logic       eth_drop_o,
+    output logic       eth_rx_o,                 // Ethernet receive event output: one-clock pulse at the end of an incoming Ethernet frame.
+    output logic       eth_tx_o,                 // Ethernet transmit event output: one-clock pulse when a reply's final byte is handed to the serializer.
+    output logic       eth_err_o,                // Ethernet receive error output: high when the receive error counter is nonzero; cleared by reset or counter wrap.
+    output logic       eth_drop_o,               // Ethernet receive drop output: high when the receive drop counter is nonzero; cleared by reset or counter wrap.
     // Debug view of the Ethernet path (see nexys_top's LED list).
-    output logic [6:0] eth_dbg_o
+    output logic [6:0] eth_dbg_o                 // Ethernet debug output: bits 2..0 are live replay/buffer/transmit status, bit 3 tracks encoding, bits 6..4 latch long activity.
 );
   localparam int RX_AW = 11;
   localparam int TX_AW = 10;

@@ -17,41 +17,41 @@ module cmd_proc
     parameter int RX_AW = 11,
     parameter int TX_AW = 10
 ) (
-    input  logic                  clk,
-    input  logic                  rst,
+    input  logic                  clk,           // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic                  rst,           // Reset: active high, sampled on the clock edge to clear control state and pending validity.
     // request
-    input  logic                  frame_valid,
-    input  logic [7:0]            frame_op,
-    input  logic [7:0]            frame_tag,
-    input  logic [15:0]           frame_len,
-    output logic [RX_AW-1:0]      rb_addr,
-    input  logic [7:0]            rb_data,
+    input  logic                  frame_valid,   // Frame valid: one-clock pulse announcing a checked request in the receive buffer.
+    input  logic [7:0]            frame_op,      // Frame operation code: command selector from the validated request header.
+    input  logic [7:0]            frame_tag,     // Frame request tag: identifier copied into the reply so the host can match its request.
+    input  logic [15:0]           frame_len,     // Frame payload length: number of request payload bytes, excluding the header and checksum.
+    output logic [RX_AW-1:0]      rb_addr,       // Receive-buffer read address: byte index selecting the stored request byte needed by the command interpreter.
+    input  logic [7:0]            rb_data,       // Receive-buffer read data: combinational byte selected by the receive-buffer address.
     // response
-    output logic                  tb_we,
-    output logic [TX_AW-1:0]      tb_addr,
-    output logic [7:0]            tb_wdata,
-    output logic                  tx_start,
-    output logic [7:0]            tx_op,
-    output logic [7:0]            tx_tag,
-    output logic [15:0]           tx_len,
-    input  logic                  tx_busy,
+    output logic                  tb_we,         // Transmit-buffer write enable: high stores one prepared reply byte on the rising edge.
+    output logic [TX_AW-1:0]      tb_addr,       // Transmit-buffer write address: byte index within the reply payload buffer.
+    output logic [7:0]            tb_wdata,      // Transmit-buffer write data: reply payload byte written when transmit-buffer write enable is high.
+    output logic                  tx_start,      // Transmit start: one-clock pulse asking the packet builder to capture the reply header and begin sending.
+    output logic [7:0]            tx_op,         // Transmit operation code: request command with the response bit set for the reply header.
+    output logic [7:0]            tx_tag,        // Transmit request tag: original host identifier echoed in the reply header.
+    output logic [15:0]           tx_len,        // Transmit payload length: number of reply bytes, including the status byte but excluding framing/checksum.
+    input  logic                  tx_busy,       // Transmit busy: high while the raw packet builder is occupied; a new reply must wait.
     // scratchpad
-    output logic                  m_en,
-    output logic                  m_we,
-    output logic [SCRATCH_AW-1:0] m_addr,
-    output logic [31:0]           m_wdata,
-    input  logic [31:0]           m_rdata,
+    output logic                  m_en,          // Memory port A enable: requests a scratchpad access on the rising clock edge.
+    output logic                  m_we,          // Memory port A write enable: high writes a word when memory enable is also high.
+    output logic [SCRATCH_AW-1:0] m_addr,        // Memory port A address: scratchpad word index for the requested read or write, not a byte address.
+    output logic [31:0]           m_wdata,       // Memory port A write data: 32-bit word stored when both memory enable and write enable are high.
+    input  logic [31:0]           m_rdata,       // Memory port A read data: registered scratchpad word returned after the enabled read edge.
     // kernel engine
-    output logic                  k_start,
-    output logic [7:0]            k_kernel,
-    output logic [8*21-1:0]       k_args,     // RUN payload bytes 1..21
-    input  logic                  k_done,
-    input  logic [31:0]           k_cycles,
-    input  logic [31:0]           k_aux,
+    output logic                  k_start,       // Kernel start: one-clock pulse launching the validated kernel identifier and packed arguments.
+    output logic [7:0]            k_kernel,      // Kernel identifier: selects no-operation, memory fill or the floating-point array kernel.
+    output logic [8*21-1:0]       k_args,        // Kernel arguments: packed RUN payload bytes 1..21 after the kernel identifier, in wire byte order.
+    input  logic                  k_done,        // Kernel done: one-clock completion pulse qualifying the returned cycle count and auxiliary result.
+    input  logic [31:0]           k_cycles,      // Kernel cycle count: elapsed core clocks reported by the completed kernel.
+    input  logic [31:0]           k_aux,         // Kernel auxiliary result: combined floating-point exception flags, or zero for the other kernels.
     // stats
-    input  logic [15:0]           crc_errors,
-    input  logic [15:0]           frame_errors,
-    output logic                  busy
+    input  logic [15:0]           crc_errors,    // Cyclic redundancy check error count: wrapping 16-bit total reported in command STATUS replies.
+    input  logic [15:0]           frame_errors,  // Frame error count: wrapping 16-bit total of malformed or dropped command frames for STATUS replies.
+    output logic                  busy           // Command processor busy: high while interpreting/executing a command or while its raw reply is being built.
 );
   localparam logic [32:0] WORDS = 33'(2 ** SCRATCH_AW);
   // Bounds checks use 33-bit sums. A 32-bit sum could wrap an invalid high
@@ -117,7 +117,7 @@ module cmd_proc
   // byte k of the vector being payload byte k+1.
   always_comb for (int k = 0; k < 21; k++) k_args[8*k +: 8] = args[k + 1];
 
-  task automatic respond_status(input logic [7:0] st);
+  task automatic respond_status(input logic [7:0] st); // st: response status byte reporting success or the selected command-validation error.
     // Error replies contain just the status byte; COPY moves it to tx_buf.
     rbuf[0] <= st;
     rlen    <= 16'd1;

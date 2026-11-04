@@ -26,15 +26,15 @@
 // reuse its holding register. I serialize each accepted byte into four
 // two-bit symbols, including the last byte before ending TX_EN.
 module rmii_tx (
-    input  logic       clk_rmii,
-    input  logic       rst,
-    input  logic       in_tgl,       // flips when a new byte is offered
-    input  logic [7:0] in_data,
-    input  logic       in_last,
-    output logic       ack_tgl,      // equals in_tgl once that byte is taken
-    output logic [1:0] txd,
-    output logic       tx_en,
-    output logic       underrun      // pulse: the next byte was late (a bug)
+    input  logic       clk_rmii,                 // Reduced media independent interface clock: 50 MHz, phase-related to the 100 MHz core clock. Rising edges prepare data; falling edges launch it onto the pins.
+    input  logic       rst,                      // Reset: active high, sampled on the 50 MHz rising edge to stop transmission and clear the byte handshake.
+    input  logic       in_tgl,                   // Input byte toggle: a change relative to acknowledgement announces a new byte held by the 100 MHz sender.
+    input  logic [7:0] in_data,                  // Input byte data: preamble, frame or checksum byte held stable until its toggle is acknowledged.
+    input  logic       in_last,                  // Input last-byte marker: high beside the frame's final byte requests the transmit gap after serialization.
+    output logic       ack_tgl,                  // Acknowledgement toggle: copies the input toggle when the offered byte is captured, allowing the sender to advance.
+    output logic [1:0] txd,                      // Transmit data: two reduced-media-interface bits launched on falling clock edges for the physical-layer device.
+    output logic       tx_en,                    // Transmit enable: high while transmit data carries frame symbols; low during the inter-frame gap.
+    output logic       underrun                  // Transmit underrun: one-clock pulse when the next required byte was not ready, forcing the frame to end early.
 );
   localparam int IFG_CLKS = 48;
 

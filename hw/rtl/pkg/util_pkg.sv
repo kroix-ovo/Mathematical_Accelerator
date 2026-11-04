@@ -7,7 +7,7 @@ package util_pkg;
 
   // I XOR one byte into the high end, then perform eight polynomial steps.
   // This is CRC-16/CCITT-FALSE: polynomial 0x1021, MSB first, initial FFFF.
-  function automatic logic [15:0] crc16_update(input logic [15:0] crc, input logic [7:0] data);
+  function automatic logic [15:0] crc16_update(input logic [15:0] crc, input logic [7:0] data); // crc: current 16-bit cyclic redundancy check accumulator; data: next byte included in the command checksum.
     logic [15:0] c;
     c = crc ^ {data, 8'h00};
     for (int i = 0; i < 8; i++)
@@ -22,7 +22,7 @@ package util_pkg;
   // the inverted register, low byte first. A receiver that also runs the
   // four FCS bytes through this function ends at the constant DEBB20E3 for
   // every good frame.
-  function automatic logic [31:0] crc32_update(input logic [31:0] crc, input logic [7:0] data);
+  function automatic logic [31:0] crc32_update(input logic [31:0] crc, input logic [7:0] data); // crc: current 32-bit cyclic redundancy check accumulator; data: next Ethernet frame byte included.
     logic [31:0] c;
     c = crc ^ {24'h0, data};
     for (int i = 0; i < 8; i++)
@@ -32,7 +32,7 @@ package util_pkg;
 
   // Ones'-complement addition used by the IPv4, ICMP and UDP checksums: a
   // carry out of bit 15 wraps around into bit 0.
-  function automatic logic [15:0] oc_add(input logic [15:0] a, input logic [15:0] b);
+  function automatic logic [15:0] oc_add(input logic [15:0] a, input logic [15:0] b); // a: first checksum word; b: second checksum word, added with ones-complement end-around carry.
     logic [16:0] s;
     s = {1'b0, a} + {1'b0, b};
     return s[15:0] + {15'h0, s[16]};

@@ -23,17 +23,17 @@ module fp_addsub
 #(
     parameter int TW = 8          // tag width: an ID carried alongside the data
 ) (
-    input  logic          clk,
-    input  logic          rst,
-    input  logic          in_valid,
-    input  logic          in_sub,   // 1: compute a - b
-    input  logic [31:0]   in_a,
-    input  logic [31:0]   in_b,
-    input  logic [TW-1:0] in_tag,
-    output logic          out_valid,
-    output logic [31:0]   out_result,
-    output logic [4:0]    out_flags,
-    output logic [TW-1:0] out_tag
+    input  logic          clk,                   // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic          rst,                   // Reset: active high, sampled on the clock edge to clear control state and pending validity.
+    input  logic          in_valid,              // Input valid: a high level presents a new operation for acceptance on the rising clock edge.
+    input  logic          in_sub,                // Input subtract select: high computes operand A minus B; low computes A plus B.
+    input  logic [31:0]   in_a,                  // Input operand A: first 32-bit floating-point operand for the selected operation.
+    input  logic [31:0]   in_b,                  // Input operand B: second 32-bit floating-point operand for the selected operation.
+    input  logic [TW-1:0] in_tag,                // Input request tag: identifier carried beside the operands so the caller can match the result.
+    output logic          out_valid,             // Output valid: result, exception flags and tag describe a completed operation on this clock.
+    output logic [31:0]   out_result,            // Output result: 32-bit encoded answer; meaningful only while output valid is high.
+    output logic [4:0]    out_flags,             // Output exception flags: bits 4..0 mean invalid, divide by zero, overflow, underflow and inexact.
+    output logic [TW-1:0] out_tag                // Output request tag: unchanged identifier of the operation that produced this result.
 );
   // ---------------------------------------------------------------- stage 1
   // Subtraction is addition with b's sign flipped. "Effective subtraction"

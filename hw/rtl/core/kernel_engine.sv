@@ -39,28 +39,28 @@
 module kernel_engine
   import accel_pkg::*;
 (
-    input  logic                  clk,
-    input  logic                  rst,
-    input  logic                  start,
-    input  logic [7:0]            kernel,
-    input  logic [8*21-1:0]       args,      // RUN payload bytes after the kernel ID
-    output logic                  busy,
-    output logic                  done,
-    output logic [31:0]           cycles,
-    output logic [31:0]           aux,
+    input  logic                  clk,           // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic                  rst,           // Reset: active high, sampled on the clock edge to clear control state and pending validity.
+    input  logic                  start,         // Kernel start: high in idle captures one validated kernel request on the rising edge.
+    input  logic [7:0]            kernel,        // Kernel identifier: selects no-operation, scratchpad fill or floating-point array processing.
+    input  logic [8*21-1:0]       args,          // Kernel arguments: packed RUN bytes after the kernel identifier; specify the operation, count and addresses.
+    output logic                  busy,          // Kernel busy: high from request capture through the final completion state.
+    output logic                  done,          // Kernel done: one-clock pulse marking completion and valid cycle-count/auxiliary outputs.
+    output logic [31:0]           cycles,        // Kernel cycle count: core clocks used by the last completed kernel, including its final completion clock.
+    output logic [31:0]           aux,           // Kernel auxiliary result: bitwise OR of all element exception flags for the floating-point kernel; otherwise zero.
     // scratchpad port A (read/write)
-    output logic                  m_en,
-    output logic                  m_we,
-    output logic [SCRATCH_AW-1:0] m_addr,
-    output logic [31:0]           m_wdata,
-    input  logic [31:0]           m_rdata,
+    output logic                  m_en,          // Memory port A enable: requests a scratchpad access on the rising clock edge.
+    output logic                  m_we,          // Memory port A write enable: high writes a word when memory enable is also high.
+    output logic [SCRATCH_AW-1:0] m_addr,        // Memory port A address: scratchpad word index for the requested read or write, not a byte address.
+    output logic [31:0]           m_wdata,       // Memory port A write data: 32-bit word stored when both memory enable and write enable are high.
+    input  logic [31:0]           m_rdata,       // Memory port A read data: registered scratchpad word returned after the enabled read edge.
     // scratchpad port B (write)
-    output logic                  b_we,
-    output logic [SCRATCH_AW-1:0] b_addr,
-    output logic [31:0]           b_wdata
+    output logic                  b_we,          // Memory port B write enable: high commits the result or flag word on the rising clock edge.
+    output logic [SCRATCH_AW-1:0] b_addr,        // Memory port B address: scratchpad word index selected for result or flag write-back.
+    output logic [31:0]           b_wdata        // Memory port B write data: 32-bit result word or zero-extended five-bit exception flags.
 );
   // Little-endian 32-bit argument starting at byte `off` of args.
-  function automatic logic [31:0] arg32(input int off);
+  function automatic logic [31:0] arg32(input int off); // off: byte offset of the little-endian 32-bit argument inside the packed RUN payload.
     return args[8*off +: 32];
   endfunction
 

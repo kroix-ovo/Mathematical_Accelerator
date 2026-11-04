@@ -13,24 +13,24 @@ module frame_rx
 #(
     parameter int BUF_AW = 11
 ) (
-    input  logic              clk,
-    input  logic              rst,
-    input  logic              in_valid,
-    input  logic [7:0]        in_data,
-    input  logic              in_end,
-    input  logic              in_err,
-    input  logic              hold,
+    input  logic              clk,               // Clock: rising edge updates this module's registers; 100 MHz in the board design.
+    input  logic              rst,               // Reset: active high, sampled on the clock edge to clear control state and pending validity.
+    input  logic              in_valid,          // Input byte valid: one-clock pulse qualifying the next decoded packet byte for collection.
+    input  logic [7:0]        in_data,           // Input byte data: decoded header, payload or cyclic redundancy check byte to store and inspect.
+    input  logic              in_end,            // Input frame end: pulse from the decoder's wire delimiter that triggers length and checksum validation.
+    input  logic              in_err,            // Input frame error: decoder reports a malformed block at frame end, forcing the packet to be rejected.
+    input  logic              hold,              // Receive hold: sampled at the first byte; a busy command processor causes this entire incoming frame to be dropped.
     // accepted frame
-    output logic              frame_valid,
-    output logic [7:0]        frame_op,
-    output logic [7:0]        frame_tag,
-    output logic [15:0]       frame_len,
+    output logic              frame_valid,       // Frame valid: one-clock pulse after length, decoder status and cyclic redundancy check all pass.
+    output logic [7:0]        frame_op,          // Frame operation code: validated request command from the packet header.
+    output logic [7:0]        frame_tag,         // Frame request tag: host-supplied identifier used later to match the reply.
+    output logic [15:0]       frame_len,         // Frame payload length: decoded header byte count, excluding the four-byte header and two-byte checksum.
     // payload buffer read (combinational)
-    input  logic [BUF_AW-1:0] rd_addr,
-    output logic [7:0]        rd_data,
+    input  logic [BUF_AW-1:0] rd_addr,           // Receive-buffer read address: byte index within the stored raw packet, including its header.
+    output logic [7:0]        rd_data,           // Receive-buffer read data: combinational byte selected by the buffer read address.
     // statistics
-    output logic [15:0]       crc_errors,
-    output logic [15:0]       frame_errors
+    output logic [15:0]       crc_errors,        // Cyclic redundancy check error count: wrapping 16-bit counter incremented for checksum mismatches.
+    output logic [15:0]       frame_errors       // Frame error count: wrapping 16-bit counter for malformed, oversized, length-mismatched or held frames.
 );
   localparam int MAX_RAW = MAX_PAYLOAD + 6;
 
