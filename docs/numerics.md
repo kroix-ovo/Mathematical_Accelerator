@@ -46,7 +46,7 @@ Underflow uses the "after rounding" tininess rule, the one x86 SSE and RISC-V us
 | fp_mul | MUL | 1 per clock | 7 clocks |
 | fp_misc | I2F, F2I, MIN, MAX, EQ, LT, LE | 1 per clock | 7 clocks |
 | fp_divsqrt | DIV, SQRT | 1 at a time | 33 clocks or more (fixed iteration count) |
-| fp_cordic | SIN, COS, ATAN2, HYPOT, EXP, LN | 1 per clock while reserved FIFO space is available | 54 clocks with a free result port; arbitration can delay it |
+| fp_cordic | SIN, COS, ATAN2, HYPOT, EXP, LN | 1 per clock while reserved FIFO space is available | 54 clocks with a free result port; at most 95 when mixed ops make it wait (91 is the longest seen) |
 
 The FPU kernel reads two operands per element through one RAM port, so it issues one element every 4 clocks. Divide and square root issue every 33 clocks. At 100 MHz the kernel computes 25 million pipelined operations per second, or 3 million divides. Moving the data over the 2 Mbaud UART takes far longer than the arithmetic, so wall time on the board is set by the link.
 
@@ -68,7 +68,7 @@ The RTL has been run against both models:
 | pyuvm, `FpuRegressTest`, Verilator and Icarus | Python exact | corner matrix, random, mixed bursts | 0 mismatches |
 | xsim UART vectors and both top-level UVM envs | Python / SV device models | FPU kernel through the UART for all 12 ops | byte-exact replies |
 
-These rows record the earlier phase 2 RTL and timing evidence. They do not establish phase 3 board behavior or timing. Reproduce a 1M run with `python hw/scripts/run_uvm.py fpu --test fpu_lcg_test --op <n> --n 1000000 --lcg-seed <hex>`.
+These rows record the phase 2 evidence for ops 0–11. The phase 3 evidence is under [Measured accuracy](#measured-accuracy). Reproduce a 1M run with `python hw/scripts/run_uvm.py fpu --test fpu_lcg_test --op <n> --n 1000000 --lcg-seed <hex>`.
 
 ## Phase 3 functions
 
@@ -93,7 +93,7 @@ accuracy reference, rather than an interval proof for every input.
 `measure_ulp.py` reports the observed maximum, its inputs, a histogram and
 flag errors. A finite sample establishes the error on that sample only.
 Its optional C screen is faster but relies on the C reference for agreeing
-results. The publication checks use the unscreened mpmath path.
+results.
 
 The phase 3 flag policy sets NX on ordinary approximated results, including
 an accidentally exact value such as `hypot(3,4)`. The explicit exact cases
@@ -108,7 +108,46 @@ the boundary near the smallest normal number.
 
 The standalone CORDIC latency is 52 clocks. A result passes through a FIFO
 and the FPU output register, giving 54 clocks when the port is free. The
-default FIFO age rule bounds latency at 95 clocks in the tested configuration.
+default FIFO age rule bounds latency at 95 clocks in the tested configuration;
+the longest measured in simulation was 91.
 The array kernel uses one operation throughout, issues every four clocks,
 and reports `4*count + 56` clocks for the phase 3 operations, or one clock
 for an empty array. These are core clock counts, separate from transfer time.
+
+### Measured accuracy
+
+Every number here is the largest error found in a sample, against the
+256-bit mpmath value. None of them is a proven bound over all inputs. All
+runs reported zero budget failures, zero flag errors and zero errors on
+rule-decided inputs (special values and limits).
+
+| Function | Model, 1M inputs: max ULP | Correctly rounded | Worst input bits | Board, 1M vectors: max ULP | Correctly rounded |
+|---|---|---|---|---|---|
+| SIN | 0.577 | 99.89% | `487a45a4` | 0.554 | 99.94% |
+| COS | 0.571 | 99.97% | `4517e059` | 0.566 | 99.99% |
+| ATAN2 | 0.599 | 99.88% | `54817c7a, 5b664338` | 0.599 | 99.93% |
+| HYPOT | 0.502 | 99.93% | `4d13ce2b, 4d5060c7` | 0.502 | 99.94% |
+| EXP | 0.500 | above 99.99% | `b6f9003c` | 0.500 | above 99.99% |
+| LN | 0.588 | 98.69% | `3f7feb89` | 0.588 | 99.09% |
+
+The model column comes from
+`python tools/measure_ulp.py --op all --n 1000000 --screen` (seed 1), with
+every input aimed at the generators' hard cases. The board column comes from
+`mathaccel --port udp:192.168.10.2 fptest --op phase3 --n 1000000`, where half
+the vectors come from those generators and half from the general LCG stream,
+so the two samples differ and their percentages can't be compared directly.
+Both columns use the C screen: results equal to the C reference count as
+correctly rounded, and only the rest get an exact mpmath measurement. The
+percentages leave out rule-decided inputs. The board matched the bit-accurate
+model on every vector, so its column is the model's error on that sample.
+[Verification](verification.md#phase-3-board-results) has the full board run.
+
+The largest error depends on the sample. An earlier million-input run with
+different inputs reached 0.629 ULP on ATAN2, the highest I have measured for
+any function, which is still inside the 1 ULP budget.
+
+LN has the lowest correctly rounded rate, and most of that comes from its
+near-1 path. In the model sample, 8,257 of 174,352 near-1 results (4.7%) were
+not correctly rounded, against 3,937 of 753,732 main-path results (0.52%). The
+largest LN error is on the main path, though: 0.588 ULP there, 0.572 ULP on
+the near-1 path.

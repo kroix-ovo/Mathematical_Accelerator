@@ -69,7 +69,7 @@ Checks happen in this order: payload length (22 bytes including the kernel byte)
 | 4 | SQRT | | 10 | LT | | 16 | EXP |
 | 5 | I2F (int32 → fp32) | | 11 | LE | | 17 | LN |
 
-Codes 12–17 are computed by the CORDIC unit with a target error below 1 ULP of the high-precision value; they do not promise a correctly rounded result for every input. The [publication accuracy sample](verification.md#phase-3-implementation-checks) measured a maximum of 0.599 ULP over 20,000 inputs per function. The flags follow the phase 3 rule (NX on every ordinary result except a listed set of exact cases), described in [numerics.md](numerics.md#phase-3-functions).
+Codes 12–17 are computed by the CORDIC unit with a target error below 1 ULP of the high-precision value; they do not promise a correctly rounded result for every input. The largest error measured so far is 0.629 ULP (atan2), on samples of a million inputs per function; [numerics.md](numerics.md#measured-accuracy) has the table. The flags follow the phase 3 rule (NX on every ordinary result except a listed set of exact cases), described in [numerics.md](numerics.md#phase-3-functions).
 
 The exact arithmetic rules (rounding, subnormals, NaN results, flags) are in [numerics.md](numerics.md).
 

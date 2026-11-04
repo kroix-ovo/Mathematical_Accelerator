@@ -13,6 +13,7 @@ import pytest
 
 from mathaccel._generated import spec
 from mathaccel._generated.spec import FpuOp, Kernel, Op, Status
+from mathaccel.cli import main
 from mathaccel.driver.device import Device
 from mathaccel.driver.model import DeviceModel, fpu_evaluate
 from mathaccel.driver.protocol import DeviceError, Frame
@@ -142,3 +143,12 @@ def test_fpu_kernel_errors(dev):
     with pytest.raises(DeviceError, match="BAD_ADDR"):
         dev.fpu_kernel(0, 2, 0, 0, 0, spec.SCRATCH_WORDS - 1)
     assert dev.fpu_kernel(0, 0, 0, 0, 0, 0).cycles == 1
+
+
+def test_fptest_cli_covers_phase3_ops(capsys):
+    """fptest checks results, cycle counts and ULP error for the CORDIC ops, against the simulator."""
+    main(["--port", "sim", "fptest", "--op", "phase3", "--n", "200"])
+    out = capsys.readouterr().out
+    for name in ("SIN", "COS", "ATAN2", "HYPOT", "EXP", "LN"):
+        assert f"{name}" in out
+    assert out.count("0 over budget or with wrong flags") == 6

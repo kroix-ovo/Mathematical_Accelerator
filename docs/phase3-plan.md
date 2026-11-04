@@ -7,8 +7,9 @@ below were estimates made before implementation; for example the reduction
 window is now 96 bits. Read [the HDL guide](hdl-reading-guide.md#follow-one-cordic-operation)
 for the implemented circuit, [numerics](numerics.md#phase-3-functions) for
 the current rules, and [verification](verification.md#phase-3-implementation-checks)
-for this publication's checks. The board milestone and the phase 3 CLI
-checks are still open.
+for the simulation checks and [board results](verification.md#phase-3-board-results).
+The board milestone and phase 3 CLI checks are complete; the optional
+exhaustive sweeps have not been run.
 
 Phase 3 adds sin, cos, atan2, hypot, exp and ln to the FPU as new operations, computed by a fully pipelined CORDIC unit. These are the functions my EM/RF and semiconductor classes use most: phasor conversion between rectangular and polar form, wave and field expressions, carrier statistics, and decibels.
 
@@ -79,9 +80,11 @@ The hardware can't detect exactness in general, for example hypot(3, 4) = 5. So 
 - **Reference 2:** C, computing in double precision with libm and rounding to float, called from the SV scoreboard through DPI. It's fast, and a second opinion.
 - **Scoreboards:** check every result against the ULP budget, keep a histogram and maximum error per function, and compare flags with the policy above.
 - **Directed and coverage cases:** tiny inputs, inputs near multiples of π/2, huge sin/cos arguments up to 1e38, the exp overflow and underflow thresholds, ln near 1, atan2 on the axes and in all four quadrants, hypot overflow and underflow scaling.
-- **Exhaustive check on the board (stretch).** A unary function has 2³² inputs, about 51 GB of traffic over Ethernet at ~11 MB/s, which is roughly 80 minutes. The PC screens all of them with the fast C reference and rechecks only the suspicious ones with mpmath. That would prove the error bound for sin, cos, exp and ln on the real hardware, not just on samples.
+- **Exhaustive check on the board (stretch).** A unary function has 2³² inputs, about 51 GB of traffic over Ethernet at ~11 MB/s, which is roughly 80 minutes. (Correction, 2026-11-03: the measured rate is about 0.7 MB/s, because every request waits for its reply, so this would take about 26 hours per function. It has not been run.) The PC screens all of them with the fast C reference and rechecks only the suspicious ones with mpmath. That would prove the error bound for sin, cos, exp and ln on the real hardware, not just on samples.
 
 ## Milestones
+
+Milestones 1–7 are done, apart from the exhaustive sweeps in milestone 6. The measured results are in [numerics.md](numerics.md#measured-accuracy) and [verification.md](verification.md#phase-3-board-results); this plan is otherwise kept as written.
 
 1. **References and tooling:** mpmath and C references, ULP measurement, flags rule, op codes 12–17 in `spec/accel.toml`.
 2. **sin/cos:** Payne–Hanek plus circular CORDIC in a standalone pyuvm block test. **Accuracy gate:** choose W, check ≤ 1 ULP, run a Vivado timing build of the unit alone. If 1 ULP can't meet timing, fall back to the 2–4 ULP budget here.

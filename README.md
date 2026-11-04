@@ -6,11 +6,11 @@ The project combines SystemVerilog hardware for a Digilent Nexys A7-100T FPGA wi
 
 ## What works now
 
-Phases 1 and 2 implement the communication and memory system and a hand-written IEEE-754 single-precision (`fp32`) floating-point unit. The current phase 3 implementation adds six CORDIC functions to that FPU and protocol version 0.3. Its simulation checks are separate from the phase 1/2 physical board results below. The host can send commands to the FPGA design, read and write its scratchpad, and run three kernels:
+Phases 1 and 2 implement the communication and memory system and a hand-written IEEE-754 single-precision (`fp32`) floating-point unit. Phase 3 adds six CORDIC functions to that FPU and protocol version 0.3, and all three phases have been tested on the board. The host can send commands to the FPGA design, read and write its scratchpad, and run three kernels:
 
 - `NOP` performs no memory operation and reports one kernel clock cycle.
 - `FILL` writes a chosen 32-bit value to a range of scratchpad words and reports the number of kernel clock cycles used.
-- `FPU` applies one operation to every element of two arrays in the scratchpad and writes the results and the IEEE exception flags for each element. The operations are add, subtract, multiply, divide, square root, integer-to-float and float-to-integer conversion, min, max, and three compares.
+- `FPU` applies one operation to every element of two arrays in the scratchpad and writes the results and the IEEE exception flags for each element. The operations are add, subtract, multiply, divide, square root, integer-to-float and float-to-integer conversion, min, max, three compares, sin, cos, atan2, hypot, exp and ln.
 
 The FPU rounds to nearest even, handles subnormal numbers without flushing them to zero, returns one canonical NaN, and reports the five IEEE flags (invalid, divide by zero, overflow, underflow, inexact). [Numerics](docs/numerics.md) defines every rule. Add, multiply, conversions and compares are pipelined and accept one operation per clock; divide and square root compute one bit per clock and take 33 clocks each.
 
@@ -18,7 +18,7 @@ The design has a 256 KiB scratchpad, a command processor, a UART link configured
 
 The Python driver provides the same command interface through either a serial connection or a software simulator. Two reference models check the arithmetic: an exact Python model that uses rational numbers, and a C model that uses the PC's own floating-point hardware. A third comparison against NumPy checks the Python model itself.
 
-Verification uses four UVM environments, one per combination of SystemVerilog UVM 1.2 (Vivado xsim) or pyuvm (cocotb with Verilator and Icarus), and the FPU block alone or the whole design through its UART pins. They include sequencers, layered command-to-byte sequences, virtual sequences, scoreboards, and coverage. Every FPU operation passed one million generated simulation vectors, with result bits and flags compared exactly against the C model.
+Verification uses seven UVM environments in SystemVerilog UVM 1.2 (Vivado xsim) and pyuvm (cocotb with Verilator and Icarus), covering the FPU block, the whole design through its UART pins, the whole design through its Ethernet pins, and the CORDIC unit alone. They include sequencers, layered command-to-byte sequences, virtual sequences, scoreboards, and coverage. Each of the 12 phase 2 FPU operations passed one million generated simulation vectors, with result bits and flags compared exactly against the C model.
 
 On 2026-10-13 I tested phase 2 on the Nexys A7-100T through COM3. All 65,536 scratchpad words read back correctly, a 4,096-word FILL took exactly 4,097 cycles, and all 9 calculations checked by hand returned the expected answers. The board also passed 5,000 vectors for each of the 12 FPU operations, 60,000 total, with no result or flag mismatches against the Python model. The device test run passed 23 tests: 20 used the board and 3 used their own simulator. No CRC or framing errors remained afterwards.
 
@@ -55,17 +55,19 @@ docs/           Protocol, numerics, verification, and HDL reading guide
 
 I have added comments throughout the HDL to explain the data flow, state machines, and clock timing for someone who knows basic digital logic. Start with the [HDL reading guide](docs/hdl-reading-guide.md), then follow a request through `accel_core` and `cmd_proc`. The [protocol document](docs/protocol.md) gives the exact packet and command formats.
 
-## Current phase 3 implementation
+## Phase 3 functions
 
 Phase 3 adds `SIN`, `COS`, `ATAN2(y, x)`, `HYPOT`, `EXP` and `LN` as operation codes 12–17. I use a shared CORDIC pipeline: 42 stages of shifts and additions, with input reduction and output rounding for a total of 52 clocks inside the unit. It accepts one operation per clock. The FPU buffers CORDIC results when shorter operations need the result port, reserves space for work already in flight, and pauses new requests when an older queued result needs to leave.
 
-These functions have a target error below 1 ULP, where one ULP is the spacing between nearby fp32 values. The Python integer model and its C port describe the datapath bit for bit; mpmath at 256-bit precision checks its mathematical accuracy. The tests also check flags, tags, latency, and mixed operations with a smaller 16-entry FIFO. [Numerics](docs/numerics.md#phase-3-functions) explains the rules and [Verification](docs/verification.md#phase-3-implementation-checks) records the checks for this publication.
+These functions have a target error below 1 ULP, where one ULP is the spacing between nearby fp32 values. The Python integer model and its C port describe the datapath bit for bit; mpmath at 256-bit precision checks its mathematical accuracy. The tests also check flags, tags, latency, and mixed operations with a smaller 16-entry FIFO. [Numerics](docs/numerics.md#phase-3-functions) explains the rules and [Verification](docs/verification.md#phase-3-implementation-checks) records the simulation checks.
 
-The RTL, driver and device models understand the new operations. The CLI's `fp` choices and default `fptest` still cover the original twelve operations; phase 3 board checks and an interface for ULP-aware function testing remain to be done. The [phase 3 plan](docs/phase3-plan.md) records the original design goals. For a guided explanation of the implemented stages, start with [Follow one CORDIC operation](docs/hdl-reading-guide.md#follow-one-cordic-operation).
+On 2026-11-03 I tested the six functions on the Nexys A7-100T over Ethernet: one million vectors per function, half of them aimed at hard cases such as inputs near multiples of π/2. Every result and flag word matched the bit-accurate model and every kernel cycle count was correct. The largest error was 0.599 ULP (atan2), and across all sample runs the largest I have measured is 0.629 ULP. These are samples, not a bound over all inputs. The full design meets 100 MHz with +0.154 ns of slack. The [measured accuracy table](docs/numerics.md#measured-accuracy) and [board results](docs/verification.md#phase-3-board-results) have the details, including what the board run doesn't cover.
+
+The CLI's `fp` and `fptest` cover all eighteen operations; `fptest --op phase3` checks the six functions bit for bit against the CORDIC model and measures their ULP error against mpmath. The [phase 3 plan](docs/phase3-plan.md) records the original design goals. For a guided explanation of the implemented stages, start with [Follow one CORDIC operation](docs/hdl-reading-guide.md#follow-one-cordic-operation).
 
 ## Where I want to take it
 
-With the arithmetic units working, I want to build a direct calculation interface for algebra and calculus, including expression evaluation and numerical integration. Later hardware could add functions such as sine, cosine, exponential, and logarithm, followed by operations that come up in my classes: phasor calculations, field sums, Laplace and Poisson problems, and semiconductor carrier calculations.
+With the arithmetic units and functions working, I want to build a direct calculation interface for algebra and calculus, including expression evaluation and numerical integration. Later hardware could add operations that come up in my classes: phasor calculations, field sums, Laplace and Poisson problems, and semiconductor carrier calculations.
 
 The interface should make the requested operation and its inputs clear. I would like to type requests in plain text, such as "5 divided by 9", and have a small text model translate them into the explicit operations the FPGA runs. That model would only pick the operation and operands; it would not solve problems. I still need to choose the equations, set up the problem, and understand the result. I also want to measure the time spent transferring data and computing it, so any claim about speed comes from an actual calculation benchmark.
 
@@ -117,11 +119,13 @@ With the Ethernet cable connected and the laptop's port set to 192.168.10.1 (net
 ping 192.168.10.2
 mathaccel --port udp:192.168.10.2 ping
 mathaccel --port udp:192.168.10.2 bench
+mathaccel --port udp:192.168.10.2 fp sin 0.5
+mathaccel --port udp:192.168.10.2 fptest --op phase3 --n 100000
 pytest --port udp:192.168.10.2
 ```
 
 `--port udpsim` runs the Python model behind a local UDP socket, which tests the UDP code path without a board.
 
-`fp` runs one operation on the board and prints the result, its flags, and the kernel's clock count. `fptest` runs seeded test vectors for every operation on the board and compares each result and flag word with the Python reference model.
+`fp` runs one operation on the board and prints the result, its flags, and the kernel's clock count. `fptest` runs seeded test vectors for every operation on the board and compares each result, flag word and kernel cycle count with the Python reference model.
 
 Replace `COM5` with the board's serial port. The build writes its output to `build/vivado/`. LED 0 shows the heartbeat, LED 1 shows command activity, LED 2 records link errors, and LED 15 shows UART receive activity. For Ethernet, LED 3 and LED 4 flash for each received and sent frame, LED 5 stays on after a bad frame (RX error, bad CRC, or runt), LED 6 stays on after a dropped frame, and LED 7 shows that the PHY is out of reset. LEDs 8 to 14 are Ethernet debug indicators, described in [Verification](docs/verification.md#still-open).

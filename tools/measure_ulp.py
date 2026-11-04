@@ -27,9 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "sw"))
 
-import numpy as np  # noqa: E402
-
-from mathaccel import cordic_model, cref, mpref, ulp  # noqa: E402
+from mathaccel import cordic_model, cref, ulp  # noqa: E402
 from mathaccel._generated.spec import FpuOp  # noqa: E402
 
 
@@ -42,30 +40,11 @@ def run(op: int, pairs: list[tuple[int, int]], p: cordic_model.CordicParams, imp
         results = [c.eval(op, a, b) for a, b in pairs]
     else:
         results = [cordic_model.evaluate(op, a, b, p) for a, b in pairs]
-    if screen is None:
-        for (a, b), (r, f) in zip(pairs, results, strict=True):
-            st.add(op, a, b, r, f)
-        return st
-    # I use the full mpmath path for accuracy measurements when I need
-    # every sample checked independently. Screening is faster, but its
-    # agreeing samples rely on the C reference being correctly rounded;
-    # the screen alone is not an exhaustive proof of the error bound.
-    # Screened: compare with the C reference first.
-    cr, cf = screen.eval_many(op, np.array([a for a, _ in pairs], dtype=np.uint32),
-                              np.array([b for _, b in pairs], dtype=np.uint32))
-    agree = 0
-    ops = st.ops.setdefault(op, ulp.OpStats())
-    for (a, b), (r, f), r2, f2 in zip(pairs, results, cr, cf, strict=True):
-        if (r, f) != (int(r2), int(f2)):
-            st.add(op, a, b, r, f)
-        elif mpref.special(op, a, b) is not None:
-            ops.n_rule += 1                     # rule-decided and matching: not a measured error
-        else:
-            agree += 1
-    # Agreeing results are correctly rounded, so their error is at most 0.5.
-    ops.n += agree
-    ops.correctly_rounded += agree
-    ops.hist[0] += agree
+    if screen is not None:
+        return ulp.screen(op, pairs, results, screen, budget)
+    # The full mpmath path, for when I need every sample checked independently.
+    for (a, b), (r, f) in zip(pairs, results, strict=True):
+        st.add(op, a, b, r, f)
     return st
 
 

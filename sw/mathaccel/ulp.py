@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 
 import mpmath
+import numpy as np
 
 from mathaccel import mpref
 from mathaccel._generated.spec import FpuFlag, FpuOp
@@ -346,6 +347,36 @@ def ln_inputs(n: int, seed: int) -> list[int]:
         else:
             xs.append(rng.getrandbits(32))
     return xs
+
+
+def screen(op: int, pairs: list[tuple[int, int]], results: list[tuple[int, int]], c,
+           budget: float = 1.0) -> UlpStats:
+    """Measure results against the C reference first, and mpmath only where they differ.
+
+    pairs are the (a, b) operands, results the (result, flags) under test (from
+    the model or the board) and c a loaded cref.CRef. A result equal to C's is
+    counted as correctly rounded, so only the ones that differ pay for an exact
+    mpmath measurement. That makes a million results take about a minute. The
+    agreeing samples rely on the C reference being correctly rounded, so this
+    is a fast measurement, not a proof of the error bound.
+    """
+    st = UlpStats(budget=budget)
+    cr, cf = c.eval_many(op, np.array([a for a, _ in pairs], dtype=np.uint32),
+                         np.array([b for _, b in pairs], dtype=np.uint32))
+    agree = 0
+    ops = st.ops.setdefault(op, OpStats())
+    for (a, b), (r, f), r2, f2 in zip(pairs, results, cr, cf, strict=True):
+        if (r, f) != (int(r2), int(f2)):
+            st.add(op, a, b, r, f)
+        elif mpref.special(op, a, b) is not None:
+            ops.n_rule += 1                     # rule-decided and matching: not a measured error
+        else:
+            agree += 1
+    # Agreeing results are correctly rounded, so their error is at most 0.5.
+    ops.n += agree
+    ops.correctly_rounded += agree
+    ops.hist[0] += agree
+    return st
 
 
 def op_inputs(op: int, n: int, seed: int) -> list[tuple[int, int]]:

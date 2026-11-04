@@ -198,9 +198,9 @@ results, and a scoreboard compares the observations with predictions.
 Coverage records which cases were exercised. It is useful evidence of test
 scope, but a covered case still needs its result checked.
 
-The current CLI's `fp` choices and default `fptest` cover the original twelve
-operations. Phase 3 is available through the driver and RTL testbenches;
-extending the CLI with ULP-aware function checks remains separate work.
+The CLI's `fp` and `fptest` cover all eighteen operations. `fptest --op phase3`
+checks the six functions against the bit-accurate model and measures their
+ULP error, so the same check runs on the board and on the simulator.
 
 ## Where to change things
 

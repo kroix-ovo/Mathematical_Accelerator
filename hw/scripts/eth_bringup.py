@@ -43,6 +43,7 @@ from mathaccel import fp32ref  # noqa: E402
 from mathaccel._generated import spec  # noqa: E402
 from mathaccel._generated.spec import FpuOp  # noqa: E402
 from mathaccel.driver.device import connect  # noqa: E402
+from mathaccel.driver.model import fpu_evaluate  # noqa: E402
 from mathaccel.fpgen import stream  # noqa: E402
 
 BOARD_MAC_WIN = spec.ETH_MAC.lower().replace(":", "-")
@@ -187,15 +188,15 @@ def main() -> None:
         if args.fptest:
             total_bad = 0
             t0 = time.perf_counter()
-            for op in fp32ref.EXACT_OPS:
-                vecs = list(stream(1 + int(op), args.fptest, int(op)))
+            for op in range(spec.FPU_OP_COUNT):
+                vecs = list(stream(1 + op, args.fptest, op))
                 for i in range(0, len(vecs), 1024):
                     part = vecs[i:i + 1024]
                     a, b = [v[1] for v in part], [v[2] for v in part]
                     r, f, _ = dev.fpu(op, a, b)
-                    total_bad += sum((int(r[k]), int(f[k])) != fp32ref.evaluate(op, x, y)
+                    total_bad += sum((int(r[k]), int(f[k])) != fpu_evaluate(op, x, y)
                                      for k, (x, y) in enumerate(zip(a, b, strict=True)))
-            say(f"   fptest: {args.fptest} vectors x 12 ops in {time.perf_counter() - t0:.1f} s, "
+            say(f"   fptest: {args.fptest} vectors x {spec.FPU_OP_COUNT} ops in {time.perf_counter() - t0:.1f} s, "
                 f"{total_bad} mismatches")
             if total_bad:
                 fail("5. fptest", "FPU mismatches; compare with the UART run to see if it is transport related.")

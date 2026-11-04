@@ -4,8 +4,9 @@
 The driver moves scratchpad words and runs NOP, FILL and the FPU array kernel.
 I keep the same Device methods for UART, UDP and the software simulators;
 the chosen transport changes how packets move, not what a command means.
-The phase 3 operation codes are available through Device.fpu, while the CLI's
-exact-bit checks still select the original twelve arithmetic operations.
+The driver and CLI support all eighteen operations. Phase 3 checks compare
+the result bits with the CORDIC model and measure error against the
+mathematical reference separately.
 """
 
 from mathaccel.driver.device import Device, connect

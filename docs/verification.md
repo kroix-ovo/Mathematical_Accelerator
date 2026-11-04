@@ -19,15 +19,15 @@ The older directed checks still run: `hw/tb/sv/tb_accel_core.sv` (xsim) and `hw/
 I reran these checks on 2026-11-03 for the phase 3 publication. They cover the
 current RTL and reference models, including the five-bit operation field,
 CORDIC integration and output buffering. They are simulation and host-model
-results; the physical board measurements later in this file are from the
-earlier twelve-operation implementation.
+results. [Phase 3 board results](#phase-3-board-results) has the measurements
+on the physical board.
 
 | Check | Command from the repository root | Result |
 |---|---|---|
 | Generated protocol and CORDIC tables | `python tools/gen_spec.py --check` and `python tools/gen_cordic.py --check` | Both current |
 | Python lint | `python -m ruff check sw tools hw/tb hw/scripts` | Passed |
-| Software/reference tests | `python -m pytest -q` | 138 passed |
-| Driver over a local UDP socket | `python -m pytest -q sw/tests/test_device.py --port udpsim` | 29 passed |
+| Software/reference tests | `python -m pytest -q` | 139 passed |
+| Driver over a local UDP socket | `python -m pytest -q sw/tests/test_device.py --port udpsim` | 30 passed |
 | Standalone CORDIC, Verilator | `python hw/scripts/run_pyuvm.py cordic --test CordicRegressTest --n 5000` | 5,419 results; no model, latency or ULP/flag errors; 52/52 path bins |
 | Standalone CORDIC, Icarus | `python hw/scripts/run_pyuvm.py cordic --sim icarus --test CordicRegressTest --n 500` | 1,051 results; no model, latency or ULP/flag errors |
 | FPU with 64-entry FIFO, Verilator | `python hw/scripts/run_pyuvm.py fpu --test FpuRegressTest --n 3000` | 23,568 results; no errors; longest CORDIC latency 91 clocks |
@@ -63,17 +63,17 @@ Errors are rounded to three decimal places in the table. All six runs
 reported zero rule, flag and budget failures. Rule-decided inputs are
 included in the input count but checked by exact result/flag equality,
 rather than included in the finite-error histogram. This is a sampled
-accuracy result, not an exhaustive bound over all fp32 operands.
+accuracy result, not an exhaustive bound over all fp32 operands. The
+million-input table is in [numerics.md](numerics.md#measured-accuracy).
 
 The first Icarus Ethernet multi-frame attempt stopped at time zero because
 the transmit monitor converted an unknown `TX_EN` to a Python integer before
 reset had initialized it. I made that monitor wait for reset release. The
 rerun passed; the change does not suppress checks on traffic after reset.
 
-This publication does not add phase 3 physical board measurements or a new
-full-design timing result. The standalone timing script remains available
-as `hw/scripts/build_cordic.tcl`; its reports and a programmed-board test
-would establish different facts from the simulations above.
+The standalone timing script is `hw/scripts/build_cordic.tcl`. It reports on
+the CORDIC unit alone, so the full-design timing that matters for the board is
+in [Phase 3 board results](#phase-3-board-results).
 
 ## FPU block environment (`hw/tb/uvm/fpu`)
 
@@ -285,7 +285,35 @@ With the new driver the median NOP round trip was 88 µs and the slowest of the 
 
 * After the laptop's adapter resets, the link only comes back when the cable is replugged. A fix would read the PHY's link status over MDIO and reset the PHY if the link stays down.
 * The debug LEDs are still in the design. LED8 to LED11 show live state (transmitter busy, reply waiting in the reply buffer, replay engine inside a datagram, reply still in the encoder); LED12 to LED14 are the latching versions of the first three. Pressing the CPU reset button clears them.
-* `pytest sw/tests/test_device.py --port udp:192.168.10.2` has not been run on the board yet; the bring-up script covers the same commands.
+
+## Phase 3 board results
+
+I ran these checks on 2026-11-03 on the same board and cable as the Ethernet results above, with the laptop at 192.168.10.1 and the USB cable still connected. The bitstream was built from commit `a67302d` with `hw/scripts/build.tcl` and loaded with `hw/scripts/program.tcl`.
+
+The full design met the 100 MHz constraint with WNS +0.154 ns and WHS +0.013 ns. Before phase 3 the worst setup slack was +0.118 ns (the final Ethernet bitstream). The worst path is in `cmd_proc`, from `len` to `tptr`, not in the FPU. The RMII paths had 1.85/1.78 ns (receive setup/hold) and 2.48/9.99 ns (transmit setup/hold) of slack, the same as before. The design uses 16,875 LUTs (26.6%), 11,704 flip-flops (9.2%), 66.5 block RAM tiles (49.3%) and 20 DSP blocks (8.3%). Of those, `fp_cordic` takes 9,517 LUTs, 7,498 flip-flops and 18 DSP blocks, and the logic in `fpu.sv` around the units, including the result FIFO, takes 173 LUTs.
+
+| check | command | result |
+|---|---|---|
+| bring-up, all layers | `python hw/scripts/eth_bringup.py --uart COM3 --fptest 5000 --nop 2000` | passed; board reports v0.3 and 100 MHz; 4/4 pings answered |
+| full scratchpad over UDP | same script | 65,536 words written and read in 835 ms (628 kB/s payload), 0 mismatches |
+| all 18 ops, seeded | same script | 5,000 vectors per op, 90,000 total, 0 mismatches against the models |
+| device tests | `pytest sw/tests/test_device.py --port udp:192.168.10.2` | 30 passed: 26 board tests and 4 simulator-only tests |
+| ops 0–11, cycle counts checked | `mathaccel --port udp:192.168.10.2 fptest --op exact --n 5000` | 0 result or flag mismatches, 0 wrong cycle counts |
+| ops 12–17 | `mathaccel --port udp:192.168.10.2 fptest --op phase3 --n 1000000` | 1,000,000 vectors per function, 6,000,000 total; 0 mismatches against the bit-accurate model, 0 wrong cycle counts, 0 over budget or with wrong flags |
+| single operations | `mathaccel --port udp:192.168.10.2 fp ...` for one case of each function | all matched the model at 60 cycles, which is 4·1 + 56 |
+| link errors afterwards | `mathaccel --port udp:192.168.10.2 status` | 0 CRC errors, 0 frame errors |
+
+The largest errors for each function are in [numerics.md](numerics.md#measured-accuracy). For these vectors the board's result word, flag word and kernel cycle count were checked; `fptest` includes the Payne–Hanek worst-case inputs from `ulp.PH_WORST`.
+
+NOP round trips, 2,000 requests each: median 94 µs over UDP (mean 126 µs, 99th percentile 573 µs) and 998 µs over the UART, a ratio of 10.6.
+
+What this run does not show:
+
+* **The FIFO's stall rules.** One kernel run uses one op, so on the board CORDIC results never collide with other units. The slot reservation, the full-FIFO stall and the age rule have only been exercised in simulation.
+* **A bound over all inputs.** These are samples.
+* **Separate board timing for CORDIC.** The cycle counts come from the kernel's counter. Wall time on the board is set by the link.
+
+Each function took about 22 s per million vectors, or about 45,000 elements per second. That time includes the transfers and computing the expected results on the laptop, and it is mostly the transfers: every request waits for its reply, which holds payload rates near 0.7 MB/s. The plan's estimate of about 80 minutes for a sweep of all 2^32 inputs assumed 11 MB/s. At the measured rate one function would take about 26 hours, so I have not run those sweeps. Sending several requests per datagram would be the first thing to try.
 
 ## Ethernet bring-up checklist
 
