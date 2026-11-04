@@ -15,6 +15,12 @@ asyncio-style Lock instead; the layering sequence and raw byte sequences hold
 it for a whole frame, which gives the same "no interleaved frames" guarantee.
 """
 
+# pyuvm calls build_phase to create components and connect_phase to wire
+# their software ports. Concurrent run_phase coroutines then drive or
+# observe the simulated pins. check/report phases run after stimulus.
+# I use observations from the monitors for predictions: an item queued
+# by a sequence is not evidence that the DUT actually accepted it.
+
 from __future__ import annotations
 
 import struct
@@ -54,6 +60,7 @@ CPB = 8  # clocks per UART bit, matches the CLKS_PER_BIT parameter in run.py
 # ---------------------------------------------------------------------------
 
 class UartByteItem(uvm_sequence_item):
+    """One UART byte with an optional delay before the next character."""
     def __init__(self, name="byte", data=0):
         super().__init__(name)
         self.data = data
@@ -80,12 +87,14 @@ class WireFrameItem(uvm_sequence_item):
 # ---------------------------------------------------------------------------
 
 class UartSequencer(uvm_sequencer):
+    """Queue byte items for the serial pin driver."""
     def __init__(self, name, parent):
         super().__init__(name, parent)
         self.frame_lock = Lock()       # stands in for SV lock()/unlock()
 
 
 class UartDriver(uvm_driver):
+    """Turn byte items into timed start, data and stop bits on the DUT receive pin."""
     def build_phase(self):
         self.dut = ConfigDB().get(self, "", "DUT")
 
@@ -137,6 +146,7 @@ class UartFrameMonitor(uvm_monitor):
 
 
 class UartAgent(uvm_agent):
+    """Group the serial driver, sequencer and passive byte monitors."""
     def build_phase(self):
         self.sqr = UartSequencer("sqr", self)
         self.drv = UartDriver("drv", self)
@@ -190,6 +200,7 @@ async def send_bytes(seq: uvm_sequence, data: bytes) -> None:
 
 
 class RawBytesSeq(uvm_sequence):
+    """Send an already encoded byte string, including malformed frames used by error tests."""
     def __init__(self, name, data: bytes):
         super().__init__(name)
         self.data = data
@@ -203,6 +214,7 @@ class RawBytesSeq(uvm_sequence):
 # ---------------------------------------------------------------------------
 
 class CmdBaseSeq(uvm_sequence):
+    """Express commands at the protocol level while lower sequences handle serial framing."""
     tag = 0
     timeout_clks = 400_000
 
@@ -235,6 +247,7 @@ class CmdBaseSeq(uvm_sequence):
 
 
 class CmdSmokeSeq(CmdBaseSeq):
+    """Check board identity, simple kernels and status before the longer command scenarios."""
     async def body(self):
         await self.send(*P.ping())
         await self.send(*P.status())
@@ -242,6 +255,7 @@ class CmdSmokeSeq(CmdBaseSeq):
 
 
 class CmdMemSeq(CmdBaseSeq):
+    """Write and read memory through commands, including the legal-range boundaries."""
     async def body(self):
         import random
         rng = random.Random(11)
@@ -253,10 +267,11 @@ class CmdMemSeq(CmdBaseSeq):
 
 
 class CmdFpuSeq(CmdBaseSeq):
+    """Run every FPU operation through scratchpad arrays and check its returned data and cycles."""
     async def body(self):
         n, A, B, R, F = 10, 8000, 8300, 8600, 8900
         g = FpLcg(0x70F0)
-        for fop in range(12):
+        for fop in range(spec.FPU_OP_COUNT):
             ops = [g.stimulus(fop) for _ in range(n)]
             await self.write_words(A, [a for _, a, _ in ops])
             await self.write_words(B, [b for _, _, b in ops])
@@ -266,12 +281,13 @@ class CmdFpuSeq(CmdBaseSeq):
 
 
 class CmdErrorSeq(CmdBaseSeq):
+    """Send broken frames and invalid commands, then check that normal traffic still works."""
     async def body(self):
         await self.send(0x33)                                                    # BAD_OP
         await self.send(Op.PING, b"\x00")                                        # BAD_LEN
         await self.send(*P.read_mem(spec.SCRATCH_WORDS - 1, 2))                  # BAD_ADDR
         await self.send(*P.run(0x7E))                                            # BAD_KERNEL
-        await self.send(*P.run(Kernel.FPU, P.fpu_args(12, 1, 0, 0, 0, 0)))       # BAD_ARG
+        await self.send(*P.run(Kernel.FPU, P.fpu_args(spec.FPU_OP_COUNT, 1, 0, 0, 0, 0)))  # BAD_ARG
         await self.send(*P.run(Kernel.FILL, struct.pack("<III", spec.SCRATCH_WORDS - 1, 2, 0)))
         await self.send(*P.ping(), corrupt="crc")
         await self.send(*P.ping(), corrupt="short")
@@ -332,6 +348,7 @@ class TopScoreboard(uvm_component):
 
 
 class TopEnv(uvm_env):
+    """Connect UART observations to the command reference model and coverage components."""
     def build_phase(self):
         self.uart = UartAgent("uart", self)
         self.cmd_sqr = CmdSequencer("cmd_sqr", self)
@@ -347,6 +364,7 @@ class TopEnv(uvm_env):
 
 
 class TopBaseTest(uvm_test):
+    """Reset the core, run a command scenario and wait for all expected UART replies."""
     def build_phase(self):
         ConfigDB().set(None, "*", "DUT", cocotb.top)
         self.env = TopEnv("env", self)
@@ -379,6 +397,7 @@ class TopBaseTest(uvm_test):
 
 @pyuvm.test()
 class TopSmokeTest(TopBaseTest):
+    """Run only the short command smoke sequence."""
     async def run_seqs(self):
         await CmdSmokeSeq("smoke").start(self.env.cmd_sqr)
 

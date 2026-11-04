@@ -15,6 +15,10 @@
 //   stage 4  second multiplier register (lets the DSP blocks run at speed)
 //   stage 5  renormalize the 48-bit product, first half of rounding
 //   stage 6  second half of rounding, output register
+// Multiplying two 24-bit significands gives a 48-bit product. I keep the
+// extra low bits until rounding: dropping them early would change the answer
+// near a halfway point. The FPGA can implement this multiplication with DSP
+// blocks, while the surrounding registers split the work across clock edges.
 module fp_mul
   import accel_pkg::*;
   import fp_pkg::*;

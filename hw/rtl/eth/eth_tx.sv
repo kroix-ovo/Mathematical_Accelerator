@@ -19,6 +19,11 @@
 // the UDP length), the UDP header and the payload; a result of 0 is sent as
 // FFFF because 0 would mean "no checksum". The same rules are in
 // sw/mathaccel/net/frames.py.
+// Read the transmit states as a byte scheduler: each chooses a header,
+// payload, padding or checksum byte, then waits for the RMII handoff. Packet
+// checksums describe protocol headers; the Ethernet FCS protects the frame
+// sent on the wire. I keep those checks separate because they cover different
+// bytes and use different algorithms.
 module eth_tx
   import accel_pkg::*;
   import util_pkg::*;

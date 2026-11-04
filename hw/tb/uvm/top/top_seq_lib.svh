@@ -1,3 +1,7 @@
+// Command sequences use array addresses in words, while packet payloads are
+// bytes in little-endian order. The codec performs that conversion before the
+// UART driver sees the request. I read results back from the scratchpad so a
+// passing RUN reply alone cannot hide a missing or misaddressed result write.
 // Sequences for the top-level environment.
 //
 // Three kinds:
@@ -125,7 +129,7 @@ class cmd_fpu_seq extends cmd_base_seq;
     fp_lcg     g = new(seed);
     fpu_op_e   op;
     bit [31:0] a, b, av[$], bv[$];
-    for (int fop = 0; fop < 12; fop++) begin
+    for (int fop = 0; fop < accel_pkg::FPU_OP_COUNT; fop++) begin
       av.delete(); bv.delete();
       repeat (n) begin
         g.stimulus(fop, op, a, b);
@@ -153,7 +157,7 @@ class cmd_error_seq extends cmd_base_seq;
     p.delete(); put32(p, (1 << accel_pkg::SCRATCH_AW) - 1); put16(p, 2);
     send(accel_pkg::OP_READ_MEM, p, r);                         // BAD_ADDR
     p = '{8'h7E};            send(accel_pkg::OP_RUN, p, r);       // BAD_KERNEL
-    p.delete(); p.push_back(accel_pkg::K_FPU); p.push_back(12);
+    p.delete(); p.push_back(accel_pkg::K_FPU); p.push_back(accel_pkg::FPU_OP_COUNT);
     repeat (20) p.push_back(0);
     send(accel_pkg::OP_RUN, p, r);                              // BAD_ARG
     p.delete(); p.push_back(accel_pkg::K_FPU); p.push_back(0);

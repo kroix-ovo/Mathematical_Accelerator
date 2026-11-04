@@ -1,6 +1,10 @@
 // UART receive converts a start bit, eight data bits, and a stop bit into a
 // one-clock byte-valid pulse. I sample near each bit's center, where the wire
 // is less likely to be changing, and discard a byte with a bad stop bit.
+// CLKS_PER_BIT counts FPGA clocks, not transmitted bits. The counter spaces
+// the samples; bit_idx chooses which of the eight data samples comes next.
+// The two synchronizer registers reduce metastability risk, while the START
+// state's half-bit wait separately rejects short low pulses on the cable.
 module uart_rx #(
     parameter int CLKS_PER_BIT = 50
 ) (

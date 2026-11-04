@@ -1,6 +1,7 @@
 hw/rtl/pkg/accel_pkg.sv
 hw/rtl/pkg/util_pkg.sv
 hw/rtl/fp/fp_pkg.sv
+hw/rtl/fp/cordic_pkg.sv
 hw/rtl/io/uart_rx.sv
 hw/rtl/io/uart_tx.sv
 hw/rtl/io/cobs_decoder.sv
@@ -17,6 +18,7 @@ hw/rtl/fp/fp_addsub.sv
 hw/rtl/fp/fp_mul.sv
 hw/rtl/fp/fp_misc.sv
 hw/rtl/fp/fp_divsqrt.sv
+hw/rtl/fp/fp_cordic.sv
 hw/rtl/fp/fpu.sv
 hw/rtl/core/scratch_mem.sv
 hw/rtl/core/kernel_engine.sv

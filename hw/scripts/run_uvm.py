@@ -6,8 +6,8 @@
     python hw/scripts/run_uvm.py board
 
 Steps, all inside build/uvm_<env>/:
-  1. xsc compiles the DPI-C reference model (hw/tb/uvm/dpi/fp_ref.c) into a
-     shared library the simulator can call.
+  1. xsc compiles the DPI-C reference models (hw/tb/uvm/dpi/fp_ref.c and
+     cordic_ref.c) into a shared library the simulator can call.
   2. xvlog compiles the RTL, the UVM packages and the test top (-L uvm links
      the UVM 1.2 library that ships with Vivado).
   3. xelab elaborates the design into a simulation snapshot and attaches the
@@ -31,7 +31,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from run_xsim import find_bin  # noqa: E402
 
 FP_RTL = ["hw/rtl/pkg/accel_pkg.sv", "hw/rtl/fp/fp_pkg.sv", "hw/rtl/fp/fp_addsub.sv",
-          "hw/rtl/fp/fp_mul.sv", "hw/rtl/fp/fp_misc.sv", "hw/rtl/fp/fp_divsqrt.sv", "hw/rtl/fp/fpu.sv"]
+          "hw/rtl/fp/fp_mul.sv", "hw/rtl/fp/fp_misc.sv", "hw/rtl/fp/fp_divsqrt.sv",
+          "hw/rtl/fp/cordic_pkg.sv", "hw/rtl/fp/fp_cordic.sv", "hw/rtl/fp/fpu.sv"]
 
 ENVS = {
     "fpu": {
@@ -108,7 +109,8 @@ def main() -> int:
     # Forward slashes on purpose: xelab copies the source path of each DPI
     # call into a C string literal, and a Windows path such as C:\Users holds
     # the two characters backslash-U, which C rejects as an escape sequence.
-    run([find_bin(args.vivado, "xsc"), (ROOT / "hw/tb/uvm/dpi/fp_ref.c").as_posix()], "xsc.log")
+    dpi = [(ROOT / "hw/tb/uvm/dpi" / c).as_posix() for c in ("fp_ref.c", "cordic_ref.c")]
+    run([find_bin(args.vivado, "xsc"), *dpi], "xsc.log")
     incs = [x for d in cfg["inc"] for x in ("-i", (ROOT / d).as_posix())]
     srcs = [(ROOT / s).as_posix() for s in [*rtl, *cfg["tb"]]]
     run([find_bin(args.vivado, "xvlog"), "-sv", "-L", "uvm", *incs, *srcs], "xvlog.log")

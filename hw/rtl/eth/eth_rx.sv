@@ -33,6 +33,12 @@
 //      time); otherwise the frame is dropped and counted.
 //   6. Anything else (IPv6, other ports, multicast...): ignore.
 // The Python model sw/mathaccel/net/board_model.py makes the same decisions.
+// I separate receiving bytes from deciding whether the frame is useful.
+// Temporary frame RAM can contain bad traffic; a published slot describes
+// only a checked frame. The slot's kind and address fields tell the replay
+// or ping-reply logic what to do, and its consumer explicitly frees it.
+// This ownership rule keeps a later incoming frame from overwriting one
+// whose payload is still being read.
 module eth_rx
   import accel_pkg::*;
   import util_pkg::*;

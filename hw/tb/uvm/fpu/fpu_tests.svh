@@ -1,3 +1,7 @@
+// A test selects and runs sequences inside the reusable FPU environment.
+// Raising an objection keeps the simulation alive while stimulus and queued
+// outputs are outstanding. Dropping it is safe only after the drain interval;
+// the scoreboard's final checks catch missing replies as well as wrong ones.
 // Tests: each one builds the same environment and runs different sequences.
 // Pick one at run time with +UVM_TESTNAME=<name>. Size knobs:
 //   +FPU_N=<n>       items per random/LCG sequence (default 2000)
@@ -11,7 +15,7 @@ class fpu_base_test extends uvm_test;
   fpu_env      env;
   int unsigned n = 2000;
   bit [31:0]   lcg_seed = 1;
-  int          force_op = -1;       // +FPU_OP=<0..11> pins the LCG test's operation
+  int          force_op = -1;       // +FPU_OP=<0..17> pins the LCG test's operation
 
   function new(string name, uvm_component parent);
     super.new(name, parent);
@@ -126,8 +130,9 @@ class fpu_regress_test extends fpu_base_test;
     fpu_tie_seq       t   = fpu_tie_seq::type_id::create("t");
     fpu_underflow_seq u   = fpu_underflow_seq::type_id::create("u");
     fpu_mix_burst_seq mix = fpu_mix_burst_seq::type_id::create("mix");
+    fpu_cordic_mix_seq cm = fpu_cordic_mix_seq::type_id::create("cm");
     l.count = n;  l.seed = lcg_seed;
-    r.count = n;  t.count = n / 4;  u.count = n / 4;  mix.count = n / 16;
+    r.count = n;  t.count = n / 4;  u.count = n / 4;  mix.count = n / 16;  cm.count = n / 40;
     c.start(env.agent.sqr);
     l.start(env.agent.sqr);
     fork
@@ -136,5 +141,6 @@ class fpu_regress_test extends fpu_base_test;
     join
     t.start(env.agent.sqr);
     u.start(env.agent.sqr);
+    cm.start(env.agent.sqr);     // on its own, so its bursts stay intact
   endtask
 endclass

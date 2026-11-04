@@ -81,6 +81,7 @@ def describe(bits: int) -> str:
 
 
 def flag_names(flags: int) -> str:
+    """Print all flags present in the five-bit result status, or a dash for an exact ordinary result."""
     return "|".join(f.name for f in FpuFlag if flags & f) or "-"
 
 
@@ -102,7 +103,11 @@ def cmd_fp(dev, args) -> None:
 def cmd_fptest(dev, args) -> None:
     """Run seeded FPU vectors on the device and compare every result and flag
     word with the Python reference model. Exits non-zero on any mismatch."""
-    ops = list(FpuOp) if args.op == "all" else [FpuOp[args.op.upper()]]
+    # This command is an exact-bit checker for the original twelve ops.
+    # I keep phase 3 out of the default sweep: its results need the
+    # ULP-aware checks used in the CORDIC tools, rather than equality
+    # with the correctly rounded mathematical answer.
+    ops = list(fp32ref.EXACT_OPS) if args.op == "all" else [FpuOp[args.op.upper()]]
     chunk = 1024                     # elements per FPU kernel run
     bad_total = 0
     for op in ops:
@@ -146,7 +151,7 @@ def main(argv: list[str] | None = None) -> None:
     mt.add_argument("--seed", type=int, default=1)
     sub.add_parser("bench")
     fp = sub.add_parser("fp", help="one FPU operation, e.g. `fp div 1 3` or `fp sqrt 2`")
-    fp.add_argument("op", choices=[o.name.lower() for o in FpuOp])
+    fp.add_argument("op", choices=[o.name.lower() for o in fp32ref.EXACT_OPS])
     fp.add_argument("a")
     fp.add_argument("b", nargs="?")
     ft = sub.add_parser("fptest", help="seeded FPU vectors checked against the Python model")

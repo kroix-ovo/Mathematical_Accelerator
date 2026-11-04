@@ -11,11 +11,10 @@ import struct
 import numpy as np
 import pytest
 
-from mathaccel import fp32ref
 from mathaccel._generated import spec
 from mathaccel._generated.spec import FpuOp, Kernel, Op, Status
 from mathaccel.driver.device import Device
-from mathaccel.driver.model import DeviceModel
+from mathaccel.driver.model import DeviceModel, fpu_evaluate
 from mathaccel.driver.protocol import DeviceError, Frame
 from mathaccel.driver.transport import SimTransport
 from mathaccel.fpgen import stream
@@ -118,15 +117,18 @@ def test_status_payload_len_checked():
 
 # ---- FPU kernel (simulator by default, the board with --port) --------------
 
-@pytest.mark.parametrize("fop", list(FpuOp))
+@pytest.mark.parametrize("fop", range(spec.FPU_OP_COUNT))
 def test_fpu_kernel_matches_reference(dev, fop):
-    """Run seeded vectors through the FPU kernel and compare bit patterns and flags."""
+    """Run seeded vectors through the FPU kernel and compare bit patterns and flags.
+
+    Ops 0-11 against the exact IEEE rules, the CORDIC ops 12-17 against the
+    bit-accurate model of the CORDIC unit (both through fpu_evaluate)."""
     vecs = list(stream(0xF00D + fop, 64, fop))
     a = [v[1] for v in vecs]
     b = [v[2] for v in vecs]
     res, fl, run = dev.fpu(fop, a, b, base=1000)
     for k, (x, y) in enumerate(zip(a, b, strict=True)):
-        assert (int(res[k]), int(fl[k])) == fp32ref.evaluate(fop, x, y), f"{FpuOp(fop).name} {x:08x} {y:08x}"
+        assert (int(res[k]), int(fl[k])) == fpu_evaluate(fop, x, y), f"{FpuOp(fop).name} {x:08x} {y:08x}"
     want_aux = 0
     for f in fl:
         want_aux |= int(f)
@@ -134,8 +136,9 @@ def test_fpu_kernel_matches_reference(dev, fop):
 
 
 def test_fpu_kernel_errors(dev):
+    """Reject illegal operations, lengths and memory spans before an FPU kernel can modify memory."""
     with pytest.raises(DeviceError, match="BAD_ARG"):
-        dev.fpu_kernel(12, 1, 0, 0, 0, 0)
+        dev.fpu_kernel(spec.FPU_OP_COUNT, 1, 0, 0, 0, 0)
     with pytest.raises(DeviceError, match="BAD_ADDR"):
         dev.fpu_kernel(0, 2, 0, 0, 0, spec.SCRATCH_WORDS - 1)
     assert dev.fpu_kernel(0, 0, 0, 0, 0, 0).cycles == 1

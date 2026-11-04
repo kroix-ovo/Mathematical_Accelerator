@@ -25,7 +25,7 @@ SECTIONS = (
     ("opcodes", "OP_", 8),
     ("status", "ST_", 8),
     ("kernels", "K_", 8),
-    ("fpu_ops", "FOP_", 4),
+    ("fpu_ops", "FOP_", 5),
     ("fpu_flags", "FFLAG_", 5),
 )
 PY_CLASSES = {"opcodes": "Op", "status": "Status", "kernels": "Kernel",
@@ -64,6 +64,8 @@ def render_sv(spec: dict) -> str:
     lines.append(f"  localparam int          BAUD          = {d['baud']};")
     lines.append(f"  localparam int          SCRATCH_AW    = {d['scratch_addr_bits']};")
     lines.append(f"  localparam int          MAX_PAYLOAD   = {d['max_payload']};")
+    lines.append("  // The FPU kernel accepts op codes 0 .. FPU_OP_COUNT-1 (BAD_ARG otherwise).")
+    lines.append(f"  localparam int          FPU_OP_COUNT  = {d['fpu_op_count']};")
     # The Ethernet identity is written as packed hex so the RTL can compare a
     # received byte with one slice of it, e.g. ETH_MAC[47 -: 8] is the first
     # byte on the wire. Dotted and colon notation stay in the TOML for people.
@@ -78,7 +80,7 @@ def render_sv(spec: dict) -> str:
         "opcodes": "Request opcodes; a reply sets bit 7 of the same opcode.",
         "status": "First byte of every reply payload; zero means success.",
         "kernels": "Kernel IDs carried in the first byte of a RUN request payload.",
-        "fpu_ops": "FPU operation codes, four bits wide (fpu.sv op input).",
+        "fpu_ops": "FPU operation codes, five bits wide (codes 12-17 are phase 3).",
         "fpu_flags": "IEEE exception flag masks, five bits wide (RISC-V fflags order).",
     }
     # Each section gets its own name prefix and bit width. The width makes the
@@ -104,7 +106,7 @@ def render_py(spec: dict) -> str:
         "# Device identity, version, clock, baud, and packet/memory sizes.",
     ]
     for key in ("magic", "version_major", "version_minor", "clk_hz", "baud",
-                "scratch_addr_bits", "max_payload"):
+                "scratch_addr_bits", "max_payload", "fpu_op_count"):
         val = d[key]
         lines.append(f"{key.upper()} = {hex(val) if key == 'magic' else val}")
     lines += [

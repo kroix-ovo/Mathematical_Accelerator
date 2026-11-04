@@ -9,6 +9,11 @@
 // frame_rx; a small arbiter hands one checked frame at a time to the single
 // cmd_proc and remembers where it came from. The reply goes through the one
 // frame_tx and COBS encoder, then back out on the transport its request used.
+// This file is mostly connectivity: .clk connects an instance's clk port
+// to this module's clk signal, and .name(signal) connects names that differ.
+// These instances exist at the same time; their order in the file does not
+// prescribe an execution order. Follow valid/ready and the selected memory
+// ports to see when bytes, commands and results actually move.
 module accel_core
   import accel_pkg::*;
 #(

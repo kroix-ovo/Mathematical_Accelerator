@@ -23,7 +23,7 @@ from mathaccel.driver.protocol import RESP_BIT, Frame, FrameError
 
 
 class DeviceModel:
-    """A scratchpad and command handlers with the FPGA's phase 1 behavior."""
+    """Scratchpad, command responses and kernel timing through phase 3."""
 
     def __init__(self) -> None:
         # Like configured FPGA block RAM, a new model starts with zero words.
@@ -135,7 +135,7 @@ class DeviceModel:
             if len(args) != 21:
                 return Status.BAD_LEN, b""
             fop, count, a, b, r, f = struct.unpack("<BIIIII", args)
-            if fop > max(FpuOp):
+            if fop >= spec.FPU_OP_COUNT:
                 return Status.BAD_ARG, b""
             if not all(self._in_range(base, count) for base in (a, b, r, f)):
                 return Status.BAD_ADDR, b""
@@ -146,7 +146,7 @@ class DeviceModel:
             av = self.mem[a:a + count].copy()
             bv = self.mem[b:b + count].copy()
             for k in range(count):
-                res, fl = fp32ref.evaluate(fop, int(av[k]), int(bv[k]))
+                res, fl = fpu_evaluate(fop, int(av[k]), int(bv[k]))
                 self.mem[r + k] = res
                 self.mem[f + k] = fl
                 aux |= fl
@@ -157,19 +157,43 @@ class DeviceModel:
         return Status.OK, struct.pack("<II", cycles, aux)
 
 
+CORDIC_OPS = (FpuOp.SIN, FpuOp.COS, FpuOp.ATAN2, FpuOp.HYPOT, FpuOp.EXP, FpuOp.LN)
+
+
+def fpu_evaluate(fop: int, a: int, b: int = 0) -> tuple[int, int]:
+    """What the FPU returns for one element: (result_bits, flags).
+
+    Ops 0-11 follow the exact IEEE rules in fp32ref. The CORDIC ops 12-17
+    are not correctly rounded, so for those I use the bit-accurate model of
+    fp_cordic.sv instead, which matches the hardware exactly (its accuracy
+    against mpmath is measured separately by tools/measure_ulp.py). It is
+    imported only when needed, because building its tables takes a moment.
+    """
+    if fop in CORDIC_OPS:
+        from mathaccel import cordic_model
+        return cordic_model.evaluate(fop, a, b)
+    return fp32ref.evaluate(fop, a, b)
+
+
 # Clock counts of the FPU kernel, measured from the RTL (kernel_engine.sv)
 # and checked against it by the xsim/cocotb vector tests. Each element costs
 # FETCH clocks (RA, RB, RC, ISSUE) when the FPU is ready at once; divide and
-# square root are limited by the iterative unit's DS_PERIOD instead.
+# square root are limited by the iterative unit's DS_PERIOD instead. The
+# CORDIC ops issue at the same rate as the 6-clock ops and only have a
+# longer tail: the FPU returns them 54 clocks after issue instead of 7.
 FPU_FETCH = 4          # RA, RB, RC, ISSUE
 FPU_PIPE_TAIL = 9      # last issue -> 7-clock FPU latency -> flag write -> FIN
+CORDIC_TAIL = FPU_PIPE_TAIL + (54 - 7)
 DS_PERIOD = 33         # fp_divsqrt: capture, prep, 27 iterate, pack, 2 round, output, +1 kernel clock
 DS_TAIL = 6
 
 
 def fpu_kernel_cycles(fop: int, count: int) -> int:
+    """Predict reported clocks from the fetch cadence, unit latency and final write-back."""
     if count == 0:
         return 1
     if fop in (FpuOp.DIV, FpuOp.SQRT):
         return DS_PERIOD * count + DS_TAIL
+    if fop in CORDIC_OPS:
+        return FPU_FETCH * count + CORDIC_TAIL
     return FPU_FETCH * count + FPU_PIPE_TAIL

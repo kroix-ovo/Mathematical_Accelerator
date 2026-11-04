@@ -1,3 +1,6 @@
+// A frame sequence can vary packet contents and PHY behavior independently.
+// That distinction matters: a valid command must survive legal RMII timing,
+// while malformed headers or checksums must be rejected even with ideal pins.
 // Sequences, the reply path for command sequences, the environment, and the
 // virtual sequences for the Ethernet tests.
 

@@ -18,6 +18,12 @@
 // sender left it off, so one datagram's last frame can never run into the
 // next datagram's first. While I replay a datagram I remember who sent it;
 // the reply goes back to that MAC, IP address and port.
+// The instance connections below are wires between circuits that all run
+// concurrently. The replay state machine coordinates their ownership: a
+// stored UDP frame is retained until all of its command bytes have passed
+// through the core and the final reply no longer needs its return address.
+// I gate replay at command delimiters because the network can deliver data
+// much faster than the command processor can execute a long kernel.
 module eth_stack
   import accel_pkg::*;
 (

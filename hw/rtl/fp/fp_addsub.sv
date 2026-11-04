@@ -12,6 +12,11 @@
 //   stage 6  second half of rounding (fp_pkg::round_post), output register
 // Each "stage" ends at a register (an always_ff assignment), so the logic
 // between two registers only has to settle within one 10 ns clock period.
+// I separate arithmetic stages with registers so exponent alignment, the
+// add/subtract, normalization and rounding do not all have to settle in one
+// 10 ns clock period. A new request can follow the previous one each clock.
+// The stage's valid bit and tag move with its number, including special
+// answers such as NaN that bypass the arithmetic but keep the same latency.
 module fp_addsub
   import accel_pkg::*;
   import fp_pkg::*;

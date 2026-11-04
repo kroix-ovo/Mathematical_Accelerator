@@ -12,6 +12,11 @@
 // The real work takes four stages (I2F rounding uses two); stages 5-6 are
 // plain delay registers so this unit has the same latency as fp_addsub and
 // fp_mul.
+// I compare the encoded fields rather than using Verilog real arithmetic:
+// these are synthesizable bit comparisons, shifts and multiplexers. The five
+// op bits select a path; each path still carries its tag through six stages.
+// Even a comparison that is already decided in stage 1 waits in registers
+// so the FPU can merge it with add and multiply without result collisions.
 module fp_misc
   import accel_pkg::*;
   import fp_pkg::*;
@@ -21,7 +26,7 @@ module fp_misc
     input  logic          clk,
     input  logic          rst,
     input  logic          in_valid,
-    input  logic [3:0]    in_op,
+    input  logic [4:0]    in_op,      // ops this unit does not know give NaN + NV
     input  logic [31:0]   in_a,
     input  logic [31:0]   in_b,
     input  logic [TW-1:0] in_tag,
@@ -33,7 +38,7 @@ module fp_misc
   // ---------------------------------------------------------------- stage 1
   // Everything here only looks at bit fields or does one shift/compare.
   logic                 s1_v, s1_done, s1_neg, s1_zero;
-  logic [3:0]           s1_op;
+  logic [4:0]           s1_op;
   logic [TW-1:0]        s1_tag;
   logic [31:0]          s1_res, s1_abs;   // s1_abs: |integer| for I2F
   logic [5:0]           s1_lz;
@@ -144,7 +149,7 @@ module fp_misc
   // F2I: round the integer part to nearest even and apply the sign.
   logic                 s2_v, s2_done, s2_neg, s2_zero;
   logic [TW-1:0]        s2_tag;
-  logic [3:0]           s2_op;
+  logic [4:0]           s2_op;
   logic [31:0]          s2_res;
   logic [4:0]           s2_fl;
   logic [25:0]          s2_sig;

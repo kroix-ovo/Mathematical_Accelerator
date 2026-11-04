@@ -1,9 +1,11 @@
 # Reading the current HDL
 
-This guide follows the implemented design through phase 2. The hardware
+This guide follows the implemented design through phase 3. The hardware
 accepts packets, reads and writes a scratchpad, and runs three kernels: NOP,
-FILL, and FPU (elementwise fp32 arithmetic on scratchpad arrays). CORDIC, the
-expression engine, and the physics kernels in the project plan are future work.
+FILL, and FPU (elementwise fp32 arithmetic on scratchpad arrays). The FPU now
+includes CORDIC for sin, cos, atan2, hypot, exp and ln. The expression engine
+and physics kernels remain future work. Phase 3 simulation results are
+separate from the earlier physical board results in [verification.md](verification.md).
 
 ## The few SystemVerilog ideas you need
 
@@ -18,6 +20,35 @@ expression engine, and the physics kernels in the project plan are future work.
   the transfer occurs on a rising edge when both are high.
 - `rst` returns control state machines to idle. Scratchpad contents are set
   to zero when the FPGA is configured; a later reset does not erase them.
+
+I read HDL as a description of connected circuits. Two module instances
+exist at the same time, and two clocked blocks respond to the same edge.
+Their order in the file does not make one run before the other. Within a
+clocked block, `next <= current` means a register captures the value that
+was present before the edge. A local `=` assignment calculates a temporary
+value for that block; it does not add another clock edge.
+
+Some notation looks unfamiliar even when the circuit is straightforward:
+
+| Syntax | What to picture |
+|---|---|
+| `word[30:23]` | Wires carrying bits 30 down to 23 of a bus |
+| `args[8*k +: 8]` | Eight adjacent bits starting at bit `8*k`, selected as one byte |
+| `{high, low}` | Two buses joined end to end, with `high` in the upper positions |
+| `24'(value)` | A value resized to 24 bits; bits above that width are discarded |
+| `'0`, `1'b0`, `8'hFF` | All zeros at the destination width, one zero bit, and eight one bits |
+| `cond ? a : b` | A multiplexer selecting `a` when `cond` is true |
+| `logic signed`, `>>>` | A two's-complement bus and a right shift that preserves its sign |
+| `typedef struct packed` | One bus divided into named fields, such as result, flags and tag |
+| `logic [31:0] mem [64]` | 64 separate words, each 32 bits wide |
+| `for (genvar i = ...)` | Repeated hardware built before execution; here it creates pipeline stages |
+| `function automatic` | A reusable calculation; in RTL its logic feeds the caller's circuit |
+
+A procedural `for` loop is not automatically one iteration per clock either.
+For example, a checksum helper's loop expands combinational XOR logic.
+An iterative divider needs an explicit counter and registers to spread its
+iterations across clocks. The distinction comes from the surrounding circuit,
+not from the word `for`.
 
 ## Follow a request
 
@@ -66,7 +97,7 @@ the last write, and `cmd_proc` returns the measured cycle count.
 The FPU kernel streams pairs of words from the scratchpad into
 [`fpu.sv`](../hw/rtl/fp/fpu.sv) and writes each result and its flags back.
 The FPU has one request port (valid/ready handshake) and one result port
-(valid only), and sends every request to one of four units:
+(valid only), and sends every request to one of five units:
 
 - [`fp_addsub.sv`](../hw/rtl/fp/fp_addsub.sv): addition and subtraction. Line up
   the exponents, add the significands, renormalize. Six pipeline stages.
@@ -76,6 +107,8 @@ The FPU has one request port (valid/ready handshake) and one result port
   compares, also six stages so all three pipelines finish in step.
 - [`fp_divsqrt.sv`](../hw/rtl/fp/fp_divsqrt.sv): binary long division and
   digit-by-digit square root, one result bit per clock, one operation at a time.
+- [`fp_cordic.sv`](../hw/rtl/fp/fp_cordic.sv): the six phase 3 functions,
+  using a pipeline of shifts and additions with argument reduction at the input.
 
 Every unit hands its exact (or nearly exact) answer to `round_pre` and
 `round_post` in [`fp_pkg.sv`](../hw/rtl/fp/fp_pkg.sv), the only rounding logic
@@ -87,6 +120,87 @@ it does.
 
 The precise arithmetic rules are in [`numerics.md`](numerics.md). The
 testbenches are described in [`verification.md`](verification.md).
+
+## Follow one CORDIC operation
+
+Start with the header of `fp_cordic.sv`, which maps each function to its
+datapath. I use the same stages for several functions, but carry a mode with
+each request so adjacent requests can use different kinds of step.
+
+1. **Unpack and classify.** Stage 1 reads the fp32 sign, exponent and
+   significand. It handles zeros, infinities, NaNs and selected tiny inputs
+   by explicit rules. A precomputed answer travels beside the arithmetic
+   until the usual output clock; special inputs do not finish early.
+2. **Reduce and scale.** Stages 2–5 put the input into a range the adders can
+   handle accurately. Sin/cos multiply a 24-bit significand by a 96-bit
+   window of `2/pi`. Whole turns can be discarded, leaving the quadrant and
+   a fraction of a quarter turn. Exp uses the same multiplier with `1/ln2`.
+   Atan2/hypot normalize and order the two magnitudes. Ln separates the
+   exponent contribution and treats inputs close to 1 separately.
+3. **Load the vector.** Stage 6 chooses starting `x`, `y`, `z`, the step
+   mode and the eventual result sign. A fixed-point integer with 44 fraction
+   bits represents the stored integer divided by `2^44`. For example,
+   `1 << 43` represents 0.5. The binary point is an agreement between the
+   stages, rather than a separate signal.
+4. **Take 42 small steps.** Each generated stage has its own adders and
+   registers. Circular rotation drives the angle remainder toward zero;
+   vectoring drives `y` toward zero and accumulates the angle. Hyperbolic
+   steps serve exp/ln and repeat selected shift amounts to converge. Linear
+   steps perform division for small atan2 results and ln near 1.
+5. **Normalize and round.** The last four stages select `x`, `y`, `z`, or
+   the parallel small-angle result, find its leading one, restore its
+   exponent and apply the shared rounding logic. Guard and sticky bits
+   retain enough information about discarded bits to decide rounding.
+
+The unit accepts one request per clock and has 52 clocks of latency. Those
+are different properties: while one request is near the output, newer ones
+can occupy every earlier stage. A valid bit moves with each request. An
+empty stage still contains bits, but those bits do not describe an answer.
+
+The surrounding FPU adds buffering and output arbitration. With an otherwise
+free result port, a CORDIC result appears after 54 clocks. Short operations
+can finish while older CORDIC operations are still running, so tags identify
+which request produced each result. I reserve a FIFO entry when accepting
+CORDIC work, before its result exists. Otherwise many in-flight requests
+could all finish after the FIFO had filled. The age rule temporarily stops
+new requests to give waiting results access to the shared output.
+
+The kernel uses a single operation for an entire array and fetches a new
+pair every four clocks. Its CORDIC cycle formula is therefore `4*count + 56`
+for a nonempty array, including pipeline drain and final writes. It does
+not mean each element needs 56 separate clocks of exclusive execution.
+
+## Read the software and tests beside the hardware
+
+The Python driver in [`device.py`](../sw/mathaccel/driver/device.py) turns
+array operations into memory commands and a RUN request. The transport
+moves bytes; [`protocol.py`](../sw/mathaccel/driver/protocol.py) checks packet
+framing and CRC. [`model.py`](../sw/mathaccel/driver/model.py) predicts the
+command's memory effects and reported cycles without simulating each clock.
+
+For phase 3 there are two questions to test. First, does the RTL implement
+the intended finite-width algorithm? The integer model in
+[`cordic_model.py`](../sw/mathaccel/cordic_model.py) reproduces its truncations,
+tables and shifts. The C port in
+[`cordic_ref.c`](../hw/tb/uvm/dpi/cordic_ref.c) provides that same check for SV
+tests. They should match result bits and flags exactly.
+
+Second, how close is that algorithm to the mathematical function?
+[`mpref.py`](../sw/mathaccel/mpref.py) evaluates with mpmath at 256-bit
+precision, and [`ulp.py`](../sw/mathaccel/ulp.py) measures the difference in
+fp32 spacing. The C/libm reference is a faster second opinion. Sharing a
+constant table establishes consistency between implementations; it does not
+establish accuracy against the mathematical function.
+
+The testbench classes are simulation software. A sequence chooses inputs,
+a driver applies them to pins, monitors record accepted requests and valid
+results, and a scoreboard compares the observations with predictions.
+Coverage records which cases were exercised. It is useful evidence of test
+scope, but a covered case still needs its result checked.
+
+The current CLI's `fp` choices and default `fptest` cover the original twelve
+operations. Phase 3 is available through the driver and RTL testbenches;
+extending the CLI with ULP-aware function checks remains separate work.
 
 ## Where to change things
 
@@ -103,6 +217,15 @@ testbenches are described in [`verification.md`](verification.md).
   UART-to-UART simulation. Run `pytest -q` after installing the Python package.
   The UVM environments and their run commands are in
   [`verification.md`](verification.md).
+- Change CORDIC widths in `CordicParams` in `cordic_model.py`, then run
+  `python tools/gen_cordic.py`. This regenerates both `cordic_pkg.sv` and
+  `cordic_tables.h`. Remeasure accuracy and timing after changing widths;
+  editing a generated table alone makes the models disagree.
+
+I keep comments focused on data movement, timing and reasons for a design
+choice. First person marks a choice; the surrounding explanation describes
+what the circuit does. The wording follows the clear, conversational approach
+in [Google's developer writing guidance](https://developers.google.com/style/tone).
 
 No physical board result follows from these simulation checks. A bitstream,
 timing report, and board-level UART test are separate evidence.

@@ -1,6 +1,10 @@
 # Program the board over JTAG (volatile).
 #   vivado -mode batch -source hw/scripts/program.tcl
 set root [file normalize [file dirname [info script]]/../..]
+# Programming loads an existing bitstream over JTAG. I keep this separate
+# from the build so repeating a board test does not silently rebuild the RTL.
+# Success here confirms configuration transfer; commands and result checks
+# through UART or UDP are still needed to establish functional behavior.
 open_hw_manager
 connect_hw_server
 open_hw_target

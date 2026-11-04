@@ -25,6 +25,12 @@ and RX_ER can be raised in the middle of a frame. Each frame item picks those
 details, so the same commands are received under many PHY behaviours.
 """
 
+# pyuvm calls build_phase to create components and connect_phase to wire
+# their software ports. Concurrent run_phase coroutines then drive or
+# observe the simulated pins. check/report phases run after stimulus.
+# I use observations from the monitors for predictions: an item queued
+# by a sequence is not evidence that the DUT actually accepted it.
+
 from __future__ import annotations
 
 import os
@@ -150,10 +156,12 @@ class RmiiPhy:
 # ---------------------------------------------------------------------------
 
 class RmiiSequencer(uvm_sequencer):
+    """Queue complete frame descriptions for the PHY-model driver."""
     pass
 
 
 class RmiiDriver(uvm_driver):
+    """Apply each frame through the PHY model, including its selected receive timing variations."""
     def build_phase(self):
         self.dut = ConfigDB().get(self, "", "DUT")
         self.phy = RmiiPhy(self.dut)
@@ -232,6 +240,10 @@ class RmiiTxMonitor(uvm_monitor):
         dut = self.dut
         dib: list[int] = []
         idle = 10_000
+        # I start observing after reset releases. On a four-state simulator,
+        # the first clock edge can arrive before TX_EN's reset assignment has
+        # settled; that X is startup state, not a transmitted symbol.
+        await FallingEdge(dut.rst)
         while True:
             await RisingEdge(dut.clk_rmii)
             en = int(dut.rmii_tx_en.value)
@@ -260,6 +272,7 @@ class RmiiTxMonitor(uvm_monitor):
 
 
 class RmiiAgent(uvm_agent):
+    """Group frame sequencing, PHY driving and passive receive/transmit observations."""
     def build_phase(self):
         self.sqr = RmiiSequencer("sqr", self)
         self.drv = RmiiDriver("drv", self)
@@ -275,6 +288,7 @@ class RmiiAgent(uvm_agent):
 # ---------------------------------------------------------------------------
 
 def udp_frame(wire: bytes, sport: int = HOST_PORT) -> bytes:
+    """Wrap command bytes in a UDP/IP/Ethernet frame addressed to the configured board."""
     return F.udp_frame(wire, HOST_MAC, HOST_IP, sport)
 
 
@@ -408,6 +422,7 @@ class EthScoreboard(uvm_component):
 
 
 class EthEnv(uvm_env):
+    """Join RMII and UART agents to one model so cross-transport memory and status checks share state."""
     def build_phase(self):
         self.rmii = RmiiAgent("rmii", self)
         self.uart = UartAgent("uart", self)
@@ -468,6 +483,7 @@ def junk_frames() -> list[bytes]:
 
 
 class EthBaseTest(uvm_test):
+    """Set up clocks and reset, run network scenarios and allow outstanding replies to finish."""
     def build_phase(self):
         ConfigDB().set(None, "*", "DUT", cocotb.top)
         self.env = EthEnv("env", self)
@@ -564,6 +580,7 @@ class EthRegressTest(EthBaseTest):
 
 
 class _OneCmd(CmdBaseSeq):
+    """Adapt a single command into the reusable command-sequence interface."""
     def __init__(self, name, op, payload):
         super().__init__(name)
         self.op, self.payload = op, payload

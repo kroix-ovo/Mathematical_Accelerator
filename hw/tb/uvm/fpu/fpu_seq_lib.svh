@@ -1,3 +1,7 @@
+// These classes are simulator stimulus, not synthesized hardware. A sequence
+// describes operations; the driver controls the clock edges and waits for
+// req_ready. I mix short and long units so the test can expose result-port
+// collisions that a run containing only one operation would never exercise.
 // Sequence library for the FPU agent.
 //
 // A sequence is a task (body) that generates items and passes each one to
@@ -99,7 +103,7 @@ class fpu_corner_seq extends fpu_base_seq;
   endfunction
 
   task body();
-    for (int op = 0; op < 12; op++)
+    for (int op = 0; op < accel_pkg::FPU_OP_COUNT; op++)
       foreach (SPECIALS[i])
         foreach (SPECIALS[j])
           send(fpu_op_e'(op), SPECIALS[i], SPECIALS[j]);
@@ -155,6 +159,41 @@ class fpu_mix_burst_seq extends fpu_base_seq;
       send(op, a, b);
       repeat ($urandom_range(0, 12)) begin
         g.stimulus(int'(fpu_op_e'($urandom_range(0, 2))), op, a, b);  // ADD, SUB or MUL
+        send(op, a, b);
+      end
+    end
+  endtask
+endclass
+
+// ---------------------------------------------------------------------------
+// CORDIC ops in back-to-back bursts, then runs of 6-clock ops (and in every
+// other round some divides and more CORDIC ops), all with no gaps. The CORDIC
+// results come out while 6-clock results own the result port, so they pile
+// up in the result FIFO and come out later, out of order. Same shape as
+// FpuCordicMixSeq in the pyuvm environment.
+class fpu_cordic_mix_seq extends fpu_base_seq;
+  `uvm_object_utils(fpu_cordic_mix_seq)
+
+  function new(string name = "fpu_cordic_mix_seq");
+    super.new(name);
+  endfunction
+
+  task body();
+    fp_lcg     g = new(32'h5EED_0003);
+    fpu_op_e   op;
+    bit [31:0] a, b;
+    repeat (count) begin
+      int unsigned burst = $urandom_range(0, 1) ? $urandom_range(1, 16) : $urandom_range(17, 60);
+      bit          only6 = $urandom_range(0, 1);     // 6-clock ops only in the run
+      repeat (burst) begin
+        g.stimulus(int'(FSIN) + $urandom_range(0, 5), op, a, b);
+        send(op, a, b);
+      end
+      repeat ($urandom_range(0, 80)) begin
+        int unsigned r = $urandom_range(0, 99);
+        if (!only6 && r < 5)       g.stimulus($urandom_range(0, 1) ? int'(FDIV) : int'(FSQRT), op, a, b);
+        else if (!only6 && r < 25) g.stimulus(int'(FSIN) + $urandom_range(0, 5), op, a, b);
+        else                      g.stimulus($urandom_range(0, 2), op, a, b);   // ADD, SUB or MUL
         send(op, a, b);
       end
     end

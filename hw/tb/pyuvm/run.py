@@ -4,6 +4,7 @@
     python hw/tb/pyuvm/run.py top --test TopRegressTest
     python hw/tb/pyuvm/run.py eth --test EthRegressTest --seed 3
     python hw/tb/pyuvm/run.py fpu --sim icarus
+    python hw/tb/pyuvm/run.py cordic --test CordicRegressTest --n 5000
 
 From Windows, hw/scripts/run_pyuvm.py runs this inside WSL for you.
 
@@ -26,10 +27,18 @@ ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
 
 FP_RTL = ["hw/rtl/pkg/accel_pkg.sv", "hw/rtl/fp/fp_pkg.sv", "hw/rtl/fp/fp_addsub.sv",
-          "hw/rtl/fp/fp_mul.sv", "hw/rtl/fp/fp_misc.sv", "hw/rtl/fp/fp_divsqrt.sv", "hw/rtl/fp/fpu.sv"]
+          "hw/rtl/fp/fp_mul.sv", "hw/rtl/fp/fp_misc.sv", "hw/rtl/fp/fp_divsqrt.sv",
+          "hw/rtl/fp/cordic_pkg.sv", "hw/rtl/fp/fp_cordic.sv", "hw/rtl/fp/fpu.sv"]
+CORDIC_RTL = ["hw/rtl/pkg/accel_pkg.sv", "hw/rtl/fp/fp_pkg.sv", "hw/rtl/fp/cordic_pkg.sv", "hw/rtl/fp/fp_cordic.sv"]
 
 ENVS = {
     "fpu": {"top": "fpu", "module": "test_fpu_uvm", "dir": HERE / "fpu", "rtl": FP_RTL, "params": {}},
+    # The same tests with a 16-entry CORDIC result FIFO, small enough for the
+    # mixed sequences to fill it, so the FIFO's stall rules get exercised.
+    "fpu16": {"top": "fpu", "module": "test_fpu_uvm", "dir": HERE / "fpu", "rtl": FP_RTL, "params": {"FD": 16}},
+    # The phase 3 CORDIC unit on its own (inside fpu.sv it is also covered by the fpu env).
+    "cordic": {"top": "fp_cordic", "module": "test_cordic_uvm", "dir": HERE / "cordic", "rtl": CORDIC_RTL,
+               "params": {}},
     "top": {"top": "accel_core", "module": "test_top_uvm", "dir": HERE / "top", "rtl": None,
             "params": {"CLKS_PER_BIT": 8}},
     "eth": {"top": "accel_core", "module": "test_eth_uvm", "dir": HERE / "eth", "rtl": None,
@@ -38,6 +47,7 @@ ENVS = {
 
 
 def main() -> int:
+    """Build one selected DUT configuration, run its pyuvm test and check the simulator results file."""
     ap = argparse.ArgumentParser()
     ap.add_argument("env", choices=ENVS)
     ap.add_argument("--sim", default="verilator", choices=["verilator", "icarus"])
@@ -66,6 +76,8 @@ def main() -> int:
         env["FPU_OP"] = str(args.op)
     if args.seed is not None:
         env["ETH_SEED"] = str(args.seed)
+    # The tests can see which parameters the DUT was built with.
+    env.update({f"PARAM_{k}": str(v) for k, v in cfg["params"].items()})
     os.environ.update(env)
 
     runner = get_runner(args.sim)

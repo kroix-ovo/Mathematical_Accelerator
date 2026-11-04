@@ -1,3 +1,7 @@
+// These are simulation entry points. Each creates the same environment and
+// chooses a command scenario; the agents and reference model are shared.
+// The run-phase objection holds the test open until serial replies have had
+// time to leave the DUT, then the scoreboard checks for unfinished commands.
 // Top-level tests. Select with +UVM_TESTNAME.
 class top_base_test extends uvm_test;
   `uvm_component_utils(top_base_test)

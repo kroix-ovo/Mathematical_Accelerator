@@ -1,6 +1,6 @@
 # FPU numerics
 
-This file defines what the FPU computes, bit for bit. The RTL (`hw/rtl/fp/`), the Python reference (`sw/mathaccel/fp32ref.py`) and the C/DPI reference (`hw/tb/uvm/dpi/fp_ref.c`) all implement these rules, and the testbenches compare 32-bit result patterns and flags exactly. Results that are only numerically close count as wrong.
+For operations 0–11, this file defines what the FPU computes bit for bit. The RTL (`hw/rtl/fp/`), the Python reference (`sw/mathaccel/fp32ref.py`) and the C/DPI reference (`hw/tb/uvm/dpi/fp_ref.c`) implement these rules, and the testbenches compare result patterns and flags exactly. The six [phase 3 functions](#phase-3-functions) instead have an approximation budget, checked separately from their exact match to the finite-width datapath model.
 
 ## Format and rounding
 
@@ -46,6 +46,7 @@ Underflow uses the "after rounding" tininess rule, the one x86 SSE and RISC-V us
 | fp_mul | MUL | 1 per clock | 7 clocks |
 | fp_misc | I2F, F2I, MIN, MAX, EQ, LT, LE | 1 per clock | 7 clocks |
 | fp_divsqrt | DIV, SQRT | 1 at a time | 33 clocks or more (fixed iteration count) |
+| fp_cordic | SIN, COS, ATAN2, HYPOT, EXP, LN | 1 per clock while reserved FIFO space is available | 54 clocks with a free result port; arbitration can delay it |
 
 The FPU kernel reads two operands per element through one RAM port, so it issues one element every 4 clocks. Divide and square root issue every 33 clocks. At 100 MHz the kernel computes 25 million pipelined operations per second, or 3 million divides. Moving the data over the 2 Mbaud UART takes far longer than the arithmetic, so wall time on the board is set by the link.
 
@@ -67,4 +68,47 @@ The RTL has been run against both models:
 | pyuvm, `FpuRegressTest`, Verilator and Icarus | Python exact | corner matrix, random, mixed bursts | 0 mismatches |
 | xsim UART vectors and both top-level UVM envs | Python / SV device models | FPU kernel through the UART for all 12 ops | byte-exact replies |
 
-All rows were run on the final RTL, the version that meets timing at 100 MHz. Reproduce a 1M run with `python hw/scripts/run_uvm.py fpu --test fpu_lcg_test --op <n> --n 1000000 --lcg-seed <hex>`.
+These rows record the earlier phase 2 RTL and timing evidence. They do not establish phase 3 board behavior or timing. Reproduce a 1M run with `python hw/scripts/run_uvm.py fpu --test fpu_lcg_test --op <n> --n 1000000 --lcg-seed <hex>`.
+
+## Phase 3 functions
+
+| Code | Function | Operands and result |
+|---|---|---|
+| 12 | SIN | Sine of `a`, in radians |
+| 13 | COS | Cosine of `a`, in radians |
+| 14 | ATAN2 | Angle of `(x=b, y=a)`, in radians, retaining signed-axis cases |
+| 15 | HYPOT | `sqrt(a*a + b*b)`, with scaling to avoid intermediate overflow |
+| 16 | EXP | `e^a` |
+| 17 | LN | Natural logarithm of `a` |
+
+I use a target error strictly below 1 ULP of the high-precision value. Here
+ULP means fp32 spacing at that magnitude, with a floor of `2^-149` for
+subnormals. This differs from counting representable steps between two
+already-rounded answers. A model can match the hardware exactly while both
+remain a fraction of a ULP away from the mathematical function.
+
+`cordic_model.py` and `cordic_ref.c` reproduce the finite-width algorithm.
+`mpref.py` evaluates at 256 bits and rounds once; it is the high-precision
+accuracy reference, rather than an interval proof for every input.
+`measure_ulp.py` reports the observed maximum, its inputs, a histogram and
+flag errors. A finite sample establishes the error on that sample only.
+Its optional C screen is faster but relies on the C reference for agreeing
+results. The publication checks use the unscreened mpmath path.
+
+The phase 3 flag policy sets NX on ordinary approximated results, including
+an accidentally exact value such as `hypot(3,4)`. The explicit exact cases
+are `sin(±0)=±0`, `cos(±0)=1`, `exp(±0)=1`, `ln(1)=+0`,
+`atan2(±0,+x)=±0` for nonnegative `x`, and hypot with a zero operand.
+Infinite-input limits and NaNs follow the rules in `mpref.special` and the
+matching RTL branches. An sNaN raises NV; sin/cos of infinity and ln of a
+negative number are invalid. `ln(±0)` returns negative infinity with DZ.
+Overflow raises OF with NX; tiny approximated results raise UF with NX.
+The underflow decision retains the shared after-rounding rule, including
+the boundary near the smallest normal number.
+
+The standalone CORDIC latency is 52 clocks. A result passes through a FIFO
+and the FPU output register, giving 54 clocks when the port is free. The
+default FIFO age rule bounds latency at 95 clocks in the tested configuration.
+The array kernel uses one operation throughout, issues every four clocks,
+and reports `4*count + 56` clocks for the phase 3 operations, or one clock
+for an empty array. These are core clock counts, separate from transfer time.

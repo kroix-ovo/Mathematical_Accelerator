@@ -1,4 +1,8 @@
 // Shared bit-level helper functions used by both packet directions.
+// Each helper transforms a current checksum and one byte into the next
+// checksum. The loop inside a function describes combinational XOR logic;
+// the caller's register stores its answer for use on the following byte.
+// There is no extra clock per loop iteration unless the caller adds one.
 package util_pkg;
 
   // I XOR one byte into the high end, then perform eight polynomial steps.

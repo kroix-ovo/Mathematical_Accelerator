@@ -1,6 +1,10 @@
 // UART transmit turns each accepted byte into a start bit, eight data bits
 // (least significant first), and a stop bit. ready is high only when idle.
 // CLKS_PER_BIT determines how long every bit stays on the output pin.
+// I load one whole byte before serialization. valid is acted on only while
+// ready is high; leaving it high for a stalled byte does not restart the
+// transmitter. tx stays high between characters, and the final stop bit gets
+// a full bit period before ready allows the next character to begin.
 module uart_tx #(
     parameter int CLKS_PER_BIT = 50
 ) (

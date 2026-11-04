@@ -1,3 +1,6 @@
+// These frame builders run on the simulator host. Their byte queues make
+// packet fields explicit; they are not FPGA FIFOs or RTL storage. I calculate
+// checksums here independently of the receive/transmit circuits being tested.
 // Ethernet, ARP, IPv4, ICMP and UDP in SystemVerilog, for the testbench.
 //
 // This is the third independent copy of these rules: the RTL streams one byte

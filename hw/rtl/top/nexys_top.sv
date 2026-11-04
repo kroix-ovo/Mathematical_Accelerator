@@ -24,6 +24,12 @@
 // side. I found the value from Vivado's slack on the RMII input paths. The
 // transmit side uses the falling edge (see rmii_tx). The XDC describes the
 // PHY's timing, and the Vivado timing report shows the margins.
+// I keep board-specific circuitry here: clock primitives, pin wiring,
+// reset release and LED indicators. The computation lives in accel_core.
+// The MMCM clocks have a defined phase relationship; the RMII constraints
+// describe when the external PHY's signals arrive relative to those clocks.
+// Changing a clock phase requires rechecking that interface timing, even if
+// the digital protocol simulation still gives the expected bytes.
 module nexys_top #(
     // PHY reset length is 2^PHY_RST_BITS clocks; the board-level simulation
     // shortens it so the test does not spend a millisecond waiting.

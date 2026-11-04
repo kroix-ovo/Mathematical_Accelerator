@@ -10,21 +10,15 @@
 
 from __future__ import annotations
 
-import ctypes
-import os
-import shutil
-import subprocess
 import warnings
-from pathlib import Path
 
 import numpy as np
 import pytest
 
+from mathaccel import cref as cref_mod
 from mathaccel import fp32ref as R
 from mathaccel._generated.spec import FpuOp
 from mathaccel.fpgen import stream
-
-ROOT = Path(__file__).resolve().parents[2]
 
 SPECIALS = [
     0x00000000, 0x80000000, 0x00000001, 0x80000001, 0x007FFFFF, 0x00800000,
@@ -40,6 +34,7 @@ SPECIALS = [
 # ---------------------------------------------------------------------------
 
 def test_directed_values():
+    """Pin phase 2 results and flags for readable examples and exceptional inputs."""
     one, two = 0x3F800000, 0x40000000
     assert R.fadd(one, one) == (two, 0)
     # 0.1f + 0.2f = 0x3E99999A, inexact
@@ -78,6 +73,7 @@ def test_directed_values():
 # ---------------------------------------------------------------------------
 
 def _np_canon(x: np.ndarray) -> np.ndarray:
+    """Replace any NumPy NaN payload with the canonical NaN required by this design."""
     bits = x.view(np.uint32).copy()
     bits[np.isnan(x)] = R.CANON_NAN
     return bits
@@ -93,6 +89,7 @@ NUMPY_OPS = {
 
 
 def _cases(op: int, n: int, seed: int):
+    """Combine a special-value matrix and reproducible generator inputs for an operation."""
     pairs = [(a, b) for a in SPECIALS for b in SPECIALS]
     pairs += [(a, b) for _, a, b in stream(seed, n, op)]
     return pairs
@@ -100,6 +97,7 @@ def _cases(op: int, n: int, seed: int):
 
 @pytest.mark.parametrize("op", list(NUMPY_OPS))
 def test_against_numpy(op):
+    """Cross-check result bits with NumPy after accounting for this design's NaN convention."""
     pairs = _cases(op, 20000, seed=0xC0FFEE + op)
     a = np.array([p[0] for p in pairs], dtype=np.uint32).view(np.float32)
     b = np.array([p[1] for p in pairs], dtype=np.uint32).view(np.float32)
@@ -112,6 +110,7 @@ def test_against_numpy(op):
 
 
 def test_i2f_against_numpy():
+    """Check signed-integer conversion, especially magnitudes that require rounding."""
     ints = np.array([0, 1, -1, 2**24 + 1, 2**31 - 1, -(2**31), 16777217, -16777219]
                     + list(np.random.default_rng(1).integers(-(2**31), 2**31, 20000)), dtype=np.int64)
     expect = ints.astype(np.int32).astype(np.float32).view(np.uint32)
@@ -123,44 +122,20 @@ def test_i2f_against_numpy():
 # C / DPI reference cross-check (results and flags)
 # ---------------------------------------------------------------------------
 
-def _find_cc() -> str | None:
-    """Prefer the exact gcc that Vivado's xsc uses for DPI code (MinGW 6.2),
-    so this test sees the same compiled behaviour as the xsim scoreboard."""
-    if os.name == "nt":
-        for ver in ("6.2.0", "*"):
-            for guess in sorted(Path("C:/Xilinx/Vivado").glob(f"*/tps/mingw/{ver}/win64.o/nt/bin/gcc.exe"),
-                                reverse=True):
-                return str(guess)
-    return shutil.which("gcc") or shutil.which("cc")
-
-
 @pytest.fixture(scope="module")
-def cref(tmp_path_factory):
-    cc = _find_cc()
-    if cc is None:
+def cref():
+    # mathaccel.cref compiles fp_ref.c with the same gcc xsim's xsc uses on
+    # Windows (Vivado's MinGW 6.2), so this test sees the DPI model as xsim does.
+    """Build the C/DPI model with the available compiler or report an explicit skip."""
+    lib = cref_mod.load()
+    if lib is None:
         pytest.skip("no C compiler for the DPI reference")
-    out = tmp_path_factory.mktemp("cref") / ("fp_ref.dll" if os.name == "nt" else "fp_ref.so")
-    src = ROOT / "hw/tb/uvm/dpi/fp_ref.c"
-    env = dict(os.environ)
-    env["PATH"] = str(Path(cc).parent) + os.pathsep + env.get("PATH", "")
-    # -O0 matches xsc's own compile flags.
-    subprocess.run([cc, "-O0", "-shared", "-fPIC", "-o", str(out), str(src), "-lm"],
-                   check=True, env=env)
-    if os.name == "nt":
-        os.add_dll_directory(str(Path(cc).parent))
-    lib = ctypes.CDLL(str(out))
-    lib.fp_ref_eval.restype = ctypes.c_uint32
-    lib.fp_ref_eval.argtypes = [ctypes.c_int, ctypes.c_uint32, ctypes.c_uint32, ctypes.POINTER(ctypes.c_int)]
-
-    def call(op, a, b):
-        f = ctypes.c_int(0)
-        r = lib.fp_ref_eval(op, a, b, ctypes.byref(f))
-        return r, f.value
-    return call
+    return lib.eval
 
 
-@pytest.mark.parametrize("op", list(FpuOp))
+@pytest.mark.parametrize("op", list(R.EXACT_OPS))
 def test_against_c_reference(cref, op):
+    """Compare both result and exception bits with the host-CPU reference."""
     mismatches = []
     for a, b in _cases(op, 20000, seed=0xBEEF00 + op):
         want = R.evaluate(op, a, b)
@@ -171,6 +146,7 @@ def test_against_c_reference(cref, op):
 
 
 def test_generator_is_deterministic():
+    """Pin the integer generator stream so Python and SV can reproduce a failing seed."""
     assert list(stream(42, 50)) == list(stream(42, 50))
     # Pinned values. fp_lcg.svh (the SV twin) checks itself against the same
     # numbers in fp_lcg::selftest(), so a change on either side is caught.

@@ -14,7 +14,7 @@
 interface fpu_if #(parameter int TW = 8) (input logic clk);
   logic          rst;
   logic          req_valid, req_ready;
-  logic [3:0]    req_op;
+  logic [4:0]    req_op;
   logic [31:0]   req_a, req_b;
   logic [TW-1:0] req_tag;
   logic          rsp_valid;

@@ -1,5 +1,9 @@
+// The op enum has five bits so values 12..17 reach the phase 3 unit intact.
+// The portable LCG still chooses among the original twelve operations when no
+// op is forced; dedicated phase 3 sequences add the function-specific cases.
+// Keeping that stream stable lets older failing seeds reproduce the same bits.
 // Pieces shared by the FPU block environment and the top-level environment:
-// the DPI-C reference model, operand classes, and the seeded LCG generator.
+// the DPI-C reference models, operand classes, and the seeded LCG generator.
 package fp_common_pkg;
   import uvm_pkg::*;
   `include "uvm_macros.svh"
@@ -10,11 +14,18 @@ package fp_common_pkg;
   // becomes an int* that the C code writes through.
   import "DPI-C" function int unsigned fp_ref_eval(input int op, input int unsigned a,
                                                    input int unsigned b, output int flags);
+  // The bit-accurate model of the CORDIC unit (hw/tb/uvm/dpi/cordic_ref.c, a
+  // port of sw/mathaccel/cordic_model.py): what the hardware returns for ops
+  // 12-17, bit for bit. fp_ref_eval gives the independent, nearly always
+  // correctly rounded answer for the same ops, used for the ULP check.
+  import "DPI-C" function int unsigned cordic_ref_eval(input int op, input int unsigned a,
+                                                       input int unsigned b, output int flags);
 
   // FPU op codes, mirrored from accel_pkg as an enum so logs print names.
-  typedef enum bit [3:0] {
-    FADD = 4'h0, FSUB = 4'h1, FMUL = 4'h2, FDIV = 4'h3, FSQRT = 4'h4, FI2F = 4'h5,
-    FF2I = 4'h6, FMIN = 4'h7, FMAX = 4'h8, FEQ = 4'h9, FLT = 4'hA, FLE = 4'hB
+  typedef enum bit [4:0] {
+    FADD = 5'h00, FSUB = 5'h01, FMUL = 5'h02, FDIV = 5'h03, FSQRT = 5'h04, FI2F = 5'h05,
+    FF2I = 5'h06, FMIN = 5'h07, FMAX = 5'h08, FEQ = 5'h09, FLT = 5'h0A, FLE = 5'h0B,
+    FSIN = 5'h0C, FCOS = 5'h0D, FATAN2 = 5'h0E, FHYPOT = 5'h0F, FEXP = 5'h10, FLN = 5'h11
   } fpu_op_e;
 
   // Operand classes. Order and values match OperandClass in sw/mathaccel/fpgen.py.
@@ -34,7 +45,27 @@ package fp_common_pkg;
   endfunction
 
   function automatic bit is_unary(fpu_op_e op);
-    return op inside {FSQRT, FI2F, FF2I};
+    return op inside {FSQRT, FI2F, FF2I, FSIN, FCOS, FEXP, FLN};
+  endfunction
+
+  // The phase 3 ops, computed by the CORDIC unit.
+  function automatic bit is_cordic(fpu_op_e op);
+    return op inside {[FSIN:FLN]};
+  endfunction
+
+  // Distance in ULPs between two fp32 results: how many representable floats
+  // apart they are. Mapping the bit patterns onto a line of integers (negative
+  // numbers mirrored below zero) makes neighbouring floats neighbouring
+  // integers, so +0 and -0 count as the same point. Two NaNs are 0 apart; a
+  // NaN and a number are "infinitely" far apart.
+  function automatic longint ulp_distance(bit [31:0] x, bit [31:0] y);
+    longint ix, iy;
+    bit xnan = (x[30:23] == 8'hFF) && (x[22:0] != 0);
+    bit ynan = (y[30:23] == 8'hFF) && (y[22:0] != 0);
+    if (xnan || ynan) return (xnan && ynan) ? 0 : 64'h7FFFFFFF;
+    ix = x[31] ? -longint'(x[30:0]) : longint'(x[30:0]);
+    iy = y[31] ? -longint'(y[30:0]) : longint'(y[30:0]);
+    return (ix > iy) ? ix - iy : iy - ix;
   endfunction
 
   // ---- seeded generator ----------------------------------------------------

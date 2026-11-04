@@ -1,6 +1,10 @@
 // This stateful byte selector builds one raw reply packet. I send opcode,
 // tag, little-endian length, payload, then little-endian CRC. The downstream
 // COBS encoder adds the wire delimiter. idx advances on ready/valid handshakes.
+// I latch op/tag/len at start so they cannot change halfway through a reply.
+// The payload remains in the caller's buffer and rd_addr selects its next
+// byte. The output multiplexer can change combinationally, but idx moves only
+// after acceptance, keeping data stable while the COBS encoder is paused.
 module frame_tx
   import util_pkg::*;
 #(

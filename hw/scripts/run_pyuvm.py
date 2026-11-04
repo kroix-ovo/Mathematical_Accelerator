@@ -27,6 +27,7 @@ def wsl_path(p: PureWindowsPath) -> str:
 
 
 def main() -> int:
+    """Forward arguments into the WSL tools and Python environment used by the RTL test runner."""
     oss = os.environ.get("OSS_CAD", "~/tools/oss-cad-suite")
     venv = os.environ.get("PYUVM_VENV", "~/venvs/mathaccel")
     args = " ".join(shlex.quote(a) for a in sys.argv[1:])

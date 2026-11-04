@@ -3,6 +3,11 @@
 // and finally emit a zero delimiter. A raw zero closes its current block.
 // The input side pauses while a block is emitted; ready/valid controls each
 // transfer so a slow UART cannot cause dropped bytes.
+// blk is a byte array, while cnt and rd are registers choosing its write
+// and read positions. I buffer a block because its length must go on the
+// wire before its data. in_ready tells the packet builder when this storage
+// can accept another byte; out_ready tells this encoder when its selected
+// output byte has actually been consumed.
 module cobs_encoder (
     input  logic       clk,
     input  logic       rst,

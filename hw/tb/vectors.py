@@ -76,7 +76,7 @@ def build_vectors(seed: int = 0) -> list[tuple[bytes, bytes | None]]:
     from mathaccel.fpgen import stream
     n = 9
     A, B, R, F = 4000, 4100, 4200, 4300
-    for fop in range(12):
+    for fop in range(spec.FPU_OP_COUNT):
         ops = list(stream(0x600D + fop, n, fop))
         req(*P.write_mem(A, [a for _, a, _ in ops]))
         req(*P.write_mem(B, [b for _, _, b in ops]))
@@ -100,7 +100,7 @@ def build_vectors(seed: int = 0) -> list[tuple[bytes, bytes | None]]:
     req(*P.run(Kernel.FILL, b"\x00" * 4))                     # BAD_LEN
     req(*P.run(Kernel.FILL, struct.pack("<III", spec.SCRATCH_WORDS - 1, 2, 0)))  # BAD_ADDR
     req(*P.run(Kernel.FPU, b"\x00" * 20))                         # BAD_LEN
-    req(*P.run(Kernel.FPU, P.fpu_args(12, 1, 0, 0, 0, 0)))         # BAD_ARG (op code)
+    req(*P.run(Kernel.FPU, P.fpu_args(spec.FPU_OP_COUNT, 1, 0, 0, 0, 0)))  # BAD_ARG (op code)
     req(*P.run(Kernel.FPU, P.fpu_args(0, 2, 0, 0, 0, spec.SCRATCH_WORDS - 1)))  # BAD_ADDR (f)
     req(*P.run(Kernel.FPU, P.fpu_args(0, 0xFFFFFFFF, 0, 0, 0, 0)))  # BAD_ADDR (count)
 

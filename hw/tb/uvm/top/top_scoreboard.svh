@@ -1,18 +1,26 @@
+// I predict command semantics at the packet level, not by copying the DUT's
+// controller states. The model keeps scratchpad contents across commands, so
+// a write affects a later read. Exact reply bytes include the reported cycle
+// count; this also checks that the longer CORDIC tail reached the kernel model.
 // Reference model and scoreboard for the whole accelerator.
 //
 // top_ref_model is an SV version of the device behaviour in docs/protocol.md
 // (the Python DeviceModel implements the same document). Given the raw bytes
 // of a frame the DUT received, it decides whether the DUT must stay silent
 // (link error) or reply, and if so it produces the exact reply wire bytes.
-// FPU results come from the DPI-C reference, the same one the block-level
-// scoreboard uses.
+// FPU results come from the DPI-C references, the same ones the block-level
+// scoreboard uses: fp_ref for ops 0-11 and the bit-accurate CORDIC model
+// (cordic_ref) for ops 12-17, so every reply can still be compared byte for
+// byte.
 
 class top_ref_model extends uvm_object;
   `uvm_object_utils(top_ref_model)
 
   localparam int unsigned WORDS = 1 << accel_pkg::SCRATCH_AW;
   // Cycle counts of the FPU kernel (same numbers as sw/mathaccel/driver/model.py).
+  // CORDIC ops issue like the 6-clock ops; their results arrive 47 clocks later.
   localparam int unsigned FPU_FETCH = 4, FPU_PIPE_TAIL = 9, DS_PERIOD = 33, DS_TAIL = 6;
+  localparam int unsigned CORDIC_TAIL = FPU_PIPE_TAIL + 47;
 
   // Scratchpad words. An associative array only stores words that were
   // written; reading a missing key returns the default value 0, like the
@@ -143,7 +151,7 @@ class top_ref_model extends uvm_object;
         if (p.size() != 22) return accel_pkg::ST_BAD_LEN;
         fop = p[1];
         count = le32(p, 2); a = le32(p, 6); b = le32(p, 10); r = le32(p, 14); f = le32(p, 18);
-        if (fop > 11) return accel_pkg::ST_BAD_ARG;
+        if (fop >= accel_pkg::FPU_OP_COUNT) return accel_pkg::ST_BAD_ARG;
         if (!in_range(a, count) || !in_range(b, count) || !in_range(r, count) || !in_range(f, count))
           return accel_pkg::ST_BAD_ADDR;
         // Read all operands first, then write: matches the hardware for
@@ -151,12 +159,14 @@ class top_ref_model extends uvm_object;
         for (int i = 0; i < count; i++) begin av.push_back(rd(a + i)); bv.push_back(rd(b + i)); end
         for (int i = 0; i < count; i++) begin
           int fl;
-          mem[r + i] = fp_ref_eval(fop, av[i], bv[i], fl);
+          if (fop >= 12) mem[r + i] = cordic_ref_eval(fop, av[i], bv[i], fl);
+          else           mem[r + i] = fp_ref_eval(fop, av[i], bv[i], fl);
           mem[f + i] = fl;
           aux |= fl;
         end
         if (count == 0)             cycles = 1;
         else if (fop inside {3, 4}) cycles = DS_PERIOD * count + DS_TAIL;
+        else if (fop >= 12)         cycles = FPU_FETCH * count + CORDIC_TAIL;
         else                        cycles = FPU_FETCH * count + FPU_PIPE_TAIL;
       end
       default: return accel_pkg::ST_BAD_KERNEL;

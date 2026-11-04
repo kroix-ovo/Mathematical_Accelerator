@@ -6,7 +6,7 @@ The project combines SystemVerilog hardware for a Digilent Nexys A7-100T FPGA wi
 
 ## What works now
 
-Phases 1 and 2 are implemented: the communication and memory system, and a hand-written IEEE-754 single-precision (`fp32`) floating-point unit. The host can send commands to the FPGA design, read and write its scratchpad, and run three kernels:
+Phases 1 and 2 implement the communication and memory system and a hand-written IEEE-754 single-precision (`fp32`) floating-point unit. The current phase 3 implementation adds six CORDIC functions to that FPU and protocol version 0.3. Its simulation checks are separate from the phase 1/2 physical board results below. The host can send commands to the FPGA design, read and write its scratchpad, and run three kernels:
 
 - `NOP` performs no memory operation and reports one kernel clock cycle.
 - `FILL` writes a chosen 32-bit value to a range of scratchpad words and reports the number of kernel clock cycles used.
@@ -55,9 +55,13 @@ docs/           Protocol, numerics, verification, and HDL reading guide
 
 I have added comments throughout the HDL to explain the data flow, state machines, and clock timing for someone who knows basic digital logic. Start with the [HDL reading guide](docs/hdl-reading-guide.md), then follow a request through `accel_core` and `cmd_proc`. The [protocol document](docs/protocol.md) gives the exact packet and command formats.
 
-## Next step: phase 3 functions
+## Current phase 3 implementation
 
-Phase 3 will add sine, cosine, arctangent, exponential and logarithm using CORDIC, a method that computes these functions with shifts and additions. Unlike the phase 2 operations, these results will not be bit-exact against every reference, so I need to define an error limit (in units in the last place) and measure the worst case.
+Phase 3 adds `SIN`, `COS`, `ATAN2(y, x)`, `HYPOT`, `EXP` and `LN` as operation codes 12–17. I use a shared CORDIC pipeline: 42 stages of shifts and additions, with input reduction and output rounding for a total of 52 clocks inside the unit. It accepts one operation per clock. The FPU buffers CORDIC results when shorter operations need the result port, reserves space for work already in flight, and pauses new requests when an older queued result needs to leave.
+
+These functions have a target error below 1 ULP, where one ULP is the spacing between nearby fp32 values. The Python integer model and its C port describe the datapath bit for bit; mpmath at 256-bit precision checks its mathematical accuracy. The tests also check flags, tags, latency, and mixed operations with a smaller 16-entry FIFO. [Numerics](docs/numerics.md#phase-3-functions) explains the rules and [Verification](docs/verification.md#phase-3-implementation-checks) records the checks for this publication.
+
+The RTL, driver and device models understand the new operations. The CLI's `fp` choices and default `fptest` still cover the original twelve operations; phase 3 board checks and an interface for ULP-aware function testing remain to be done. The [phase 3 plan](docs/phase3-plan.md) records the original design goals. For a guided explanation of the implemented stages, start with [Follow one CORDIC operation](docs/hdl-reading-guide.md#follow-one-cordic-operation).
 
 ## Where I want to take it
 
@@ -91,6 +95,8 @@ python hw/scripts/run_pyuvm.py top
 python hw/scripts/run_uvm.py eth            # Ethernet, SystemVerilog UVM
 python hw/scripts/run_uvm.py board          # nexys_top with the MMCM/ODDR models
 python hw/scripts/run_pyuvm.py eth          # Ethernet, pyuvm
+python hw/scripts/run_pyuvm.py cordic --test CordicRegressTest --n 5000
+python hw/scripts/run_pyuvm.py fpu16 --test FpuRegressTest --n 3000
 ```
 
 To build and program the Nexys A7-100T with Vivado 2023.2:

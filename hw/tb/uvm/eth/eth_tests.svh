@@ -1,3 +1,7 @@
+// Ethernet tests reuse the command layer but drive complete frames through
+// the RMII PHY model. I leave the test alive while replies drain through the
+// core and transmitter. The shared scoreboard compares the observed frame
+// bytes and UART bytes, including commands that use both transports.
 // Ethernet tests. Select with +UVM_TESTNAME (run_uvm.py eth --test ...).
 class eth_base_test extends uvm_test;
   `uvm_component_utils(eth_base_test)

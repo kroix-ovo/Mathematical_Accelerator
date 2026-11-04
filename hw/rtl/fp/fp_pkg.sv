@@ -15,6 +15,11 @@
 // (round_pre, then round_post one clock later). They are the only place that
 // rounds, so there is one piece of rounding logic to get right, and it
 // mirrors round_fraction() in the Python model (sw/mathaccel/fp32ref.py).
+// A package shares constants, types and helper functions between modules;
+// importing it does not instantiate another clocked arithmetic unit. Calling
+// a function such as round_pre inside a stage describes combinational logic
+// feeding that stage's registers. I keep the common rounding rules here so
+// every execution unit uses the same guard/sticky-bit and overflow decisions.
 package fp_pkg;
   import accel_pkg::*;
 

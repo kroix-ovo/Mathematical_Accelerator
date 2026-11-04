@@ -7,6 +7,9 @@ this file has the same structure as the SystemVerilog environment:
 Differences from the SV version, on purpose:
 * The reference model is sw/mathaccel/fp32ref.py (exact rational arithmetic),
   not the C/DPI model. Two environments with two independent references.
+  The phase 3 CORDIC ops (SIN .. LN) are predicted by the bit-accurate model
+  sw/mathaccel/cordic_model.py (through fpu_evaluate in the device model);
+  their accuracy against mpmath is checked in the cordic block environment.
 * Coverage is counted in plain Python dictionaries (pyuvm has no covergroups).
 * Timing: cocotb has no clocking blocks, so the driver changes inputs on the
   falling clock edge and everything is sampled after the values settle
@@ -14,7 +17,19 @@ Differences from the SV version, on purpose:
 
 Select a test with COCOTB_TEST_FILTER / the runner's --test option. Size knob:
 the FPU_N environment variable (default 2000).
+
+The runner's "fpu16" environment builds the same DUT with a 16-entry CORDIC
+result FIFO (PARAM_FD=16). FifoProbe watches the FIFO's counters inside the
+DUT. The regression test requires the age rule to have stalled requests, and
+with the small FIFO also the other two stall rules (no free slot for a CORDIC
+request, FIFO full).
 """
+
+# pyuvm calls build_phase to create components and connect_phase to wire
+# their software ports. Concurrent run_phase coroutines then drive or
+# observe the simulated pins. check/report phases run after stimulus.
+# I use observations from the monitors for predictions: an item queued
+# by a sequence is not evidence that the DUT actually accepted it.
 
 from __future__ import annotations
 
@@ -41,13 +56,24 @@ from pyuvm import (
     uvm_tlm_analysis_fifo,
 )
 
-from mathaccel import fp32ref
+from mathaccel._generated import spec
 from mathaccel._generated.spec import FpuOp
+from mathaccel.driver.model import CORDIC_OPS, fpu_evaluate
 from mathaccel.fpgen import FpLcg, OperandClass
 
 N_ITEMS = int(os.environ.get("FPU_N", "2000"))
+FD = int(os.environ.get("PARAM_FD", "64"))  # CORDIC result FIFO depth the DUT was built with
+N_OPS = spec.FPU_OP_COUNT
 LAT_PIPE = 7
 LAT_DS_MIN = 30
+LAT_CORD = 54          # 52 in fp_cordic, one in the FIFO, one output register
+LAT_CORD_MAX = 95      # the FIFO age rule's bound: LAT_CORD + AGE_MAX (32) + 9
+UNARY = {FpuOp.SQRT, FpuOp.I2F, FpuOp.F2I, FpuOp.SIN, FpuOp.COS, FpuOp.EXP, FpuOp.LN}
+
+
+def is_unary(op: int) -> bool:
+    """Identify operations whose second operand is ignored when building test coverage."""
+    return op in UNARY
 
 SPECIALS = [
     0x00000000, 0x80000000, 0x00000001, 0x80000001, 0x007FFFFF, 0x00800000,
@@ -63,6 +89,7 @@ SPECIALS = [
 # ---------------------------------------------------------------------------
 
 class FpuReqItem(uvm_sequence_item):
+    """Operands and operation to offer, plus the tag and time used to track accepted work."""
     def __init__(self, name="fpu_req", op=0, a=0, b=0, gap=0):
         super().__init__(name)
         self.op, self.a, self.b, self.gap = op, a, b, gap
@@ -74,7 +101,7 @@ class FpuReqItem(uvm_sequence_item):
         constraints, with the operand bits built by the shared LCG builder."""
         classes = [c for c in OperandClass if c != OperandClass.RELATED]
         weights = [16, 24, 64, 48, 10, 8, 8, 16, 16, 22, 24]
-        self.op = rng.randrange(12) if op is None else op
+        self.op = rng.randrange(N_OPS) if op is None else op
         cls_a = rng.choices(classes, weights)[0]
         cls_b = rng.choices(classes + [OperandClass.RELATED], weights + [32])[0]
         g = FpLcg(rng.getrandbits(32))
@@ -87,6 +114,7 @@ class FpuReqItem(uvm_sequence_item):
 
 
 class FpuRspItem(uvm_sequence_item):
+    """Observed result bits, exception flags and tag from the shared FPU output port."""
     def __init__(self, name="fpu_rsp", result=0, flags=0, tag=0, cycle=0):
         super().__init__(name)
         self.result, self.flags, self.tag, self.cycle = result, flags, tag, cycle
@@ -97,6 +125,7 @@ class FpuRspItem(uvm_sequence_item):
 # ---------------------------------------------------------------------------
 
 class FpuBaseSeq(uvm_sequence):
+    """Provide a common send operation for directed, random and mixed-unit sequences."""
     count = 100
 
     async def send(self, op, a, b, gap=0):
@@ -106,6 +135,7 @@ class FpuBaseSeq(uvm_sequence):
 
 
 class FpuRandSeq(FpuBaseSeq):
+    """Mix operations, operand classes and gaps to exercise dispatch and output arbitration."""
     seed = 1
     force_op: int | None = None
 
@@ -131,8 +161,9 @@ class FpuLcgSeq(FpuBaseSeq):
 
 
 class FpuCornerSeq(FpuBaseSeq):
+    """Cross the fixed special-value set so both operand positions see the numerical edge cases."""
     async def body(self):
-        for op in range(12):
+        for op in range(N_OPS):
             for a in SPECIALS:
                 for b in SPECIALS:
                     await self.send(op, a, b)
@@ -150,11 +181,41 @@ class FpuMixBurstSeq(FpuBaseSeq):
                 await self.send(*g.stimulus(rng.randrange(3)))
 
 
+class FpuCordicMixSeq(FpuBaseSeq):
+    """CORDIC ops in back-to-back bursts, then runs of 6-clock ops and the odd
+    divide, all with no gaps. The CORDIC results come out while the 6-clock
+    results own the result port, so they pile up in the FIFO.
+
+    For a 16-entry FIFO: a burst longer than 16 stalls on reserved slots, and
+    a burst of at most 16 followed by a run of 6-clock ops only (every other
+    round has no CORDIC ops in the run) fills the FIFO completely."""
+
+    async def body(self):
+        g = FpLcg(0x5EED0003)
+        rng = random.Random(5)
+        for _ in range(self.count):
+            for _ in range(rng.choice([rng.randint(1, 16), rng.randint(17, 60)])):
+                await self.send(*g.stimulus(rng.choice(CORDIC_OPS)))
+            # A divide that finds the divider busy stalls the stream and frees
+            # the result port, so the 6-clock-only rounds leave them out too.
+            p_div, p_cordic = rng.choice([(0.0, 0.0), (0.05, 0.2)])
+            for _ in range(rng.randint(0, 80)):
+                r = rng.random()
+                if r < p_div:
+                    op = rng.choice([FpuOp.DIV, FpuOp.SQRT])
+                elif r < p_div + p_cordic:
+                    op = rng.choice(CORDIC_OPS)
+                else:
+                    op = rng.choice([FpuOp.ADD, FpuOp.SUB, FpuOp.MUL, FpuOp.MIN, FpuOp.F2I])
+                await self.send(*g.stimulus(op))
+
+
 # ---------------------------------------------------------------------------
 # Agent components
 # ---------------------------------------------------------------------------
 
 class FpuDriver(uvm_driver):
+    """Hold each request stable until ready/valid acceptance, then move to the next sequence item."""
     def build_phase(self):
         self.dut = ConfigDB().get(self, "", "DUT")
         self.next_tag = 0
@@ -168,23 +229,27 @@ class FpuDriver(uvm_driver):
         await FallingEdge(dut.rst)
         item = None
         while True:
-            # Back to back: take the next item now if one is already queued,
-            # otherwise drop valid and wait. try_next_item hands back the item
-            # before the sequence has filled it in, so wait for item_ready.
+            # Back to back: at the falling edge after the last request was
+            # taken, take the next item if one is already queued, otherwise
+            # drop valid and wait. Asking half a clock later rather than right
+            # after item_done gives the sequence time to queue its next item;
+            # asking at once found the queue empty every time, which left an
+            # idle clock between all requests. try_next_item hands back the
+            # item before the sequence has filled it in, so wait for item_ready.
+            await FallingEdge(dut.clk)
             ok, item = self.seq_item_port.try_next_item()
             if ok:
                 await item.item_ready.wait()
             else:
-                await FallingEdge(dut.clk)
                 await self.drive_idle()
                 item = await self.seq_item_port.get_next_item()
-            for _ in range(item.gap):
                 await FallingEdge(dut.clk)
+            for _ in range(item.gap):
                 await self.drive_idle()
+                await FallingEdge(dut.clk)
             item.tag = self.next_tag
             self.next_tag = (self.next_tag + 1) & 0xFF
             # Drive on the falling edge; the DUT registers on the next rising edge.
-            await FallingEdge(dut.clk)
             dut.req_valid.value = 1
             dut.req_op.value = item.op
             dut.req_a.value = item.a
@@ -216,6 +281,7 @@ class CycleCounter:
 
 
 class FpuReqMonitor(uvm_monitor):
+    """Observe accepted input handshakes independently of what the driver intended to send."""
     def build_phase(self):
         self.dut = ConfigDB().get(self, "", "DUT")
         self.cc = ConfigDB().get(self, "", "CYCLES")
@@ -235,6 +301,7 @@ class FpuReqMonitor(uvm_monitor):
 
 
 class FpuRspMonitor(uvm_monitor):
+    """Observe each valid result and reject X/Z values before numerical checking."""
     def build_phase(self):
         self.dut = ConfigDB().get(self, "", "DUT")
         self.cc = ConfigDB().get(self, "", "CYCLES")
@@ -257,6 +324,7 @@ class FpuRspMonitor(uvm_monitor):
 
 
 class FpuAgent(uvm_agent):
+    """Bundle the request sequencer/driver and passive input/output monitors."""
     def build_phase(self):
         self.sqr = uvm_sequencer("sqr", self)
         self.drv = FpuDriver("drv", self)
@@ -272,7 +340,8 @@ class FpuAgent(uvm_agent):
 # ---------------------------------------------------------------------------
 
 class FpuScoreboard(uvm_component):
-    """Predicts with fp32ref and matches responses to requests by tag.
+    """Predicts with fpu_evaluate (fp32ref, or the CORDIC model for ops 12-17) and
+    matches responses to requests by tag.
 
     Two analysis FIFOs buffer the monitor streams; run_phase drains them.
     """
@@ -283,7 +352,9 @@ class FpuScoreboard(uvm_component):
         self.pending: dict[int, tuple[FpuReqItem, int, int]] = {}
         self.checked = 0
         self.errors = 0
-        self.per_op = {op.name: 0 for op in FpuOp}
+        self.cord_lat = [0, 0]      # CORDIC results that waited / came straight out
+        self.cord_max = 0           # longest CORDIC latency seen
+        self.per_op = {FpuOp(op).name: 0 for op in range(N_OPS)}
 
     async def run_phase(self):
         while True:
@@ -295,11 +366,11 @@ class FpuScoreboard(uvm_component):
                     break
                 if req.tag in self.pending:
                     self.logger.error(f"tag {req.tag:02x} reused while outstanding")
-                self.pending[req.tag] = (req, *fp32ref.evaluate(req.op, req.a, req.b))
+                self.pending[req.tag] = (req, *fpu_evaluate(req.op, req.a, req.b))
             rsp = await self.rsp_fifo.get()
             ok, req2 = self.req_fifo.try_get()
             while ok:
-                self.pending[req2.tag] = (req2, *fp32ref.evaluate(req2.op, req2.a, req2.b))
+                self.pending[req2.tag] = (req2, *fpu_evaluate(req2.op, req2.a, req2.b))
                 ok, req2 = self.req_fifo.try_get()
             self.check(rsp)
 
@@ -321,6 +392,14 @@ class FpuScoreboard(uvm_component):
             if lat < LAT_DS_MIN:
                 self.errors += 1
                 self.logger.error(f"{req}: latency {lat} < {LAT_DS_MIN}")
+        elif req.op in CORDIC_OPS:
+            # Exactly LAT_CORD when the result port is free, later when the
+            # result has to wait in the FIFO.
+            if not LAT_CORD <= lat <= LAT_CORD_MAX:
+                self.errors += 1
+                self.logger.error(f"{req}: latency {lat} outside {LAT_CORD}..{LAT_CORD_MAX}")
+            self.cord_lat[lat == LAT_CORD] += 1
+            self.cord_max = max(self.cord_max, lat)
         elif lat != LAT_PIPE:
             self.errors += 1
             self.logger.error(f"{req}: latency {lat} != {LAT_PIPE}")
@@ -332,9 +411,51 @@ class FpuScoreboard(uvm_component):
 
     def report_phase(self):
         self.logger.info(f"checked {self.checked} results, {self.errors} errors; per op {self.per_op}")
+        self.logger.info(f"CORDIC results: {self.cord_lat[1]} at {LAT_CORD} clocks, "
+                         f"{self.cord_lat[0]} waited in the FIFO, longest latency {self.cord_max}")
+
+
+class FifoProbe(uvm_component):
+    """Watches the CORDIC FIFO's counters inside the DUT (fpu.c_cnt, f_cnt) and
+    counts the clocks where each stall rule held a request back. This is white
+    box: it reads internal signals, which cocotb can see because the
+    simulators are built with their internals visible."""
+
+    def build_phase(self):
+        self.dut = ConfigDB().get(self, "", "DUT")
+        self.max_c = self.max_f = 0
+        self.noroom = 0         # a CORDIC request waiting because every slot is reserved
+        self.full = 0           # all requests waiting because the FIFO is full
+        self.old = 0            # all requests waiting because the oldest result is too old
+
+    async def run_phase(self):
+        dut = self.dut
+        cordic = {int(op) for op in CORDIC_OPS}
+        while True:
+            await FallingEdge(dut.clk)
+            await ReadOnly()
+            if int(dut.rst.value):
+                continue
+            c, f = int(dut.c_cnt.value), int(dut.f_cnt.value)
+            self.max_c, self.max_f = max(self.max_c, c), max(self.max_f, f)
+            waiting = int(dut.req_valid.value) and not int(dut.req_ready.value)
+            if waiting and f == FD:
+                self.full += 1
+            elif waiting and int(dut.f_old.value):
+                self.old += 1
+            elif waiting and c == FD and int(dut.req_op.value) in cordic:
+                self.noroom += 1
+            if c > FD or f > c:
+                self.logger.error(f"FIFO counters out of range: c_cnt={c} f_cnt={f} (depth {FD})")
+
+    def report_phase(self):
+        self.logger.info(f"CORDIC FIFO (depth {FD}): at most {self.max_c} reserved, {self.max_f} stored; "
+                         f"{self.noroom} clocks waiting for a slot, {self.full} clocks stalled by a full FIFO, "
+                         f"{self.old} clocks stalled by the age rule")
 
 
 def kind_of(x: int) -> str:
+    """Classify raw operand bits for coverage without changing the bits sent to the DUT."""
     e, f = (x >> 23) & 0xFF, x & 0x7FFFFF
     if e == 0xFF:
         return "inf" if f == 0 else ("qnan" if f >> 22 else "snan")
@@ -352,20 +473,22 @@ class FpuCoverage(uvm_subscriber):
         self.hits: dict[tuple[str, str, str], int] = {}
 
     def write(self, t: FpuReqItem):
-        key = (FpuOp(t.op).name, kind_of(t.a), "-" if fp32ref.is_unary(t.op) else kind_of(t.b))
+        key = (FpuOp(t.op).name, kind_of(t.a), "-" if is_unary(t.op) else kind_of(t.b))
         self.hits[key] = self.hits.get(key, 0) + 1
 
     def report_phase(self):
-        total = sum(len(self.KINDS) if fp32ref.is_unary(op) else len(self.KINDS) ** 2 for op in FpuOp)
+        total = sum(len(self.KINDS) if is_unary(op) else len(self.KINDS) ** 2 for op in range(N_OPS))
         self.logger.info(f"operand-kind coverage: {len(self.hits)}/{total} bins "
                          f"({100 * len(self.hits) / total:.1f}%)")
 
 
 class FpuEnv(uvm_env):
+    """Wire observed requests and results into the scoreboard and coverage collector."""
     def build_phase(self):
         self.agent = FpuAgent("agent", self)
         self.sb = FpuScoreboard("sb", self)
         self.cov = FpuCoverage("cov", self)
+        self.probe = FifoProbe("probe", self)
 
     def connect_phase(self):
         self.agent.req_mon.ap.connect(self.sb.req_fifo.analysis_export)
@@ -378,6 +501,7 @@ class FpuEnv(uvm_env):
 # ---------------------------------------------------------------------------
 
 class FpuBaseTest(uvm_test):
+    """Own reset, sequence execution and enough drain time for queued CORDIC outputs."""
     def build_phase(self):
         dut = cocotb.top
         ConfigDB().set(None, "*", "DUT", dut)
@@ -400,7 +524,7 @@ class FpuBaseTest(uvm_test):
         self.raise_objection()
         await self.reset()
         await self.run_seqs()
-        for _ in range(100):                     # drain: divide takes ~30 clocks
+        for _ in range(200):                     # drain: CORDIC takes 54 clocks plus FIFO waits
             await RisingEdge(cocotb.top.clk)
         self.drop_objection()
 
@@ -411,12 +535,14 @@ class FpuBaseTest(uvm_test):
 
 @pyuvm.test()
 class FpuCornerTest(FpuBaseTest):
+    """Run the directed operand matrix against every implemented operation."""
     async def run_seqs(self):
         await FpuCornerSeq("corner").start(self.env.agent.sqr)
 
 
 @pyuvm.test()
 class FpuLcgTest(FpuBaseTest):
+    """Replay the portable integer generator with a selected operation and seed."""
     async def run_seqs(self):
         s = FpuLcgSeq("lcg")
         s.count = N_ITEMS
@@ -437,7 +563,18 @@ class FpuRegressTest(FpuBaseTest):
         rnd.count = N_ITEMS
         mix = FpuMixBurstSeq("mix")
         mix.count = max(1, N_ITEMS // 16)
-        t1 = cocotb.start_soon(rnd.start(self.env.agent.sqr))
-        t2 = cocotb.start_soon(mix.start(self.env.agent.sqr))
-        await t1
-        await t2
+        tasks = [cocotb.start_soon(s.start(self.env.agent.sqr)) for s in (rnd, mix)]
+        for task in tasks:
+            await task
+        # On its own, so the sequencer doesn't break up its bursts.
+        cmix = FpuCordicMixSeq("cmix")
+        cmix.count = max(1, N_ITEMS // 40)
+        await cmix.start(self.env.agent.sqr)
+
+    def final_phase(self):
+        super().final_phase()
+        pr = self.env.probe
+        assert pr.old > 0, "the FIFO age rule never stalled a request"
+        if FD < 64:
+            # The small FIFO exists to reach the stall rules; make sure it did.
+            assert pr.noroom > 0 and pr.full > 0, f"stall rules not reached: {pr.noroom} / {pr.full}"

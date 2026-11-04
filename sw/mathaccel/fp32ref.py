@@ -1,6 +1,6 @@
 """Exact IEEE-754 single-precision reference model with exception flags.
 
-This is the Python golden model for the FPU. It works on raw 32-bit patterns
+This is the Python golden model for FPU operations 0-11. It works on raw 32-bit patterns
 and returns (result_bits, flags), matching what fpu.sv must produce.
 
 How it stays independent of the hardware design: every finite operation is
@@ -10,6 +10,8 @@ float arithmetic anywhere, so the host CPU's FPU, NumPy, and my RTL share no
 code path with this model. The tests in sw/tests/test_fp32ref.py check this
 model against NumPy (results) and against the C/DPI reference (results and
 flags), which together give three independent opinions on every answer.
+Phase 3 uses cordic_model.py for the hardware algorithm and mpref.py for
+high-precision accuracy checks; those functions do not use this evaluator.
 
 Behaviour (also written up in docs/numerics.md):
 * Round to nearest, ties to even is the only rounding mode.
@@ -51,6 +53,9 @@ def fields(bits: int) -> tuple[int, int, int]:
     return (bits >> 31) & 1, (bits >> 23) & 0xFF, bits & 0x7FFFFF
 
 
+# Inspect encoded fields before doing arithmetic so an sNaN is not
+# quietly changed by a host floating-point conversion. These predicates
+# are also used by the phase 3 references for the same input policy.
 def is_nan(bits: int) -> bool:
     _, e, f = fields(bits)
     return e == 0xFF and f != 0
@@ -333,3 +338,9 @@ def evaluate(op: int, a: int, b: int = 0) -> tuple[int, int]:
 
 def is_unary(op: int) -> bool:
     return op in _UNARY
+
+
+# The ops this exact model covers, which are also the ops the FPU kernel runs
+# today (0 .. FPU_OP_COUNT-1). The phase 3 functions (SIN .. LN) can't be
+# checked bit for bit; their reference is mathaccel.mpref.
+EXACT_OPS = tuple(op for op in FpuOp if op in _OPS or op in _UNARY)

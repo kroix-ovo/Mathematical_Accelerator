@@ -2,6 +2,10 @@
 // ready/valid stages. I use it to shorten the combinational timing path from
 // packet generation into COBS encoding. It accepts a new item when empty;
 // UART is much slower than this possible one-item-per-two-clocks throughput.
+// Think of this as a one-byte register with an occupied bit. It can pass
+// one byte per clock when downstream is ready, yet retain a byte through a
+// stall. I use it between framing and COBS so the byte and its last marker
+// remain together even when the encoder stops to send a buffered block.
 module stream_reg #(
     parameter int W = 9
 ) (

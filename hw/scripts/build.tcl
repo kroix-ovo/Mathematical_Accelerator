@@ -3,6 +3,10 @@
 # Outputs in build/vivado/: nexys_top.bit, timing (including rmii_timing.rpt) and
 # utilisation reports. Fails if setup or hold timing is not met.
 
+# I keep the source list in sources.f so synthesis and simulations read the
+# same modules in package-before-user order. Synthesis builds a netlist;
+# implementation then places and routes it under the XDC timing constraints.
+# A written bitstream is a programming artifact, not a functional board test.
 set root [file normalize [file dirname [info script]]/../..]
 set out  $root/build/vivado
 file mkdir $out

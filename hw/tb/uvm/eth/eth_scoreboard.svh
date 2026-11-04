@@ -1,3 +1,7 @@
+// The receive monitors describe what reached the pins; the reference model
+// decides whether that traffic deserves a reply. Predicted and transmitted
+// frames are compared in full, including checksums. I share the command model
+// with UART so writes on one transport must be visible on the other.
 // Reference model and scoreboard for the Ethernet environment.
 //
 // eth_ref_model decides, for each frame the DUT received, which frames the

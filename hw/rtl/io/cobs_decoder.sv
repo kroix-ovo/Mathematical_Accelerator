@@ -3,6 +3,10 @@
 // between blocks; 0xFF blocks do not. I emit that implied zero when the next
 // code arrives, so the delimiter itself never adds a trailing packet byte.
 // An input 0x00 ends the frame and checks whether the block was complete.
+// There is no output-ready input here. Each incoming byte can cause at most
+// one output byte, and frame_rx must accept that pulse immediately. When a
+// code byte arrives, its clock can emit a pending zero; subsequent clocks
+// emit the block's data. This is why an implied zero needs no extra cycle.
 module cobs_decoder (
     input  logic       clk,
     input  logic       rst,

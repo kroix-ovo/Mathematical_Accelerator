@@ -9,11 +9,12 @@ from enum import IntEnum
 # Device identity, version, clock, baud, and packet/memory sizes.
 MAGIC = 0x4d414343
 VERSION_MAJOR = 0
-VERSION_MINOR = 2
+VERSION_MINOR = 3
 CLK_HZ = 100000000
 BAUD = 2000000
 SCRATCH_ADDR_BITS = 16
 MAX_PAYLOAD = 1024
+FPU_OP_COUNT = 18
 # N address bits select 2**N words, each containing 32 data bits.
 SCRATCH_WORDS = 1 << SCRATCH_ADDR_BITS
 
@@ -69,6 +70,12 @@ class FpuOp(IntEnum):
     EQ = 0x09
     LT = 0x0A
     LE = 0x0B
+    SIN = 0x0C
+    COS = 0x0D
+    ATAN2 = 0x0E
+    HYPOT = 0x0F
+    EXP = 0x10
+    LN = 0x11
 
 
 class FpuFlag(IntEnum):

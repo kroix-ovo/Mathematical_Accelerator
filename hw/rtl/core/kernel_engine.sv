@@ -29,6 +29,13 @@
 // two clocks: r[j] in the clock the result arrives, f[j] on the next clock.
 // Results return in issue order, because one kernel run only ever uses one
 // operation and so only one FPU unit.
+// I keep fetching and write-back independent: the state machine feeds new
+// operands while an earlier result can use memory port B. ISSUE holds a_q,
+// b_q and the element index steady until req_ready says the FPU accepted them.
+// DRAIN is needed even after the last input was accepted: a CORDIC result is
+// still travelling through 52 internal stages and the FPU's output buffering.
+// Each input takes at least four clocks to issue, leaving time to write its
+// result word and then its flag word before another result of the same op.
 module kernel_engine
   import accel_pkg::*;
 (
@@ -63,7 +70,7 @@ module kernel_engine
   logic [31:0]           cyc, i, count, value;
   logic [SCRATCH_AW-1:0] base;                  // FILL base
   logic [SCRATCH_AW-1:0] a_base, b_base, r_base, f_base;
-  logic [3:0]            fop;
+  logic [4:0]            fop;
   logic [31:0]           a_q, b_q;              // captured a[i], b[i]
   logic [31:0]           j;                     // results fully written
   logic                  flag_pend;             // f[j] write due this clock
@@ -123,7 +130,9 @@ module kernel_engine
             if (arg32(4) != 0) state <= FILL;
             else               state <= FIN;
           end else if (kernel == K_FPU) begin
-            fop    <= args[3:0];
+            // Phase 3 needs five op bits (0..17). cmd_proc has already
+            // checked the whole wire byte, so narrowing it is safe here.
+            fop    <= args[4:0];
             count  <= arg32(1);
             a_base <= SCRATCH_AW'(arg32(5));
             b_base <= SCRATCH_AW'(arg32(9));

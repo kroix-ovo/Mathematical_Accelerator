@@ -29,6 +29,11 @@
 // edges, so Vivado can time these paths directly and no synchronizer is
 // needed. Events are at least two 50 MHz clocks apart, which is four clocks
 // on the 100 MHz side, so none can be missed.
+// The PHY supplies two data bits per 50 MHz edge, so four samples make a
+// byte. Its pins follow the PHY's timing rules rather than a ready/valid
+// handshake: the FPGA must keep up. The event toggle records that something
+// changed; the 100 MHz receive logic detects that change and consumes the
+// accompanying event kind and byte under this design's related-clock timing.
 module rmii_rx (
     input  logic       clk_rmii,     // 50 MHz, same clock the PHY uses
     input  logic       rst,

@@ -1,3 +1,7 @@
+// I index predictions by tag because a short add can overtake an older
+// CORDIC request. A missing tag is a protocol failure even if the number looks
+// plausible. ULP distance below counts adjacent fp32 encodings; the mpmath
+// tests separately measure fractional ULP error from the high-precision value.
 // Scoreboard: predicts every result and checks every response.
 //
 // When a request is observed, the scoreboard asks the C reference model what
@@ -5,9 +9,23 @@
 // When a response is observed, it looks up the tag and compares bit-for-bit:
 // the 32-bit result pattern and the 5 flag bits must both match.
 //
+// The phase 3 ops (SIN .. LN) get two checks, because their results are
+// irrational and have no single bit-exact "IEEE answer":
+//   1. bit for bit against cordic_ref.c, the C port of the bit-accurate model
+//      of the CORDIC unit (this is the check that finds RTL bugs);
+//   2. within 1 ULP of fp_ref.c, which computes the function in double
+//      precision and rounds once, so it is nearly always the correctly
+//      rounded result. The hardware is within 0.61 ULP of the exact value
+//      (tools/measure_ulp.py), so it can differ from fp_ref by at most one
+//      ULP. When the two results are equal, the flags must be equal too; when
+//      they are one ULP apart, NV, DZ, OF and NX must still agree (UF can
+//      legitimately differ at the 2^-126 boundary).
+//
 // It also checks timing that the RTL promises:
 //   - pipelined ops return exactly LAT_PIPE clocks after acceptance
 //   - divide/sqrt return no sooner than LAT_DS_MIN clocks
+//   - CORDIC ops return between LAT_CORD clocks (when the result port is
+//     free) and LAT_CORD_MAX (the bound the FIFO's age rule guarantees)
 //   - no response without a request, no request left without a response
 
 // uvm_analysis_imp_decl creates uniquely named "write" callbacks, so one
@@ -23,6 +41,8 @@ class fpu_scoreboard extends uvm_scoreboard;
   // registers its output, which the constants include).
   localparam int LAT_PIPE   = 7;
   localparam int LAT_DS_MIN = 30;
+  localparam int LAT_CORD   = 54;
+  localparam int LAT_CORD_MAX = 95;
 
   uvm_analysis_imp_req #(fpu_req_item, fpu_scoreboard) req_imp;
   uvm_analysis_imp_rsp #(fpu_rsp_item, fpu_scoreboard) rsp_imp;
@@ -32,9 +52,14 @@ class fpu_scoreboard extends uvm_scoreboard;
   fpu_req_item pending[bit [7:0]];
   bit [31:0]   exp_result[bit [7:0]];
   bit [4:0]    exp_flags[bit [7:0]];
+  bit [31:0]   ref_result[bit [7:0]];   // fp_ref's answer for the CORDIC ops
+  bit [4:0]    ref_flags[bit [7:0]];
 
   int unsigned n_checked, n_errors;
   int unsigned per_op[fpu_op_e];
+  int unsigned per_op_ulp1[fpu_op_e];   // CORDIC results one ULP away from fp_ref
+  int unsigned n_cord_waited;           // CORDIC results that waited in the FIFO
+  longint unsigned cord_max_lat;        // longest CORDIC latency seen
   int unsigned max_report = 20;     // stop printing details after this many
 
   function new(string name, uvm_component parent);
@@ -46,10 +71,32 @@ class fpu_scoreboard extends uvm_scoreboard;
   function void write_req(fpu_req_item t);
     int fl;
     if (pending.exists(t.tag))
-      `uvm_error("SB_TAG", $sformatf("tag %02h reused while still outstanding", t.tag))
-    pending[t.tag]    = t;
-    exp_result[t.tag] = fp_ref_eval(int'(t.op), t.a, t.b, fl);
-    exp_flags[t.tag]  = fl[4:0];
+      `uvm_error("SB_TAG", $sformatf("tag %02h reused while still outstanding: %s, accepted %0d clocks ago",
+                                     t.tag, pending[t.tag].convert2string(), t.cycle - pending[t.tag].cycle))
+    pending[t.tag] = t;
+    if (is_cordic(t.op)) begin
+      exp_result[t.tag] = cordic_ref_eval(int'(t.op), t.a, t.b, fl);
+      exp_flags[t.tag]  = fl[4:0];
+      ref_result[t.tag] = fp_ref_eval(int'(t.op), t.a, t.b, fl);
+      ref_flags[t.tag]  = fl[4:0];
+    end else begin
+      exp_result[t.tag] = fp_ref_eval(int'(t.op), t.a, t.b, fl);
+      exp_flags[t.tag]  = fl[4:0];
+    end
+  endfunction
+
+  // The ULP check of a CORDIC result against fp_ref (see the header).
+  function void check_ulp(fpu_req_item q, fpu_rsp_item r);
+    longint   d = ulp_distance(r.result, ref_result[r.tag]);
+    bit [4:0] must = (d == 0) ? 5'b11111 : 5'b11101;   // which flag bits must agree
+    if (d == 1) per_op_ulp1[q.op]++;
+    if (d > 1 || ((r.flags ^ ref_flags[r.tag]) & must) != 0) begin
+      n_errors++;
+      if (n_errors <= max_report)
+        `uvm_error("SB_ULP", $sformatf(
+            "%s\n  fp_ref   result=%08h flags=%05b\n  got      result=%08h flags=%05b (%0d ULP apart)",
+            q.convert2string(), ref_result[r.tag], ref_flags[r.tag], r.result, r.flags, d))
+    end
   endfunction
 
   function void write_rsp(fpu_rsp_item r);
@@ -72,9 +119,17 @@ class fpu_scoreboard extends uvm_scoreboard;
             q.convert2string(), exp_result[r.tag], exp_flags[r.tag], r.result, r.flags))
     end
 
+    if (is_cordic(q.op)) check_ulp(q, r);
+
     if (q.op inside {FDIV, FSQRT}) begin
       if (lat < LAT_DS_MIN)
         `uvm_error("SB_LAT", $sformatf("%s returned after %0d clocks (< %0d)", q.op.name(), lat, LAT_DS_MIN))
+    end else if (is_cordic(q.op)) begin
+      if (lat < LAT_CORD || lat > LAT_CORD_MAX)
+        `uvm_error("SB_LAT", $sformatf("%s returned after %0d clocks (expected %0d..%0d)",
+                                       q.op.name(), lat, LAT_CORD, LAT_CORD_MAX))
+      if (lat > LAT_CORD) n_cord_waited++;
+      if (lat > cord_max_lat) cord_max_lat = lat;
     end else if (lat != LAT_PIPE) begin
       `uvm_error("SB_LAT", $sformatf("%s returned after %0d clocks (expected %0d)", q.op.name(), lat, LAT_PIPE))
     end
@@ -82,6 +137,8 @@ class fpu_scoreboard extends uvm_scoreboard;
     pending.delete(r.tag);
     exp_result.delete(r.tag);
     exp_flags.delete(r.tag);
+    ref_result.delete(r.tag);
+    ref_flags.delete(r.tag);
   endfunction
 
   // check_phase runs after the test's stimulus is finished.
@@ -92,7 +149,13 @@ class fpu_scoreboard extends uvm_scoreboard;
 
   function void report_phase(uvm_phase phase);
     string s = $sformatf("checked %0d results, %0d mismatches\n", n_checked, n_errors);
-    foreach (per_op[op]) s = {s, $sformatf("  %-6s %0d\n", op.name(), per_op[op])};
+    foreach (per_op[op]) begin
+      s = {s, $sformatf("  %-6s %0d", op.name(), per_op[op])};
+      if (is_cordic(op)) s = {s, $sformatf("  (%0d one ULP from fp_ref)", per_op_ulp1[op])};
+      s = {s, "\n"};
+    end
+    s = {s, $sformatf("  CORDIC results that waited in the FIFO: %0d, longest latency %0d clocks\n",
+                      n_cord_waited, cord_max_lat)};
     `uvm_info("SB", s, UVM_NONE)
   endfunction
 endclass
@@ -120,7 +183,7 @@ class fpu_coverage extends uvm_component;
     // every pairing of operand kinds.
     x_op_ka: cross cp_op, cp_ka;
     x_op_ka_kb: cross cp_op, cp_ka, cp_kb {
-      ignore_bins unary = binsof(cp_op) intersect {FSQRT, FI2F, FF2I};
+      ignore_bins unary = binsof(cp_op) intersect {FSQRT, FI2F, FF2I, FSIN, FCOS, FEXP, FLN};
     }
   endgroup
 

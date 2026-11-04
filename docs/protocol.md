@@ -28,7 +28,7 @@ A response has `op | 0x80`, the same `tag`, and a payload whose **first byte is 
 | Bad payload length for op | status `BAD_LEN` |
 | Address range outside scratchpad | status `BAD_ADDR` |
 | Unknown kernel | status `BAD_KERNEL` |
-| Kernel argument out of range (FPU op code > 11) | status `BAD_ARG` |
+| Kernel argument out of range (FPU op code ≥ 18 in this version) | status `BAD_ARG` |
 
 The host treats a missing response as a timeout and retries with a new tag.
 
@@ -44,7 +44,7 @@ The host treats a missing response as a timeout and retries with a new tag.
 
 Addresses and counts are in **32-bit words**. RUN is synchronous: the response is sent when the kernel finishes, and `cycles` is the number of core clock cycles the kernel was busy. `aux` is a kernel-specific result word: the OR of every element's exception flags for the FPU kernel, and 0 for NOP and FILL.
 
-Version 0.2 added the FPU kernel, the `aux` word in RUN replies, and the `BAD_ARG` status.
+Version 0.2 added the FPU kernel, the `aux` word in RUN replies, and the `BAD_ARG` status. Version 0.3 added FPU op codes 12–17 (the phase 3 functions); nothing else changed.
 
 ## Kernels
 
@@ -52,22 +52,24 @@ Version 0.2 added the FPU kernel, the `aux` word in RUN replies, and the `BAD_AR
 |---|---|---|---|
 | 0x00 | NOP | — | 1 |
 | 0x01 | FILL | base:u32, count:u32, value:u32 | count + 1 |
-| 0x02 | FPU | fop:u8, count:u32, a:u32, b:u32, r:u32, f:u32 | 4·count + 9 (DIV, SQRT: 33·count + 6); 1 when count = 0 |
+| 0x02 | FPU | fop:u8, count:u32, a:u32, b:u32, r:u32, f:u32 | 4·count + 9 (DIV, SQRT: 33·count + 6; SIN … LN: 4·count + 56); 1 when count = 0 |
 
 ### FPU kernel
 
 For `i` in `0 .. count-1`: `r[i], f[i] = fop(a[i], b[i])`. The arguments `a`, `b`, `r` and `f` are word addresses of four arrays in the scratchpad. `r[i]` receives the 32-bit result pattern and `f[i]` receives that element's flags in bits 4..0 (NV DZ OF UF NX). Unary operations ignore `b`, but its range is still checked. The arrays must be identical or disjoint. Partially overlapping arrays give undefined results.
 
-Checks happen in this order: payload length (22 bytes including the kernel byte), then `fop ≤ 11` (`BAD_ARG`), then each array inside the scratchpad (`BAD_ADDR`).
+Checks happen in this order: payload length (22 bytes including the kernel byte), then `fop ≤ 17` (`BAD_ARG`; the limit is `fpu_op_count` in `spec/accel.toml`), then each array inside the scratchpad (`BAD_ADDR`).
 
-| fop | op | | fop | op |
-|---|---|---|---|---|
-| 0 | ADD | | 6 | F2I (fp32 → int32) |
-| 1 | SUB | | 7 | MIN |
-| 2 | MUL | | 8 | MAX |
-| 3 | DIV | | 9 | EQ |
-| 4 | SQRT | | 10 | LT |
-| 5 | I2F (int32 → fp32) | | 11 | LE |
+| fop | op | | fop | op | | fop | op |
+|---|---|---|---|---|---|---|---|
+| 0 | ADD | | 6 | F2I (fp32 → int32) | | 12 | SIN |
+| 1 | SUB | | 7 | MIN | | 13 | COS |
+| 2 | MUL | | 8 | MAX | | 14 | ATAN2 (a = y, b = x) |
+| 3 | DIV | | 9 | EQ | | 15 | HYPOT |
+| 4 | SQRT | | 10 | LT | | 16 | EXP |
+| 5 | I2F (int32 → fp32) | | 11 | LE | | 17 | LN |
+
+Codes 12–17 are computed by the CORDIC unit with a target error below 1 ULP of the high-precision value; they do not promise a correctly rounded result for every input. The [publication accuracy sample](verification.md#phase-3-implementation-checks) measured a maximum of 0.599 ULP over 20,000 inputs per function. The flags follow the phase 3 rule (NX on every ordinary result except a listed set of exact cases), described in [numerics.md](numerics.md#phase-3-functions).
 
 The exact arithmetic rules (rounding, subnormals, NaN results, flags) are in [numerics.md](numerics.md).
 

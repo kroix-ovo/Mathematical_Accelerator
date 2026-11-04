@@ -2,6 +2,11 @@
 // release a one-clock frame_valid pulse only after the delimiter, length, and
 // CRC all agree. Layout is op, tag, two length bytes, payload, two CRC bytes.
 // A request arriving while the command processor is busy is dropped.
+// buffer stores the entire decoded frame, including its four header bytes.
+// cmd_proc accounts for that header when requesting payload addresses.
+// I keep collection separate from execution: frame_valid is permission to
+// interpret stored bytes, not a pulse for each arriving byte. A corrupted
+// packet can fill temporary storage but cannot start a memory command.
 module frame_rx
   import accel_pkg::*;
   import util_pkg::*;

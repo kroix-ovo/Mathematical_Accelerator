@@ -19,6 +19,11 @@
 //   ROUND1   first half of rounding
 //   ROUND2   second half of rounding
 //   OUT      hold the result until the FPU top accepts it (out_ack)
+// This unit reuses arithmetic hardware over several clocks. Read its loop
+// counter as "which result bit am I finding now", unlike the separate stage
+// registers in fp_mul. in_ready prevents a second request from overwriting
+// that work. When out_valid rises, the answer stays available until out_ack;
+// the FPU can therefore wait for a free clock on its shared result port.
 module fp_divsqrt
   import accel_pkg::*;
   import fp_pkg::*;

@@ -50,16 +50,19 @@ LOG: list[str] = []
 
 
 def say(text: str = "") -> None:
+    """Print a progress line and keep the same text for the saved bring-up report."""
     print(text)
     LOG.append(text)
 
 
 def fail(step: str, hint: str) -> None:
+    """Record the first failing layer and stop before later checks obscure its cause."""
     say(f"\nFAILED at {step}.\nHint: {hint}")
     finish(ok=False)
 
 
 def finish(ok: bool) -> None:
+    """Write the collected observations to a timestamped report for later comparison."""
     out = ROOT / "build" / f"eth_bringup_{dt.datetime.now():%Y%m%d_%H%M%S}.md"
     out.parent.mkdir(exist_ok=True)
     out.write_text("\n".join(LOG) + "\n", encoding="utf-8")
@@ -68,6 +71,7 @@ def finish(ok: bool) -> None:
 
 
 def run(cmd: list[str]) -> str:
+    """Execute one host diagnostic and capture the command output for the report."""
     res = subprocess.run(cmd, capture_output=True, text=True)
     return res.stdout + res.stderr
 
@@ -125,12 +129,14 @@ def bench_nop(dev, n: int) -> list[float]:
 
 
 def describe(times: list[float]) -> str:
+    """Summarize host round-trip times in microseconds, including the long-tail percentile."""
     q = np.percentile(times, [50, 99])
     return (f"mean {statistics.mean(times):.0f} us, median {q[0]:.0f} us, 99th pct {q[1]:.0f} us, "
             f"min {min(times):.0f} us")
 
 
 def main() -> None:
+    """Check the link, command transport, memory and original FPU operations in layer order."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--host", default=spec.ETH_IP)
     ap.add_argument("--uart", help="serial port (e.g. COM3) for the UART comparison")
@@ -181,7 +187,7 @@ def main() -> None:
         if args.fptest:
             total_bad = 0
             t0 = time.perf_counter()
-            for op in FpuOp:
+            for op in fp32ref.EXACT_OPS:
                 vecs = list(stream(1 + int(op), args.fptest, int(op)))
                 for i in range(0, len(vecs), 1024):
                     part = vecs[i:i + 1024]

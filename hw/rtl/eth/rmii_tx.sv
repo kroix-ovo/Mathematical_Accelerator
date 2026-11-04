@@ -21,6 +21,10 @@
 // rising-edge outputs the PHY's 1.5 ns hold time would then have almost no
 // margin. Launching on the falling edge moves the transmit data to the middle
 // of the PHY's window instead. The XDC lets Vivado check both.
+// The toggle/ack pair is a byte handoff between the core and RMII logic.
+// A changed toggle announces a new byte; the acknowledgement lets the sender
+// reuse its holding register. I serialize each accepted byte into four
+// two-bit symbols, including the last byte before ending TX_EN.
 module rmii_tx (
     input  logic       clk_rmii,
     input  logic       rst,

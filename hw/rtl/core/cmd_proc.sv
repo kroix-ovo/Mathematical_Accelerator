@@ -4,6 +4,13 @@
 // the transmit buffer. The Python DeviceModel describes the same commands.
 // The state register below is the route through those steps; only a rising
 // clock edge changes state or commits a buffer/memory write.
+// Reading the state machine: each enum name is one controller state, not a
+// software function call. The combinational assignments select addresses and
+// data for the current state; the always_ff block advances that state on clk.
+// I keep length/address checks before the states that write memory so a bad
+// request cannot partly modify the scratchpad before it is rejected.
+// The FPU operation still occupies a whole byte on the wire. Only values
+// through FOP_LN pass validation; the kernel then keeps the low five bits.
 module cmd_proc
   import accel_pkg::*;
 #(
@@ -212,7 +219,7 @@ module cmd_proc
               // Checks in the same order as the Python model: length, then
               // op code, then address ranges.
               if (len != 22) respond_status(ST_BAD_LEN);
-              else if (fpu_fop > 8'd11) respond_status(ST_BAD_ARG);
+              else if (fpu_fop >= 8'(FPU_OP_COUNT)) respond_status(ST_BAD_ARG);
               else if (!fpu_in_range) respond_status(ST_BAD_ADDR);
               else begin k_start <= 1'b1; state <= KWAIT; end
             end else respond_status(ST_BAD_KERNEL);

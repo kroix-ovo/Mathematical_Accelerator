@@ -7,6 +7,11 @@
 // Reads appear in rdata after the rising edge, which callers must account for.
 // If both ports write the same address in the same clock, the stored value
 // is undefined; no user of this memory does that.
+// The array declaration describes storage, and the clocked reads describe
+// block RAM's registered outputs. Setting an address does not immediately
+// produce its word: the controller must allow the read clock edge first.
+// I give the storage no reset logic, so the controller can restart a command
+// without clearing the data someone has already loaded.
 module scratch_mem #(
     parameter int AW = 16
 ) (
