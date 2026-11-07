@@ -397,6 +397,7 @@ the comments.
 | generated constants and CORDIC tables | `python tools/gen_spec.py --check` and `python tools/gen_cordic.py --check` | passed |
 | exact accumulator, Verilator | `python hw/scripts/run_pyuvm.py accum --test AccumRegressTest --n 100` | 161 sums, 24,427 terms, 0 errors; 19/19 coverage bins |
 | expression unit, Verilator | `python hw/scripts/run_pyuvm.py evu --test EvuRegressTest --n 30` | 90 valid runs, 105 refused descriptors, 16,754 points, 197,471 FPU operations, 0 errors; 45/45 coverage bins |
+| expression unit, Icarus (four-state) | `python hw/scripts/run_pyuvm.py evu --sim icarus --test EvuRegressTest --n 15` | 71 valid runs, 91 refused descriptors, 12,691 points, 160,677 FPU operations, 0 errors; 45/45 coverage bins |
 | host command path, Verilator | `python hw/scripts/run_pyuvm.py top --test TopEvuTest --n 8` | 175 requests and replies, including 28 EVU runs, 0 errors |
 | independent SV/C command path, xsim | `python hw/scripts/run_uvm.py top --test top_evu_test --n 4` | 129 requests and replies, including 18 EVU runs, 0 mismatches, 0 UVM errors or fatals |
 | report reproduction | `python tools/evu_report.py`, also with local build inputs unavailable | all 22 rules rebuild identically from the published inputs |
