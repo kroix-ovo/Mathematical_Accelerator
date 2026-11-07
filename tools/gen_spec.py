@@ -75,6 +75,9 @@ def render_sv(spec: dict) -> str:
     lines.append(f"  localparam logic [47:0] ETH_MAC       = 48'h{mac_int(e['mac']):012X};")
     lines.append(f"  localparam logic [31:0] ETH_IP        = 32'h{ip_int(e['ip']):08X};")
     lines.append(f"  localparam logic [15:0] ETH_UDP_PORT  = 16'd{e['udp_port']};")
+    # I generate the EVU sizes and field shifts from the same section for both ends.
+    lines += ["", "  // I keep the EVU limits and field shifts aligned with the host (phase 4)."]
+    lines += [f"  localparam int          EVU_{k.upper()} = {v};" for k, v in spec["evu"].items()]
     # A section's prefix keeps opcode, reply status, and kernel names distinct.
     descriptions = {
         "opcodes": "Request opcodes; a reply sets bit 7 of the same opcode.",
@@ -122,6 +125,8 @@ def render_py(spec: dict) -> str:
         f"HOST_IP = {e['host_ip']!r}",
         f"UDP_PORT = {e['udp_port']}",
     ]
+    lines += ["", "# I keep the EVU limits and field shifts aligned with the RTL (phase 4)."]
+    lines += [f"EVU_{k.upper()} = {v}" for k, v in spec["evu"].items()]
     descriptions = {
         "Op": "Request IDs; replies use these values with bit 7 set.",
         "Status": "First reply payload byte; OK is the successful result.",

@@ -161,6 +161,13 @@ def parse_run(data: bytes) -> tuple[int, int]:
     return struct.unpack("<II", data)
 
 
+# I only send the descriptor word address here. The program and tables
+# have already been loaded into scratchpad by the device driver.
+def evu_args(desc: int) -> bytes:
+    """RUN arguments of the EVU kernel: the scratchpad address of a descriptor."""
+    return struct.pack("<I", desc)
+
+
 def fpu_args(fop: int, count: int, a: int, b: int, r: int, f: int) -> bytes:
     """Pack FPU kernel arguments: op code byte, then five 32-bit words."""
     return struct.pack("<BIIIII", fop, count, a, b, r, f)

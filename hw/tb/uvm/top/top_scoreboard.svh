@@ -11,7 +11,10 @@
 // FPU results come from the DPI-C references, the same ones the block-level
 // scoreboard uses: fp_ref for ops 0-11 and the bit-accurate CORDIC model
 // (cordic_ref) for ops 12-17, so every reply can still be compared byte for
-// byte.
+// byte. The one exception is a successful EVU run: its clock count isn't predicted
+// (docs/phase4-plan.md explains why), so the model gives a low and a high bound and
+// the scoreboard compares the rest of that reply exactly. EVU results come from
+// the C port of the interpreter, evu_ref.
 
 class top_ref_model extends uvm_object;
   `uvm_object_utils(top_ref_model)
@@ -28,6 +31,9 @@ class top_ref_model extends uvm_object;
   bit [31:0]   mem[int unsigned];
   bit [15:0]   crc_errors, frame_errors;
   bit [31:0]   last_cycles;
+  // Set when the last request was a successful EVU run.
+  bit          evu_ran;
+  int unsigned evu_low, evu_high;
 
   function new(string name = "top_ref_model"); super.new(name); endfunction
 
@@ -53,6 +59,7 @@ class top_ref_model extends uvm_object;
     byte unsigned op, tag, st;
     int unsigned len;
     reply.delete();
+    evu_ran = 0;
     if (wire_frame.size() == 0) return 0;                  // empty frame: ignored
     if (!top_codec::cobs_decode(wire_frame, raw) || raw.size() < 6) begin
       frame_errors++;
@@ -169,6 +176,21 @@ class top_ref_model extends uvm_object;
         else if (fop >= 12)         cycles = FPU_FETCH * count + CORDIC_TAIL;
         else                        cycles = FPU_FETCH * count + FPU_PIPE_TAIL;
       end
+      accel_pkg::K_EVU: begin
+        int unsigned desc, evu_aux;
+        int st;
+        if (p.size() != 5) return accel_pkg::ST_BAD_LEN;
+        desc = le32(p, 1);
+        if (!in_range(desc, accel_pkg::EVU_DESC_WORDS)) return accel_pkg::ST_BAD_ADDR;
+        evu_ref_clear();
+        foreach (mem[a]) evu_ref_poke(a, mem[a]);
+        st = evu_ref_run(desc, evu_aux, evu_low, evu_high);
+        if (st != accel_pkg::ST_OK) return st;
+        for (int i = 0; i < evu_ref_writes(); i++) mem[evu_ref_write_addr(i)] = evu_ref_write_word(i);
+        evu_ran = 1;
+        cycles = evu_low;
+        aux = evu_aux;
+      end
       default: return accel_pkg::ST_BAD_KERNEL;
     endcase
     last_cycles = cycles;
@@ -187,7 +209,10 @@ class top_scoreboard extends uvm_scoreboard;
 
   top_ref_model model;
   byte_q        expected[$];       // queue of predicted replies (one per request)
-  int unsigned  n_req, n_rsp, n_silent, n_errors;
+  // For each reply in expected: was it a successful EVU run, and its clock bounds.
+  bit           expected_evu[$];
+  int unsigned  expected_low[$], expected_high[$];
+  int unsigned  n_req, n_rsp, n_silent, n_errors, n_evu;
 
   // Which commands and statuses were exercised.
   byte unsigned cov_op, cov_status, cov_kernel;
@@ -214,6 +239,9 @@ class top_scoreboard extends uvm_scoreboard;
     n_req++;
     if (model.predict(f.bytes, reply)) begin
       expected.push_back(reply);
+      expected_evu.push_back(model.evu_ran);
+      expected_low.push_back(model.evu_low);
+      expected_high.push_back(model.evu_high);
       void'(top_codec::cobs_decode(reply, raw));
       cov_op     = raw[0] & 8'h7F;
       cov_status = raw[4];
@@ -223,8 +251,38 @@ class top_scoreboard extends uvm_scoreboard;
     end
   endfunction
 
+  // A successful EVU reply: exact except for cycles, which only has to be in
+  // bounds. got has no delimiter and exp has one, as in write_rsp.
+  // I compare status, tag, aux and CRC exactly. I only give scheduling cycles
+  // a bounded check, then carry the observed count into the next STATUS reply.
+  function void check_evu(byte_q exp, byte_q got, int unsigned low, int unsigned high);
+    byte_q want, seen;
+    bit ok;
+    int unsigned cycles;
+    n_evu++;
+    exp.pop_back();
+    got.pop_back();
+    ok = top_codec::cobs_decode(exp, want) && top_codec::cobs_decode(got, seen) && seen.size() == want.size();
+    if (ok) begin
+      cycles = {seen[8], seen[7], seen[6], seen[5]};
+      for (int i = 0; i < 5; i++)  ok &= seen[i] == want[i];    // op, tag, length, status
+      for (int i = 9; i < 13; i++) ok &= seen[i] == want[i];    // aux
+      ok &= (top_codec::crc16(seen[0:12]) == {seen[14], seen[13]});
+      if (cycles < low || cycles > high) ok = 0;
+    end
+    if (!ok) begin
+      n_errors++;
+      `uvm_error("TOP_SB", $sformatf("EVU reply\n  expected %s (cycles %0d..%0d)\n  got      %s",
+                                     top_codec::hex(exp, 64), low, high, top_codec::hex(got, 64)))
+    end
+    // STATUS reports the real count, so the model has to take it from here.
+    model.last_cycles = cycles;
+  endfunction
+
   function void write_rsp(wire_frame_item f);
     byte_q exp, got;
+    bit evu;
+    int unsigned low, high;
     n_rsp++;
     got = f.bytes;
     got.push_back(0);
@@ -233,8 +291,13 @@ class top_scoreboard extends uvm_scoreboard;
       `uvm_error("TOP_SB", $sformatf("unexpected reply %s", top_codec::hex(got)))
       return;
     end
-    exp = expected.pop_front();
-    if (got != exp) begin
+    exp  = expected.pop_front();
+    evu  = expected_evu.pop_front();
+    low  = expected_low.pop_front();
+    high = expected_high.pop_front();
+    if (evu) begin
+      check_evu(exp, got, low, high);
+    end else if (got != exp) begin
       n_errors++;
       `uvm_error("TOP_SB", $sformatf("reply mismatch\n  expected %s\n  got      %s",
                                      top_codec::hex(exp, 64), top_codec::hex(got, 64)))
@@ -247,8 +310,8 @@ class top_scoreboard extends uvm_scoreboard;
   endfunction
 
   function void report_phase(uvm_phase phase);
-    `uvm_info("SB", $sformatf("%0d requests (%0d silent by design), %0d replies, %0d mismatches, command coverage %0.1f%%",
-                              n_req, n_silent, n_rsp, n_errors, cg_cmd.get_coverage()), UVM_NONE)
+    `uvm_info("SB", $sformatf("%0d requests (%0d silent by design), %0d replies, %0d EVU runs, %0d mismatches, command coverage %0.1f%%",
+                              n_req, n_silent, n_rsp, n_evu, n_errors, cg_cmd.get_coverage()), UVM_NONE)
   endfunction
 endclass
 

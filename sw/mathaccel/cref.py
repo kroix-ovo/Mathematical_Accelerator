@@ -2,7 +2,8 @@
 
 The same C files are the DPI-C models behind the SystemVerilog scoreboards:
 fp_ref.c (CPU float arithmetic, and libm in double precision for the phase 3
-functions) and cordic_ref.c (the C port of the bit-accurate CORDIC model).
+functions), cordic_ref.c (the C port of the bit-accurate CORDIC model) and
+evu_ref.c (the C port of the expression unit's checks and interpreter).
 Here I compile them into one shared library and call it through ctypes, so
 the Python tests can compare fp_ref with fp32ref/mpref and cordic_ref with
 cordic_model, and the ULP tools can use fp_ref as the fast screen for large
@@ -26,7 +27,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 DPI = ROOT / "hw" / "tb" / "uvm" / "dpi"
 SRC = DPI / "fp_ref.c"
-SOURCES = (SRC, DPI / "cordic_ref.c")
+SOURCES = (SRC, DPI / "cordic_ref.c", DPI / "evu_ref.c")
 DEPS = (*SOURCES, DPI / "cordic_tables.h")
 
 
@@ -59,6 +60,18 @@ class CRef:
         lib.cordic_ref_eval.argtypes = [ctypes.c_int, ctypes.c_uint32, ctypes.c_uint32, intp]
         lib.cordic_ref_eval_many.restype = None
         lib.cordic_ref_eval_many.argtypes = [ctypes.c_int, ctypes.c_int, u32p, u32p, u32p, intp]
+        lib.evu_ref_clear.restype = None
+        lib.evu_ref_clear.argtypes = []
+        lib.evu_ref_poke.restype = None
+        lib.evu_ref_poke.argtypes = [ctypes.c_uint32, ctypes.c_uint32]
+        lib.evu_ref_run.restype = ctypes.c_int
+        lib.evu_ref_run.argtypes = [ctypes.c_uint32, u32p, u32p, u32p]
+        lib.evu_ref_writes.restype = ctypes.c_uint32
+        lib.evu_ref_writes.argtypes = []
+        lib.evu_ref_write_addr.restype = ctypes.c_uint32
+        lib.evu_ref_write_addr.argtypes = [ctypes.c_uint32]
+        lib.evu_ref_write_word.restype = ctypes.c_uint32
+        lib.evu_ref_write_word.argtypes = [ctypes.c_uint32]
 
     def eval(self, op: int, a: int, b: int = 0) -> tuple[int, int]:
         """Return one libm/CPU reference result and flags from raw operand bit patterns."""
@@ -73,6 +86,22 @@ class CRef:
     def cordic_many(self, op: int, a, b=None) -> tuple[np.ndarray, np.ndarray]:
         """Like eval_many, but from cordic_ref.c (what the hardware returns, bit for bit)."""
         return self._many(self.lib.cordic_ref_eval_many, op, a, b)
+
+    # I pass individual words through DPI-compatible calls, then collect every
+    # write. This checks the C scoreboard model independently of Python arrays.
+    def evu_run(self, mem: np.ndarray, desc: int) -> tuple[int, int, int, int, list[tuple[int, int]]]:
+        """One EVU run on a copy of a scratchpad, called the way the SV model calls it.
+
+        Returns (status, aux, low clock bound, high clock bound, words written).
+        """
+        lib = self.lib
+        lib.evu_ref_clear()
+        for addr in np.flatnonzero(mem):
+            lib.evu_ref_poke(int(addr), int(mem[addr]))
+        aux, low, high = ctypes.c_uint32(0), ctypes.c_uint32(0), ctypes.c_uint32(0)
+        status = lib.evu_ref_run(desc, ctypes.byref(aux), ctypes.byref(low), ctypes.byref(high))
+        writes = [(lib.evu_ref_write_addr(i), lib.evu_ref_write_word(i)) for i in range(lib.evu_ref_writes())]
+        return status, aux.value, low.value, high.value, writes
 
     @staticmethod
     def _many(fn, op: int, a, b) -> tuple[np.ndarray, np.ndarray]:

@@ -8,7 +8,7 @@ package accel_pkg;
   // SCRATCH_AW counts word-address bits; each scratchpad word is 32 bits.
   localparam logic [31:0] MAGIC         = 32'h4D414343;
   localparam int          VERSION_MAJOR = 0;
-  localparam int          VERSION_MINOR = 3;
+  localparam int          VERSION_MINOR = 4;
   localparam int          CLK_HZ        = 100000000;
   localparam int          BAUD          = 2000000;
   localparam int          SCRATCH_AW    = 16;
@@ -21,6 +21,33 @@ package accel_pkg;
   localparam logic [47:0] ETH_MAC       = 48'h024D41434301;
   localparam logic [31:0] ETH_IP        = 32'hC0A80A02;
   localparam logic [15:0] ETH_UDP_PORT  = 16'd50000;
+
+  // I keep the EVU limits and field shifts aligned with the host (phase 4).
+  localparam int          EVU_CONTEXTS = 31;
+  localparam int          EVU_REGISTERS = 64;
+  localparam int          EVU_CONSTANTS = 64;
+  localparam int          EVU_PROGRAM_LEN = 256;
+  localparam int          EVU_TABLES = 6;
+  localparam int          EVU_DIMS = 3;
+  localparam int          EVU_MAX_POINTS_LOG2 = 32;
+  localparam int          EVU_OP_LOAD = 31;
+  localparam int          EVU_OP_SHIFT = 27;
+  localparam int          EVU_LAST_SHIFT = 26;
+  localparam int          EVU_DST_SHIFT = 20;
+  localparam int          EVU_A_SHIFT = 13;
+  localparam int          EVU_B_SHIFT = 6;
+  localparam int          EVU_SRC_CONST = 64;
+  localparam int          EVU_DESC_WORDS = 16;
+  localparam int          EVU_DESC_MODE = 0;
+  localparam int          EVU_DESC_PROG = 1;
+  localparam int          EVU_DESC_PROG_LEN = 2;
+  localparam int          EVU_DESC_CONST = 3;
+  localparam int          EVU_DESC_CONST_LEN = 4;
+  localparam int          EVU_DESC_GRID = 5;
+  localparam int          EVU_DESC_R = 8;
+  localparam int          EVU_DESC_F = 9;
+  localparam int          EVU_DESC_TABLE = 10;
+  localparam int          EVU_DESC_DIM_SHIFT = 16;
 
   // Request opcodes; a reply sets bit 7 of the same opcode.
   localparam logic [7:0] OP_PING = 8'h01;
@@ -42,6 +69,7 @@ package accel_pkg;
   localparam logic [7:0] K_NOP = 8'h00;
   localparam logic [7:0] K_FILL = 8'h01;
   localparam logic [7:0] K_FPU = 8'h02;
+  localparam logic [7:0] K_EVU = 8'h03;
 
   // FPU operation codes, five bits wide (codes 12-17 are phase 3).
   localparam logic [4:0] FOP_ADD = 5'h00;

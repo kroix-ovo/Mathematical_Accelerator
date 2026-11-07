@@ -9,7 +9,7 @@ from enum import IntEnum
 # Device identity, version, clock, baud, and packet/memory sizes.
 MAGIC = 0x4d414343
 VERSION_MAJOR = 0
-VERSION_MINOR = 3
+VERSION_MINOR = 4
 CLK_HZ = 100000000
 BAUD = 2000000
 SCRATCH_ADDR_BITS = 16
@@ -23,6 +23,33 @@ ETH_MAC = '02:4D:41:43:43:01'
 ETH_IP = '192.168.10.2'
 HOST_IP = '192.168.10.1'
 UDP_PORT = 50000
+
+# I keep the EVU limits and field shifts aligned with the RTL (phase 4).
+EVU_CONTEXTS = 31
+EVU_REGISTERS = 64
+EVU_CONSTANTS = 64
+EVU_PROGRAM_LEN = 256
+EVU_TABLES = 6
+EVU_DIMS = 3
+EVU_MAX_POINTS_LOG2 = 32
+EVU_OP_LOAD = 31
+EVU_OP_SHIFT = 27
+EVU_LAST_SHIFT = 26
+EVU_DST_SHIFT = 20
+EVU_A_SHIFT = 13
+EVU_B_SHIFT = 6
+EVU_SRC_CONST = 64
+EVU_DESC_WORDS = 16
+EVU_DESC_MODE = 0
+EVU_DESC_PROG = 1
+EVU_DESC_PROG_LEN = 2
+EVU_DESC_CONST = 3
+EVU_DESC_CONST_LEN = 4
+EVU_DESC_GRID = 5
+EVU_DESC_R = 8
+EVU_DESC_F = 9
+EVU_DESC_TABLE = 10
+EVU_DESC_DIM_SHIFT = 16
 
 
 class Op(IntEnum):
@@ -53,6 +80,7 @@ class Kernel(IntEnum):
     NOP = 0x00
     FILL = 0x01
     FPU = 0x02
+    EVU = 0x03
 
 
 class FpuOp(IntEnum):

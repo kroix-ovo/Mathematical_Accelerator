@@ -6,7 +6,7 @@
 [device]
 magic = 0x4D414343          # "MACC"
 version_major = 0
-version_minor = 3          # 0.3: FPU op codes 12-17 (phase 3 CORDIC ops)
+version_minor = 4          # 0.3: FPU op codes 12-17 (phase 3 CORDIC ops). 0.4: EVU kernel
 clk_hz = 100_000_000
 baud = 2_000_000            # exact divider at 100 MHz (50 clocks/bit)
 scratch_addr_bits = 16      # 64 Ki words x 32 bit = 256 KiB scratchpad
@@ -38,6 +38,7 @@ BAD_ARG    = 0x06       # kernel argument out of range (e.g. FPU op code >= fpu_
 NOP  = 0x00     # args: none; measures dispatch overhead
 FILL = 0x01     # args: base u32, count u32, value u32
 FPU  = 0x02     # args: fop u8, count u32, a u32, b u32, r u32, f u32 (see docs/protocol.md)
+EVU  = 0x03     # args: desc u32, the scratchpad address of a 16-word descriptor (see docs/protocol.md)
 
 # FPU operation codes (5 bits). Used by the FPU kernel and the fpu block.
 # Unary operations (SQRT, I2F, F2I, SIN, COS, EXP, LN) ignore operand b.
@@ -71,6 +72,44 @@ UF = 0x02       # underflow (tiny after rounding and inexact)
 OF = 0x04       # overflow
 DZ = 0x08       # divide by zero
 NV = 0x10       # invalid operation
+
+# I keep the Phase 4 expression-unit limits here so my compiler and RTL agree.
+# I pack each instruction into a 32-bit word (docs/phase4-plan.md):
+#   [31:27] op    an FPU op code (0-17), or op_load
+#   [26]    last  the final instruction; its result is the point's output
+#   [25:20] dst   destination register
+#   [19:13] a     first source. Bit 6 set means constant, clear means register.
+#                 For op_load this field is the table number instead.
+#   [12:6]  b     second source, coded the same way
+#   [5:0]   zero
+[evu]
+contexts = 31       # points in flight at once; bank 31 of the register file holds the constants
+registers = 64      # registers per context
+constants = 64      # constants shared by all contexts
+program_len = 256   # instructions in a program
+tables = 6          # node tables a program can read
+dims = 3            # grid dimensions
+max_points_log2 = 32   # a run may have at most 2^32 points; beyond that the sum could outgrow the accumulator's checks
+op_load = 0x1F      # R[dst] = table[a][index of that table's dimension]
+op_shift = 27
+last_shift = 26
+dst_shift = 20
+a_shift = 13
+b_shift = 6
+src_const = 0x40    # set in a source field: the low 6 bits name a constant
+# A run is described by 16 words in the scratchpad, at the address RUN gives.
+# Values here are word offsets into that descriptor, except desc_dim_shift.
+desc_words = 16
+desc_mode = 0       # bit 0 set: reduce (one sum). Clear: map (one result per point).
+desc_prog = 1       # scratchpad address of the instruction words
+desc_prog_len = 2   # how many instruction words
+desc_const = 3      # scratchpad address of the constants
+desc_const_len = 4  # how many constants
+desc_grid = 5       # n0, n1, n2: three words. An unused dimension holds 1.
+desc_r = 8          # where the results go
+desc_f = 9          # where the flags go
+desc_table = 10     # six words, one per node table: base address, and its dimension above
+desc_dim_shift = 16
 
 # UDP transport over the onboard LAN8720A (RMII, 100 Mbit/s, direct cable).
 # The board answers ARP and ICMP echo for `ip` and accepts command frames as

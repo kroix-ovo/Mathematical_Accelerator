@@ -7,7 +7,7 @@
 
 Steps, all inside build/uvm_<env>/:
   1. xsc compiles the DPI-C reference models (hw/tb/uvm/dpi/fp_ref.c and
-     cordic_ref.c) into a shared library the simulator can call.
+     cordic_ref.c, evu_ref.c) into a shared library the simulator can call.
   2. xvlog compiles the RTL, the UVM packages and the test top (-L uvm links
      the UVM 1.2 library that ships with Vivado).
   3. xelab elaborates the design into a simulation snapshot and attaches the
@@ -17,6 +17,9 @@ Steps, all inside build/uvm_<env>/:
 The run passes only if the log contains the test's PASS marker and the UVM
 report summary shows no UVM_ERROR or UVM_FATAL.
 """
+
+# I include the EVU C interpreter in the top-level scoreboard build so the
+# SV command tests can check Phase 4 without importing the Python interpreter.
 
 from __future__ import annotations
 
@@ -109,7 +112,7 @@ def main() -> int:
     # Forward slashes on purpose: xelab copies the source path of each DPI
     # call into a C string literal, and a Windows path such as C:\Users holds
     # the two characters backslash-U, which C rejects as an escape sequence.
-    dpi = [(ROOT / "hw/tb/uvm/dpi" / c).as_posix() for c in ("fp_ref.c", "cordic_ref.c")]
+    dpi = [(ROOT / "hw/tb/uvm/dpi" / c).as_posix() for c in ("fp_ref.c", "cordic_ref.c", "evu_ref.c")]
     run([find_bin(args.vivado, "xsc"), *dpi], "xsc.log")
     incs = [x for d in cfg["inc"] for x in ("-i", (ROOT / d).as_posix())]
     srcs = [(ROOT / s).as_posix() for s in [*rtl, *cfg["tb"]]]

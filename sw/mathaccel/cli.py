@@ -7,6 +7,14 @@ hardware. Put the global --port option before the command:
 `--port COM5 fptest`, `--port udp:192.168.10.2 fptest --op phase3`,
 `--port sim fp div 1 3`, `--port sim fp atan2 1 2`.
 The simulator uses the same driver calls but does not measure FPGA hardware.
+
+The calc command runs the calculus tools on the expression unit:
+`calc integrate "exp(-(x**2+y**2))" x=-3:3 y=-3:3 --order 32`,
+`calc line "(-y,x)" "(2*cos(t),2*sin(t))" t=0:2*pi`,
+`calc flux "(x,y,z)" "(sin(u)*cos(v),sin(u)*sin(v),cos(u))" u=0:pi v=0:2*pi`,
+`calc grad "x**2*y" --at 1,2`, `calc div "(x,y,z)" --at 1,2,3`,
+`calc curl "(-y,x,0)" --at 1,2,0`, `calc root "cos(x)-x" x=0:1`.
+It exits with status 2 when an answer is NaN, infinite, flagged or not converged.
 """
 
 from __future__ import annotations
@@ -16,8 +24,9 @@ import struct
 import time
 
 import numpy as np
+import sympy as sp
 
-from mathaccel import cref, fp32ref, ulp
+from mathaccel import calc, cref, fp32ref, ulp
 from mathaccel._generated import spec
 from mathaccel._generated.spec import FpuFlag, FpuOp
 from mathaccel.driver.device import connect
@@ -188,6 +197,117 @@ def cmd_fptest(dev, args) -> None:
         raise SystemExit(1)
 
 
+def calc_expr(text: str):
+    """Parse an expression or a parenthesised vector, such as "(-y, x, 0)"."""
+    parsed = sp.sympify(text)
+    return tuple(parsed) if isinstance(parsed, (tuple, sp.Tuple)) else parsed
+
+
+def calc_limit(text: str) -> tuple:
+    """Parse 'x=0:2*pi' into (symbol, low, high). Limits may use other variables."""
+    name, sep, span = text.partition("=")
+    low, colon, high = span.partition(":")
+    if not (sep and colon):
+        raise SystemExit(f"a limit looks like x=0:1, not {text!r}")
+    return sp.Symbol(name), sp.sympify(low), sp.sympify(high)
+
+
+def calc_coords(field, args) -> list:
+    """The coordinates, from --coords or else x, y, z used by the expression."""
+    if args.coords:
+        return [sp.Symbol(n) for n in args.coords.split(",")]
+    exprs = field if isinstance(field, tuple) else (field,)
+    count = len(exprs) if isinstance(field, tuple) else None
+    if count is None:
+        used = sorted(s.name for e in exprs for s in e.free_symbols)
+        count = max(("xyz".index(n) + 1 for n in used if n in "xyz"), default=1)
+    return [sp.Symbol(n) for n in "xyz"[:count]]
+
+
+def calc_where(args, count: int) -> dict:
+    """Where to evaluate: --at 1,2,3 or --grid "0:1:11" per axis."""
+    if args.at:
+        points = [[float(sp.sympify(v)) for v in p.split(",")] for p in args.at]
+        if any(len(p) != count for p in points):
+            raise SystemExit(f"each --at point needs {count} values")
+        return {"at": points}
+    if not args.grid:
+        raise SystemExit("give --at or --grid")
+    axes = []
+    for text in args.grid:
+        low, high, n = text.split(":")
+        axes.append(np.linspace(float(sp.sympify(low)), float(sp.sympify(high)), int(n)))
+    return {"grid": axes}
+
+
+# I keep the CLI as setup and presentation: calc builds the requested
+# expression, and the chosen device evaluates it. I surface bad numerical
+# results in the exit status as well as in the printed answer.
+def cmd_calc(dev, args) -> None:
+    """Run one calculus tool on the device and print its answer and any warnings."""
+    options = {"panels": args.panels, "order": args.order, "check": not args.no_check,
+               "max_seconds": args.max_seconds} if "panels" in args else {}
+    if args.tool == "integrate":
+        result = calc.integrate_nd(dev, sp.sympify(args.expr), [calc_limit(t) for t in args.limits], **options)
+    elif args.tool == "line":
+        result = calc.line_integral(dev, calc_expr(args.field), calc_expr(args.curve), calc_limit(args.limit),
+                                    **options)
+    elif args.tool == "flux":
+        result = calc.surface_flux(dev, calc_expr(args.field), calc_expr(args.surface), calc_limit(args.u),
+                                   calc_limit(args.v), **options)
+    elif args.tool == "root":
+        var, low, high = calc_limit(args.bracket)
+        result = calc.root_find(dev, sp.sympify(args.expr), var, float(low), float(high) if not args.newton else None,
+                                method="newton" if args.newton else "bisect")
+    else:
+        field = calc_expr(args.expr)
+        coords = calc_coords(field, args)
+        tool = {"grad": calc.grad, "div": calc.div, "curl": calc.curl_at}[args.tool]
+        result = tool(dev, field, coords, **calc_where(args, len(coords)))
+    print(result)
+    # A shell script must not mistake a NaN or an unconverged rule for an answer.
+    if not result.clean:
+        raise SystemExit(2)
+
+
+def add_calc(sub) -> None:
+    """The calc subcommand and its seven tools."""
+    cp = sub.add_parser("calc", help="calculus on the expression unit: integrate, line, flux, grad, div, curl, root")
+    tools = cp.add_subparsers(dest="tool", required=True)
+
+    def integral(name: str, text: str):
+        p = tools.add_parser(name, help=text)
+        p.add_argument("--panels", type=int, default=1, help="panels per axis")
+        p.add_argument("--order", type=int, default=16, help="Gauss-Legendre nodes per panel")
+        p.add_argument("--no-check", action="store_true", help="skip the second run on a finer rule")
+        p.add_argument("--max-seconds", type=float, default=30.0, help="refuse a run longer than this")
+        return p
+
+    p = integral("integrate", "integrate an expression; inner limits come first and may use outer variables")
+    p.add_argument("expr")
+    p.add_argument("limits", nargs="+", help="x=0:1, one per variable")
+    p = integral("line", "line integral: a vector field gives work, a scalar gives arc length")
+    p.add_argument("field")
+    p.add_argument("curve", help="(x(t), y(t), ...)")
+    p.add_argument("limit", help="t=0:1")
+    p = integral("flux", "surface integral: a vector field gives flux, a scalar gives area")
+    p.add_argument("field")
+    p.add_argument("surface", help="(x(u,v), y(u,v), z(u,v))")
+    p.add_argument("u")
+    p.add_argument("v")
+    for name, text in (("grad", "gradient of a scalar"), ("div", "divergence of a vector field"),
+                       ("curl", "curl of a vector field")):
+        p = tools.add_parser(name, help=text)
+        p.add_argument("expr")
+        p.add_argument("--coords", help="names, comma separated, default x,y,z")
+        p.add_argument("--at", action="append", help="a point: 1,2,3. Repeat for more.")
+        p.add_argument("--grid", action="append", help="low:high:n for each coordinate, repeated in order")
+    p = tools.add_parser("root", help="solve f(x)=0 with evaluations on the board")
+    p.add_argument("expr")
+    p.add_argument("bracket", help="x=0:1. --newton starts from the low value")
+    p.add_argument("--newton", action="store_true")
+
+
 def main(argv: list[str] | None = None) -> None:
     """Parse a subcommand and keep its connection open for the whole operation."""
     ap = argparse.ArgumentParser(prog="mathaccel")
@@ -209,12 +329,13 @@ def main(argv: list[str] | None = None) -> None:
     ft.add_argument("--op", default="all", help="op name, 'all', 'exact' (ops 0-11) or 'phase3' (ops 12-17)")
     ft.add_argument("--n", type=int, default=2000, help="vectors per op")
     ft.add_argument("--seed", type=int, default=1)
+    add_calc(sub)
     args = ap.parse_args(argv)
     # The context manager closes a physical serial port even if a command
     # raises. A dictionary selects the handler with no separate CLI branches.
     with connect(args.port) as dev:
         handlers = {"ping": cmd_ping, "status": cmd_status, "memtest": cmd_memtest, "bench": cmd_bench,
-                    "fp": cmd_fp, "fptest": cmd_fptest}
+                    "fp": cmd_fp, "fptest": cmd_fptest, "calc": cmd_calc}
         handlers[args.cmd](dev, args)
 
 

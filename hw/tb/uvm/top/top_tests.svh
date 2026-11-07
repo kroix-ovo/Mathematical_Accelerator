@@ -39,6 +39,16 @@ class top_smoke_test extends top_base_test;
   endtask
 endclass
 
+// I run the complete load/RUN/readback path through UART in this focused test.
+class top_evu_test extends top_base_test;
+  `uvm_component_utils(top_evu_test)
+  function new(string name, uvm_component parent); super.new(name, parent); endfunction
+  virtual task run_vseq();
+    top_evu_vseq v = top_evu_vseq::type_id::create("v");
+    v.start(env.vsqr);
+  endtask
+endclass
+
 class top_regress_test extends top_base_test;
   `uvm_component_utils(top_regress_test)
   function new(string name, uvm_component parent); super.new(name, parent); endfunction

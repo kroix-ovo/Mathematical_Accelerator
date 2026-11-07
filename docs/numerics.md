@@ -151,3 +151,23 @@ near-1 path. In the model sample, 8,257 of 174,352 near-1 results (4.7%) were
 not correctly rounded, against 3,937 of 753,732 main-path results (0.52%). The
 largest LN error is on the main path, though: 0.588 ULP there, 0.572 ULP on
 the near-1 path.
+
+## Phase 4: sums and integrals
+
+The expression unit doesn't add any new arithmetic. Every instruction is one of the FPU operations above, with its own rounding and flags. What's new is how a run's results are combined.
+
+### The exact accumulator
+
+In reduce mode every point's fp32 output is added into a fixed-point register that covers the whole fp32 range, from 2^-149 to 2^128, with headroom for 2^32 terms. Nothing is rounded until the end, when the total is rounded once to nearest even. So the sum is exact, and the order the points finish in can't change it. The result's flags are the ones that final rounding raises (NX, OF), plus NV for a signalling NaN among the terms or for +∞ and −∞ together, the same rules repeated ADD would follow. An infinity or NaN term sets state bits instead of entering the register. The Python model predicts the sum with `Fraction` arithmetic, so it's checked bit for bit.
+
+`aux` in the RUN reply is the OR of every point's flags. A finite sum can hide an NV or DZ from one point, so the host tools spell those out from `aux`.
+
+### What the integrals measure
+
+The answer to an integral has two errors on top of fp32: each point is computed in fp32, and the quadrature rule itself has truncation error. Measured against a 40-digit reference on all 22 rules of the class problem list, on the board:
+
+* Every rule whose answer had converged came within **1.38 ULP**, however many points it used, up to 2,097,152. The fp32 rounding in the points and nodes mostly cancels in an exact sum.
+* The 1,024-point `plate_potential` rule misses by 25,621 ULP, about 0.18%, in every precision including double. That's the rule failing near a near-singular integrand, not the arithmetic. The host tools run every integral again on a finer rule and report `NOT CONVERGED` when the two disagree, which catches this case.
+* For comparison, adding the same fp32 terms in a plain fp32 loop in grid order reached about 16,400 ULP at a million points, and the result changed with the order. [phase4-cpu-comparison.md](phase4-cpu-comparison.md#accuracy-by-how-the-sum-is-done) has the full table.
+
+Two compiler choices add rounding that isn't covered by the per-op budgets: `x^y` is compiled as `exp(y·ln x)`, which rounds twice, and a long integration axis split into panels computes each node as `mid + offset`, which rounds once more. Both are included in the measured results above wherever a class problem uses them.

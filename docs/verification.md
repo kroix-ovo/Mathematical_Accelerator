@@ -1,14 +1,19 @@
 # Verification
 
-There are seven UVM environments: three in SystemVerilog UVM 1.2, run in Vivado xsim, and four in pyuvm, run in cocotb on Verilator or Icarus. Each language has a block-level environment for the FPU, a top-level environment that drives the whole accelerator through its UART pins, and an Ethernet environment that drives it through its RMII pins (and the UART pins, for checks that mix the two). The fourth pyuvm environment tests CORDIC on its own. The phase 2 mathematical references are independent implementations; the phase 3 datapath models intentionally share constants, with mpmath used separately to check accuracy.
+There are nine UVM environments: three in SystemVerilog UVM 1.2, run in Vivado xsim, and six in pyuvm, run in cocotb on Verilator or Icarus. Each language has a block-level environment for the FPU, a top-level environment that drives the whole accelerator through its UART pins, and an Ethernet environment that drives it through its RMII pins (and the UART pins, for checks that mix the two). The other three pyuvm environments test CORDIC, the exact accumulator and the expression unit (EVU) on their own. Both top-level environments run EVU programs too. The phase 2 mathematical references are independent implementations; the phase 3 datapath models intentionally share constants, with mpmath used separately to check accuracy.
 
 ```
                     SV UVM (xsim)                           pyuvm (Verilator / Icarus)
 FPU block   hw/tb/uvm/fpu   ref: C via DPI-C        hw/tb/pyuvm/fpu   ref: fp32ref.py (exact)
 Top level   hw/tb/uvm/top   ref: SV device model    hw/tb/pyuvm/top   ref: DeviceModel (Python)
+            + evu_ref.c via DPI-C
 Ethernet    hw/tb/uvm/eth   ref: SV eth_ref_model   hw/tb/pyuvm/eth   ref: EthBoardModel (Python)
 CORDIC      (covered by the SV FPU environment)    hw/tb/pyuvm/cordic ref: integer model + mpmath
+Accumulator (covered by the top environments)      hw/tb/pyuvm/accum ref: exact_sum + Fraction
+EVU         (covered by the top environments)      hw/tb/pyuvm/evu   ref: evu_model.py (bit-accurate)
 ```
+
+Every fault these tests found, and how each was fixed, is in [errors_log.md](errors_log.md).
 
 Another test, `hw/tb/sv/tb_nexys_eth.sv`, simulates the board top level with Xilinx's models of the clocking primitives (see [Board-level Ethernet test](#board-level-ethernet-test)). For FPU codes 12–17, the full-device Python/SV models use the bit-accurate CORDIC models so complete packet replies remain byte-exact checks.
 
@@ -74,6 +79,46 @@ rerun passed; the change does not suppress checks on traffic after reset.
 The standalone timing script is `hw/scripts/build_cordic.tcl`. It reports on
 the CORDIC unit alone, so the full-design timing that matters for the board is
 in [Phase 3 board results](#phase-3-board-results).
+
+## Phase 4 checks
+
+Phase 4 added the exact accumulator (`fp_accum`) and the expression unit (`evu_core`), which runs a compiled program over a grid of points. These are the simulation and host-model checks. [Phase 4 board results](#phase-4-board-results) has what ran on the hardware, and each milestone's gate in [phase4-plan.md](phase4-plan.md) has the full numbers.
+
+### How the phase 4 tests work
+
+* **References.** `sw/mathaccel/evu_model.py` runs the bytecode with the same per-op models the FPU tests use and adds the sum with `Fraction`, so it predicts every result word, flag word and `aux` bit for bit. `hw/tb/uvm/dpi/evu_ref.c` is a C port of it for the SV scoreboards, and `test_evu_ref.py` checks the two agree, including on 3,000 spoiled descriptors. Integral accuracy is measured separately against mpmath at 40 digits.
+* **Accumulator (`hw/tb/pyuvm/accum`).** Drives terms into `fp_accum` one per clock and checks every sum against `exact_sum` and against separate `Fraction` arithmetic, plus the fixed 29-clock finish, with 19 coverage bins over the kinds of terms and sums.
+* **EVU block (`hw/tb/pyuvm/evu`).** Wraps `evu_core` with the real `fpu`, `fp_accum` and `scratch_mem` in `evu_dut.sv`. Runs are directed programs, all 13 class problems at their smallest rule, and random programs from a generator. The scoreboard rebuilds each run from the words it saw written into the scratchpad, then checks every word the unit wrote, `aux`, and every FPU request against the model. The monitor also checks that no context ever has two instructions in flight. Coverage: every op, every source kind, program length, grid shape, map and reduce, divider busy, the FIFO stall rules, NaN and infinity reaching the accumulator, and every refusal.
+* **Cycle counts.** An EVU run's cycle count depends on how points line up in the FPU, so instead of predicting it exactly the scoreboards check it against a low and a high bound from `cycle_bounds`. On the board the real counts sat close to the low bound.
+* **Tests.** `EvuDirectedTest`, `EvuRegressTest` (directed plus random), `EvuRefuseTest` (bad descriptors and programs), `EvuLimitTest` (grids at the exact edges of both point limits), `EvuProfileTest` (cycle breakdown, below) and `EvuGateTest` (the milestone 3 speed measurements). Top level: `TopEvuTest` and `TopRegressTest` in pyuvm, `top_evu_test` and `top_regress_test` in SV.
+* **Cycle profile.** With `PROFILE=1`, `evu_dut.sv` puts every clock of a run into one category: useful arithmetic, LOAD, division stall, dependency stall, result FIFO rules, context scheduling, or setup and finish. The counters live only in the testbench wrapper, so the RTL and bitstream are unchanged. On 22 rules up to 70 million clocks the simulated count was the board's count minus exactly 2 every time, so the profile describes the real hardware.
+* **Injected bugs.** To check the tests can fail, I put bugs into the RTL and the C model one at a time: 12 in milestone 3, all caught, and 30 in milestone 4, of which 27 are caught and the other 3 can't be told apart from correct behaviour. The first pass found three real gaps in my tests, now covered.
+
+### Phase 4 results
+
+| Check | Command from the repository root | Result |
+|---|---|---|
+| Accumulator, Verilator | `python hw/scripts/run_pyuvm.py accum --test AccumRegressTest` | 2,061 sums, 113,774 terms, 0 errors, 19/19 bins; a second seed 461 sums, 0 errors |
+| Accumulator, Icarus | `python hw/scripts/run_pyuvm.py accum --sim icarus --test AccumRegressTest --n 100` | 361 sums, 0 errors, no X on outputs |
+| Accumulator timing, standalone | `vivado -mode batch -source hw/scripts/build_accum.tcl` | WNS +0.799 ns, WHS +0.146 ns, 1,264 LUTs, one term per clock |
+| EVU block, Verilator, seed 1 | `python hw/scripts/run_pyuvm.py evu --test EvuRegressTest --lcg-seed 1 --n 120` | 204 runs, 189 refusals, 387,144 FPU operations, 0 errors, 45/45 bins |
+| EVU block, Verilator, seed 7 | `python hw/scripts/run_pyuvm.py evu --test EvuRegressTest --lcg-seed 7 --n 120` | 205 runs, 188 refusals, 384,240 FPU operations, 0 errors, 45/45 bins |
+| EVU block, 16-entry CORDIC FIFO | `python hw/scripts/run_pyuvm.py evu16 --test EvuRegressTest` | 130 runs, 121 refusals, 230,909 FPU operations, 0 errors, 46/46 bins |
+| EVU block, Icarus | `python hw/scripts/run_pyuvm.py evu --sim icarus --test EvuRegressTest` | 71 runs, 81 refusals, 160,677 FPU operations, 0 errors, no X |
+| Point limits | `python hw/scripts/run_pyuvm.py evu --test EvuLimitTest --n 200` | 206 grids, 0 errors |
+| Cycle profile | `python hw/scripts/run_pyuvm.py evu --test EvuProfileTest --param PROFILE=1` | 23 runs, every one equal to the board's cycles minus 2 |
+| EVU timing, standalone | `vivado -mode batch -source hw/scripts/build_evu.tcl` | WNS +0.244 ns, WHS +0.042 ns |
+| Top level, Verilator | `python hw/scripts/run_pyuvm.py top --test TopRegressTest` | 306 requests, 32 EVU runs, 0 errors |
+| Top level, random EVU programs | `python hw/scripts/run_pyuvm.py top --test TopEvuTest --n 40` (seed 3) | 303 requests, 60 EVU runs, 0 errors |
+| Top level, Icarus | `python hw/scripts/run_pyuvm.py top --sim icarus --test TopEvuTest` | 151 requests, 22 EVU runs, 0 errors |
+| Top level, SV with C reference | `python hw/scripts/run_uvm.py top --test top_regress_test --seed 1` (and `--seed 5`) | 255 requests, 18 EVU runs, 0 mismatches each |
+| Full design build | `vivado -mode batch -source hw/scripts/build.tcl` | WNS +0.287 ns, WHS +0.015 ns, 19,545 LUTs (30.8%), 72 block RAM tiles, 20 DSP blocks |
+| Python tests | `python -m pytest -q` | 457 passed |
+| Driver and calc tools over a local UDP socket | `python tools/evu_board.py --port udpsim --random 60` | all 22 rules, 62,000 map words, 6 root cases, 60 random programs: 0 mismatches |
+
+The pytest count includes `test_evu.py` (compiler, model and quadrature), `test_evu_ref.py` (C port against Python), `test_calc.py` (126 tests of the host tools against closed forms, SymPy and mpmath, and of every timeout case), and `test_cpu_bench.py` (the CPU benchmark computes the same program the board runs).
+
+xsim found one bug the other simulators missed: a function call in a port expression gave every run an X descriptor address. Verilator re-evaluates it anyway, and the hardware would have been fine. The details are in [errors_log.md](errors_log.md) under E-33.
 
 ## FPU block environment (`hw/tb/uvm/fpu`)
 
@@ -179,9 +224,27 @@ python hw/scripts/run_uvm.py eth --test eth_regress_test --seed 4
 python hw/scripts/run_uvm.py board
 python hw/scripts/run_pyuvm.py eth --test EthRegressTest --seed 3
 python hw/scripts/run_pyuvm.py eth --sim icarus
+python hw/scripts/run_pyuvm.py cordic --test CordicRegressTest --n 5000
+python hw/scripts/run_pyuvm.py accum --test AccumRegressTest
+python hw/scripts/run_pyuvm.py evu --test EvuRegressTest --lcg-seed 1 --n 120
+python hw/scripts/run_pyuvm.py evu16 --test EvuRegressTest
+python hw/scripts/run_pyuvm.py evu --test EvuLimitTest --n 200
+python hw/scripts/run_pyuvm.py evu --test EvuProfileTest --param PROFILE=1
+python hw/scripts/run_pyuvm.py top --test TopEvuTest --n 40
+python hw/scripts/run_uvm.py top --test top_evu_test
 python hw/scripts/run_xsim.py
 pytest -q
 pytest -q sw/tests/test_device.py --port udpsim
+python tools/evu_board.py --port udpsim --random 60
+```
+
+With the board connected, the phase 4 board checks and the CPU comparison are:
+
+```bash
+python tools/evu_board.py --port udp:192.168.10.2 --random 100
+python tools/evu_board.py --busy --port udp:192.168.10.2 --uart COM3
+python tools/cpu_bench.py --seconds 3 --out build/cpu_bench.json
+python tools/evu_report.py
 ```
 
 `--port udpsim` runs the device tests through `UdpTransport` and a real UDP socket on 127.0.0.1, with the Python model answering behind it.
@@ -284,6 +347,7 @@ With the new driver the median NOP round trip was 88 µs and the slowest of the 
 ### Still open
 
 * After the laptop's adapter resets, the link only comes back when the cable is replugged. A fix would read the PHY's link status over MDIO and reset the PHY if the link stays down.
+* On 2026-11-06 the board stopped answering over Ethernet after about 40 idle minutes while the UART kept working. The cause isn't known yet; [errors_log.md](errors_log.md) has it as E-01, with what to check before resetting the board next time.
 * The debug LEDs are still in the design. LED8 to LED11 show live state (transmitter busy, reply waiting in the reply buffer, replay engine inside a datagram, reply still in the encoder); LED12 to LED14 are the latching versions of the first three. Pressing the CPU reset button clears them.
 
 ## Phase 3 board results
@@ -314,6 +378,66 @@ What this run does not show:
 * **Separate board timing for CORDIC.** The cycle counts come from the kernel's counter. Wall time on the board is set by the link.
 
 Each function took about 22 s per million vectors, or about 45,000 elements per second. That time includes the transfers and computing the expected results on the laptop, and it is mostly the transfers: every request waits for its reply, which holds payload rates near 0.7 MB/s. The plan's estimate of about 80 minutes for a sweep of all 2^32 inputs assumed 11 MB/s. At the measured rate one function would take about 26 hours, so I have not run those sweeps. Sending several requests per datagram would be the first thing to try.
+
+## Phase 4 publication checks
+
+I reran these on 2026-11-07 while commenting and publishing the current phase.
+I kept a snapshot of the working sources before the comment pass, then compared
+executable tokens in 14 HDL/C files and the Python syntax trees in 28 files after
+removing docstrings. They stayed identical. I changed the report loader to fall
+back to the [published measurement inputs](evidence/phase4/README.md), and kept
+the generated explanatory strings in the spec generator so regeneration retains
+the comments.
+
+| check | command | result |
+|---|---|---|
+| software | `python -m pytest -q` | 457 passed; the huge-run refusal test deliberately emits a warning |
+| UDP socket simulator | `python -m pytest -q sw/tests/test_device.py --port udpsim` | 30 passed |
+| lint | `python -m ruff check sw tools hw/tb hw/scripts` | passed |
+| generated constants and CORDIC tables | `python tools/gen_spec.py --check` and `python tools/gen_cordic.py --check` | passed |
+| exact accumulator, Verilator | `python hw/scripts/run_pyuvm.py accum --test AccumRegressTest --n 100` | 161 sums, 24,427 terms, 0 errors; 19/19 coverage bins |
+| expression unit, Verilator | `python hw/scripts/run_pyuvm.py evu --test EvuRegressTest --n 30` | 90 valid runs, 105 refused descriptors, 16,754 points, 197,471 FPU operations, 0 errors; 45/45 coverage bins |
+| host command path, Verilator | `python hw/scripts/run_pyuvm.py top --test TopEvuTest --n 8` | 175 requests and replies, including 28 EVU runs, 0 errors |
+| independent SV/C command path, xsim | `python hw/scripts/run_uvm.py top --test top_evu_test --n 4` | 129 requests and replies, including 18 EVU runs, 0 mismatches, 0 UVM errors or fatals |
+| report reproduction | `python tools/evu_report.py`, also with local build inputs unavailable | all 22 rules rebuild identically from the published inputs |
+
+I did not reprogram the board, rerun its measurements, or reroute the design for
+this pass. The following board results and the published Vivado reports are the
+existing 2026-11-05 records. I explain the full calculation path in my
+[Phase 4 reading guide](phase4-reading-guide.md).
+
+## Phase 4 board results
+
+I ran these on 2026-11-05 on the same board, cable and laptop, over Ethernet and then over the UART on COM3, so every check ran on both transports. The bitstream was rebuilt with the EVU in: WNS +0.287 ns, WHS +0.015 ns, 19,545 LUTs (30.8%), 13,406 flip-flops, 72 block RAM tiles (53.3%) and 20 DSP blocks. The board reported protocol v0.4 at 100 MHz.
+
+| check | command | result |
+|---|---|---|
+| all 22 rules of the 13 class problems, up to 2,097,152 points | `python tools/evu_board.py --port udp:192.168.10.2 --random 100` | 0 mismatches in result, flags or `aux` against the bit-accurate model, with no tolerance; each rule ran 7 more times from the loaded image |
+| accuracy against a 40-digit reference | same | at most 1.38 ULP on every converged rule. The 1,024-point `plate_potential` rule misses by 25,621 ULP, which is truncation in the rule itself and is flagged `NOT CONVERGED` |
+| cycle counts | same | inside `cycle_bounds` on every run, and identical over UDP and the UART |
+| map mode: grad, div, curl, bad points, a split list, a tensor grid | same | 62,000 result words and their flags, 0 wrong |
+| root finding, 6 cases | same | same result and iteration count as the model, at most 0.37 ULP against mpmath |
+| 65,536-point run mixing CORDIC, divide and fast ops | same | matches the model, 4,385,408 cycles |
+| 100 random programs | same | 14,265 points, 178,212 FPU operations, 0 mismatches |
+| device tests | `pytest sw/tests/test_device.py --port udp:192.168.10.2` and `--port COM3` | 30 passed each |
+| full scratchpad | `mathaccel --port udp:192.168.10.2 memtest --words 65536` | 0 mismatches, 805 kB/s |
+| calc command | `mathaccel --port COM3 calc ...` for integrate, flux, curl, root and a NaN | right answers, exit status 2 on the NaN |
+| link errors | `mathaccel status` | 0 CRC and 0 frame errors after the correctness run |
+
+This was the first time CORDIC and the short ops shared the FPU's result port on hardware, and the first run past 4,096 points. Nothing disagreed with the model, so nothing needed debugging and no tolerance changed.
+
+**A request during a run.** `python tools/evu_board.py --busy --port udp:192.168.10.2 --uart COM3` sent a second RUN and two PINGs during a 1.46 s run. Over UDP the second RUN was held and ran again afterwards, and the PINGs were dropped with no reply. Over the UART all three were dropped and `frame_errors` went up by 3. So the driver now sends an EVU run exactly once and, on a timeout, asks STATUS whether the run is `running`, `finished` or `not started`. With a forced timeout on a 3.88 s run it reported `running`, then `finished`, and the board ran it once.
+
+**Speed and the CPU comparison.** In real time the laptop wins every rule, as I expected: repeat runs on the board were 4.1x to 97x slower than NumPy FP64 and 14x to 495x slower than compiled single-threaded Numba. Clock for clock it's a different picture. The laptop's CPU ran at a measured 3.9 to 4.3 GHz, 39x to 43x the FPU's 100 MHz, and on that basis my FPU used fewer clocks per point than the NumPy FP64 baseline on 8 of 10 large rules, and fewer than compiled Numba on the sine and exponential programs: 4.4x fewer on `sin`. [phase4-cpu-comparison.md](phase4-cpu-comparison.md) has every table, the architectural reasons, the CPU's energy, and the EVU cycle profile.
+
+What this run does not show:
+
+* **Energy on the FPGA side.** The board has no power sensor the design can read, so it needs an external meter. The CPU side is measured.
+* **The stall rules counted on the board.** The cycle profile counts them in simulation, tied to the board by clock count.
+* **Every possible program.** These are the class list and random programs, a sample.
+* **Runs near the 30 s limit.** The longest kernel was 0.70 s, or 3.88 s in the timeout test.
+
+Ethernet faults found during phase 4, including the board going quiet after a long idle stretch, are in [errors_log.md](errors_log.md).
 
 ## Ethernet bring-up checklist
 

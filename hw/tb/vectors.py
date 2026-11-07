@@ -104,6 +104,26 @@ def build_vectors(seed: int = 0) -> list[tuple[bytes, bytes | None]]:
     req(*P.run(Kernel.FPU, P.fpu_args(0, 2, 0, 0, 0, spec.SCRATCH_WORDS - 1)))  # BAD_ADDR (f)
     req(*P.run(Kernel.FPU, P.fpu_args(0, 0xFFFFFFFF, 0, 0, 0, 0)))  # BAD_ADDR (count)
 
+    # EVU requests that are refused. Their replies are exact, so they can go in
+    # these vectors. A run that succeeds can't: its cycle count isn't predicted, so
+    # the UVM environments test those instead.
+    req(*P.run(Kernel.EVU))                                         # BAD_LEN
+    req(*P.run(Kernel.EVU, b"\x00" * 3))                            # BAD_LEN
+    req(*P.run(Kernel.EVU, P.evu_args(spec.SCRATCH_WORDS - spec.EVU_DESC_WORDS + 1)))  # BAD_ADDR
+    req(*P.run(Kernel.EVU, P.evu_args(0xFFFFFFFF)))                 # BAD_ADDR (wraps)
+    req(*P.run(Kernel.EVU, P.evu_args(30000)))                      # BAD_ARG: zeros, so no program
+    desc = [0] * spec.EVU_DESC_WORDS
+    desc[spec.EVU_DESC_PROG] = 30016
+    desc[spec.EVU_DESC_PROG_LEN] = 1
+    desc[spec.EVU_DESC_GRID:spec.EVU_DESC_GRID + 3] = [2, 3, 1]
+    req(*P.write_mem(30000, desc))
+    req(*P.write_mem(30016, [18 << spec.EVU_OP_SHIFT]))
+    req(*P.run(Kernel.EVU, P.evu_args(30000)))                      # BAD_ARG: op 18
+    req(*P.write_mem(30000 + spec.EVU_DESC_R, [1 << 16]))
+    req(*P.run(Kernel.EVU, P.evu_args(30000)))                      # BAD_ADDR: r, which comes before the program
+    req(*P.read_mem(30000, spec.EVU_DESC_WORDS))
+    req(*P.status())
+
     # Link errors are rejected before command execution, so no reply should
     # arrive. STATUS afterward checks counters; PING checks resynchronization.
     good = bytearray(Frame(Op.PING, 0x55).to_raw())

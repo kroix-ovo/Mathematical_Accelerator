@@ -45,7 +45,8 @@ module cmd_proc
     output logic                  k_start,       // Kernel start: one-clock pulse launching the validated kernel identifier and packed arguments.
     output logic [7:0]            k_kernel,      // Kernel identifier: selects no-operation, memory fill or the floating-point array kernel.
     output logic [8*21-1:0]       k_args,        // Kernel arguments: packed RUN payload bytes 1..21 after the kernel identifier, in wire byte order.
-    input  logic                  k_done,        // Kernel done: one-clock completion pulse qualifying the returned cycle count and auxiliary result.
+    input  logic                  k_done,        // Kernel done: one-clock completion pulse qualifying the returned cycle count, auxiliary result and status.
+    input  logic [7:0]            k_status,      // Kernel status: ST_OK, or the error to reply with when the expression unit refused its descriptor.
     input  logic [31:0]           k_cycles,      // Kernel cycle count: elapsed core clocks reported by the completed kernel.
     input  logic [31:0]           k_aux,         // Kernel auxiliary result: combined floating-point exception flags, or zero for the other kernels.
     // stats
@@ -222,6 +223,14 @@ module cmd_proc
               else if (fpu_fop >= 8'(FPU_OP_COUNT)) respond_status(ST_BAD_ARG);
               else if (!fpu_in_range) respond_status(ST_BAD_ADDR);
               else begin k_start <= 1'b1; state <= KWAIT; end
+            // I validate the descriptor pointer here. The EVU checks its
+            // contents later, before any result write can happen.
+            end else if (args[0] == K_EVU) begin
+              // I can only check that the descriptor itself is in the
+              // scratchpad. What it says is evu_core's job.
+              if (len != 5) respond_status(ST_BAD_LEN);
+              else if ({1'b0, r0} + 33'(EVU_DESC_WORDS) > WORDS) respond_status(ST_BAD_ADDR);
+              else begin k_start <= 1'b1; state <= KWAIT; end
             end else respond_status(ST_BAD_KERNEL);
           end
           default: respond_status(ST_BAD_OP);
@@ -265,14 +274,22 @@ module cmd_proc
 
         // The start pulse has already been sent. Wait for the engine's done
         // pulse before using its final cycle register and reporting success.
+        // A refused run gets the same one-byte reply as any other bad command,
+        // and leaves last_cycles alone.
+        // I carry a refused descriptor back as an error status, rather than
+        // publishing a successful RUN reply with a meaningless cycle count.
         KWAIT: if (k_done) begin
-          last_cycles <= k_cycles;
-          rbuf[0] <= ST_OK;
-          {rbuf[4], rbuf[3], rbuf[2], rbuf[1]} <= k_cycles;
-          {rbuf[8], rbuf[7], rbuf[6], rbuf[5]} <= k_aux;
-          rlen  <= 16'd9;
-          tptr  <= '0;
-          state <= COPY;
+          if (k_status != ST_OK) begin
+            respond_status(k_status);
+          end else begin
+            last_cycles <= k_cycles;
+            rbuf[0] <= ST_OK;
+            {rbuf[4], rbuf[3], rbuf[2], rbuf[1]} <= k_cycles;
+            {rbuf[8], rbuf[7], rbuf[6], rbuf[5]} <= k_aux;
+            rlen  <= 16'd9;
+            tptr  <= '0;
+            state <= COPY;
+          end
         end
 
         // tb_we is high in COPY, so each clock commits one prepared rbuf byte.

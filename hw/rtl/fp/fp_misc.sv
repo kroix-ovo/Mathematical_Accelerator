@@ -8,6 +8,12 @@
 //   EQ        quiet equality: invalid only for signaling NaN inputs
 //   LT, LE    signaling compares: invalid for any NaN input
 // Compare results are the integers 0 or 1 in the 32-bit result.
+// I route table LOADs through the same tagged write-back as arithmetic.
+// I preserve the bits here, including sNaNs, because loading is not an add.
+//   MOVE      op code EVU_OP_LOAD: a unchanged, no flags, even for a signaling
+//             NaN. Only the expression unit sends it, so that a table value
+//             reaches its register through the same write path as every other
+//             result. cmd_proc never lets a host send it.
 //
 // The real work takes four stages (I2F rounding uses two); stages 5-6 are
 // plain delay registers so this unit has the same latency as fp_addsub and
@@ -136,6 +142,8 @@ module fp_misc
         s1_res <= {31'b0, !nan_any && (a_lt_b || a_eq_b)};
         s1_fl  <= nan_any ? FFLAG_NV : '0;
       end
+
+      5'(EVU_OP_LOAD): s1_res <= in_a;         // MOVE: s1_fl stays 0
 
       default: begin                           // not an op this unit knows
         s1_res <= CANON_NAN;  s1_fl <= FFLAG_NV;

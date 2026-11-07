@@ -10,6 +10,12 @@ The scoreboard predicts replies with sw/mathaccel/driver/model.py
 That is a separate implementation from the SV reference model, so the two
 environments check each other's interpretation of docs/protocol.md.
 
+Replies are compared byte for byte, with one exception. A successful EVU run's
+clock count depends on how the queues and the FPU happened to line up, which the
+model doesn't track, so for those replies I compare everything else exactly and
+check cycles against the model's low and high bounds. Every result still comes
+back through READ_MEM and gets compared exactly.
+
 pyuvm has no sequencer lock()/grab(). The UART sequencer here carries an
 asyncio-style Lock instead; the layering sequence and raw byte sequences hold
 it for a whole frame, which gives the same "no interleaved frames" guarantee.
@@ -23,6 +29,8 @@ it for a whole frame, which gives the same "no interleaved frames" guarantee.
 
 from __future__ import annotations
 
+import os
+import random
 import struct
 
 import cocotb
@@ -45,7 +53,12 @@ from pyuvm import (
 )
 
 from mathaccel._generated import spec
-from mathaccel._generated.spec import Kernel, Op
+from mathaccel._generated.spec import FpuOp, Kernel, Op
+from mathaccel.compiler.evu_gen import f as fp32
+from mathaccel.compiler.evu_gen import prog, random_run, table
+from mathaccel.compiler.evu_isa import OP_LOAD, Image, Instr, Run, const, memory_image, reg
+from mathaccel.compiler.problems import PROBLEMS
+from mathaccel.compiler.quadrature import integral_run
 from mathaccel.driver import protocol as P
 from mathaccel.driver.framing import cobs_encode
 from mathaccel.driver.model import DeviceModel
@@ -53,6 +66,8 @@ from mathaccel.driver.protocol import Frame
 from mathaccel.fpgen import FpLcg
 
 CPB = 8  # clocks per UART bit, matches the CLKS_PER_BIT parameter in run.py
+N_RUNS = int(os.environ.get("FPU_N", "12"))  # random EVU runs
+SEED = int(os.environ.get("LCG_SEED", "1"), 16)
 
 
 # ---------------------------------------------------------------------------
@@ -280,6 +295,102 @@ class CmdFpuSeq(CmdBaseSeq):
             await self.read_words(F, n)
 
 
+# I send the image through the actual UART command path, then read outputs
+# back as a host would. The scoreboard checks writes through those replies.
+class CmdEvuSeq(CmdBaseSeq):
+    """The expression unit as a host uses it: write an image in pieces, RUN, read
+    the results back. The class problems, then what only shows up at this level:
+    sharing the FPU with the other kernel, using a descriptor twice, every way a
+    request can be refused, and random programs."""
+    timeout_clks = 2_000_000
+    count = N_RUNS
+
+    async def write_image(self, image: Image):
+        for k in range(0, len(image.words), 255):
+            await self.write_words(image.base + k, [int(w) for w in image.words[k:k + 255]])
+
+    async def run_desc(self, desc: int):
+        return await self.send(*P.run(Kernel.EVU, P.evu_args(desc)))
+
+    async def read_outputs(self, run: Run, image: Image):
+        n = 1 if run.reduce else min(run.points, 255)
+        await self.read_words(image.r, n)
+        await self.read_words(image.f, n)
+
+    async def one_run(self, run: Run, base: int = 0):
+        image = memory_image(run, base)
+        await self.write_image(image)
+        await self.run_desc(image.desc)
+        await self.read_outputs(run, image)
+        return image
+
+    async def problems(self):
+        for p in PROBLEMS:
+            await self.one_run(integral_run(p.expr, p.axes(p.rules[0])))
+
+    async def share_the_fpu(self):
+        """Each kernel straight after the other, each using the slow units."""
+        n, a, b, r, f = 6, 0x8000, 0x8100, 0x8200, 0x8300
+        await self.write_words(a, [fp32(0.25 * (k + 1)) for k in range(n)])
+        await self.write_words(b, [fp32(0.5 * (k + 1)) for k in range(n)])
+        load, sin, div = OP_LOAD, int(FpuOp.SIN), int(FpuOp.DIV)
+        lines = (Instr(load, 0, 0), Instr(sin, 1, reg(0)), Instr(div, 2, reg(1), const(0)))
+        run = Run(prog(*lines, constants=[fp32(3.0)]),
+                  [table([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8])], (8,), reduce=False)
+        image = await self.one_run(run)
+        for fop in (FpuOp.SIN, FpuOp.DIV, FpuOp.ADD, FpuOp.LN):
+            await self.send(*P.run(Kernel.FPU, P.fpu_args(fop, n, a, b, r, f)))
+            await self.read_words(r, n)
+            await self.read_words(f, n)
+            await self.run_desc(image.desc)                        # the same descriptor again
+            await self.read_outputs(run, image)
+
+    async def refused(self):
+        """Each kind of refusal. Nothing may change: the outputs read back the same,
+        STATUS keeps the last good clock count, and the unit runs again after."""
+        run = Run(prog(Instr(OP_LOAD, 0, 0), Instr(FpuOp.ADD, 1, reg(0), const(0)), constants=[fp32(1.0)]),
+                  [table([1.0, 2.0, 3.0, 4.0])], (4,), reduce=False)
+        image = await self.one_run(run)
+        top = spec.SCRATCH_WORDS
+        program = image.desc + spec.EVU_DESC_WORDS
+        await self.send(*P.run(Kernel.EVU))                                     # BAD_LEN
+        await self.send(*P.run(Kernel.EVU, b"\x00" * 5))                        # BAD_LEN
+        await self.run_desc(top - spec.EVU_DESC_WORDS + 1)                         # BAD_ADDR, in cmd_proc
+        await self.run_desc(0xFFFFFFFF)                                            # BAD_ADDR, must not wrap
+        await self.send(*P.status())
+        edits = [(spec.EVU_DESC_MODE, 6), (spec.EVU_DESC_PROG_LEN, 0), (spec.EVU_DESC_PROG_LEN, 257),
+                 (spec.EVU_DESC_CONST_LEN, 65), (spec.EVU_DESC_GRID, 0), (spec.EVU_DESC_GRID + 2, 1 << 16),
+                 (spec.EVU_DESC_TABLE + 3, 3 << spec.EVU_DESC_DIM_SHIFT), (spec.EVU_DESC_PROG, top),
+                 (spec.EVU_DESC_R, top - 3), (spec.EVU_DESC_F, 1 << 31), (spec.EVU_DESC_TABLE + 2, top - 3)]
+        for offset, value in edits:
+            good = int(image.words[offset])
+            await self.write_words(image.desc + offset, [value])
+            await self.run_desc(image.desc)
+            await self.write_words(image.desc + offset, [good])
+        for word in (Instr(18, 1, reg(0)).encode(), Instr(OP_LOAD, 1, 6).encode(),
+                     Instr(FpuOp.ADD, 1, reg(0), const(1)).encode()):
+            await self.write_words(program + 1, [word])
+            await self.run_desc(image.desc)
+        await self.write_words(program + 1, [int(image.words[spec.EVU_DESC_WORDS + 1])])
+        await self.send(*P.status())
+        await self.read_outputs(run, image)
+        await self.run_desc(image.desc)
+        await self.read_outputs(run, image)
+        await self.send(*P.status())
+
+    async def random_programs(self):
+        rng = random.Random(SEED)
+        for _ in range(self.count):
+            run = random_run(rng, max_points=48, max_length=64)
+            await self.one_run(run, rng.choice([0, 0x100, 0x8000]))
+
+    async def body(self):
+        await self.problems()
+        await self.share_the_fpu()
+        await self.refused()
+        await self.random_programs()
+
+
 class CmdErrorSeq(CmdBaseSeq):
     """Send broken frames and invalid commands, then check that normal traffic still works."""
     async def body(self):
@@ -306,8 +417,11 @@ class TopScoreboard(uvm_component):
         self.req_fifo = uvm_tlm_analysis_fifo("req_fifo", self)
         self.rsp_fifo = uvm_tlm_analysis_fifo("rsp_fifo", self)
         self.model = DeviceModel()
-        self.expected: list[bytes] = []
+        self.expected: list[tuple[bytes, tuple[int, int] | None]] = []
         self.n_req = self.n_rsp = self.n_silent = self.errors = 0
+        self.n_evu = 0
+        self.slowest = 0.0      # the largest cycles/low bound seen
+        self.closest = 1.0      # the largest cycles/high bound seen
 
     async def run_phase(self):
         while True:
@@ -319,10 +433,28 @@ class TopScoreboard(uvm_component):
                 self.errors += 1
                 self.logger.error(f"unexpected reply {got.hex()}")
                 continue
-            exp = self.expected.pop(0)
-            if got != exp:
+            exp, bounds = self.expected.pop(0)
+            if bounds is not None:
+                self.check_evu(rsp.data, exp, bounds)
+            elif got != exp:
                 self.errors += 1
                 self.logger.error(f"reply mismatch\n  expected {exp.hex()}\n  got      {got.hex()}")
+
+    def check_evu(self, data: bytes, exp: bytes, bounds: tuple[int, int]):
+        """A successful EVU reply: exact, except that cycles only has to be in bounds."""
+        got, want = Frame.decode(data), Frame.decode(exp[:-1])
+        cycles, aux = P.parse_run(got.data) if got.status == 0 and len(got.data) == 8 else (0, -1)
+        _, want_aux = P.parse_run(want.data)
+        low, high = bounds
+        self.n_evu += 1
+        self.slowest = max(self.slowest, cycles / low)
+        self.closest = max(self.closest if self.n_evu > 1 else 0.0, cycles / high)
+        if (got.op, got.tag, got.status, aux) != (want.op, want.tag, 0, want_aux) or not low <= cycles <= high:
+            self.errors += 1
+            self.logger.error(f"EVU reply: op {got.op:#x} tag {got.tag} status {got.status} aux {aux:#x} "
+                              f"cycles {cycles}, expected aux {want_aux:#x} and cycles {low}..{high}")
+        # STATUS reports the real count, so the model has to take it from here.
+        self.model.last_cycles = cycles
 
     def drain_requests(self):
         while True:
@@ -330,11 +462,12 @@ class TopScoreboard(uvm_component):
             if not ok:
                 return
             self.n_req += 1
+            self.model.evu_bounds = None
             reply = self.model.handle_wire(req.data)
             if reply is None:
                 self.n_silent += 1
             else:
-                self.expected.append(reply)
+                self.expected.append((reply, self.model.evu_bounds))
 
     def check_phase(self):
         self.drain_requests()
@@ -345,6 +478,9 @@ class TopScoreboard(uvm_component):
     def report_phase(self):
         self.logger.info(f"{self.n_req} requests ({self.n_silent} silent by design), "
                          f"{self.n_rsp} replies, {self.errors} errors")
+        if self.n_evu:
+            self.logger.info(f"{self.n_evu} EVU runs: cycles reached {self.slowest:.2f} x the low bound "
+                             f"and {self.closest:.3f} x the high bound")
 
 
 class TopEnv(uvm_env):
@@ -403,6 +539,17 @@ class TopSmokeTest(TopBaseTest):
 
 
 @pyuvm.test()
+class TopEvuTest(TopBaseTest):
+    """Only the expression unit, for working on it."""
+    async def run_seqs(self):
+        await CmdEvuSeq("evu").start(self.env.cmd_sqr)
+
+    def final_phase(self):
+        super().final_phase()
+        assert self.env.sb.n_evu > 0, "no EVU run was checked"
+
+
+@pyuvm.test()
 class TopRegressTest(TopBaseTest):
     """The virtual-sequence role is played by this method: it starts command
     sequences on the command sequencer and raw sequences on the UART sequencer."""
@@ -412,6 +559,7 @@ class TopRegressTest(TopBaseTest):
         await CmdSmokeSeq("smoke").start(cmd)
         await CmdMemSeq("mem").start(cmd)
         await CmdFpuSeq("fpu").start(cmd)
+        await CmdEvuSeq("evu").start(cmd)
         await CmdErrorSeq("err").start(cmd)
         await RawBytesSeq("garbage", b"\x05\x01\x02\x00").start(uart)
         await RawBytesSeq("empty", b"\x00").start(uart)

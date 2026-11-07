@@ -20,7 +20,9 @@ hw/rtl/fp/fp_misc.sv
 hw/rtl/fp/fp_divsqrt.sv
 hw/rtl/fp/fp_cordic.sv
 hw/rtl/fp/fpu.sv
+hw/rtl/fp/fp_accum.sv
 hw/rtl/core/scratch_mem.sv
+hw/rtl/evu/evu_core.sv
 hw/rtl/core/kernel_engine.sv
 hw/rtl/core/cmd_proc.sv
 hw/rtl/top/accel_core.sv

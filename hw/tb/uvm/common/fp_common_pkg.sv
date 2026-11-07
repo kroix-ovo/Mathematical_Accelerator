@@ -4,6 +4,8 @@
 // Keeping that stream stable lets older failing seeds reproduce the same bits.
 // Pieces shared by the FPU block environment and the top-level environment:
 // the DPI-C reference models, operand classes, and the seeded LCG generator.
+// I expose the EVU interpreter through scalar DPI calls, keeping array layout
+// out of the SV/C boundary. The top scoreboard loads memory and reads back writes.
 package fp_common_pkg;
   import uvm_pkg::*;
   `include "uvm_macros.svh"
@@ -20,6 +22,17 @@ package fp_common_pkg;
   // correctly rounded answer for the same ops, used for the ULP check.
   import "DPI-C" function int unsigned cordic_ref_eval(input int op, input int unsigned a,
                                                        input int unsigned b, output int flags);
+
+  // The expression unit's model (hw/tb/uvm/dpi/evu_ref.c). It keeps its own copy
+  // of the scratchpad: clear, poke the words that matter, run, then read back the
+  // list of words the run wrote. The status is a status code from accel_pkg.
+  import "DPI-C" function void evu_ref_clear();
+  import "DPI-C" function void evu_ref_poke(input int unsigned addr, input int unsigned word);
+  import "DPI-C" function int evu_ref_run(input int unsigned desc, output int unsigned aux,
+                                          output int unsigned low, output int unsigned high);
+  import "DPI-C" function int unsigned evu_ref_writes();
+  import "DPI-C" function int unsigned evu_ref_write_addr(input int unsigned i);
+  import "DPI-C" function int unsigned evu_ref_write_word(input int unsigned i);
 
   // FPU op codes, mirrored from accel_pkg as an enum so logs print names.
   typedef enum bit [4:0] {

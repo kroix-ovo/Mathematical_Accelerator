@@ -6,11 +6,12 @@ The project combines SystemVerilog hardware for a Digilent Nexys A7-100T FPGA wi
 
 ## What works now
 
-Phases 1 and 2 implement the communication and memory system and a hand-written IEEE-754 single-precision (`fp32`) floating-point unit. Phase 3 adds six CORDIC functions to that FPU and protocol version 0.3, and all three phases have been tested on the board. The host can send commands to the FPGA design, read and write its scratchpad, and run three kernels:
+Phases 1 and 2 implement the communication and memory system and a hand-written IEEE-754 single-precision (`fp32`) floating-point unit. Phase 3 adds six CORDIC functions to that FPU and protocol version 0.3. Phase 4 adds an expression unit that runs a compiled program over thousands of points on the FPGA, with an exact accumulator, so the board can do double, triple, line and flux integrals and sample gradient, divergence and curl (protocol version 0.4). All four phases have been tested on the board. The host can send commands to the FPGA design, read and write its scratchpad, and run four kernels:
 
 - `NOP` performs no memory operation and reports one kernel clock cycle.
 - `FILL` writes a chosen 32-bit value to a range of scratchpad words and reports the number of kernel clock cycles used.
 - `FPU` applies one operation to every element of two arrays in the scratchpad and writes the results and the IEEE exception flags for each element. The operations are add, subtract, multiply, divide, square root, integer-to-float and float-to-integer conversion, min, max, three compares, sin, cos, atan2, hypot, exp and ln.
+- `EVU` runs a small bytecode program once per point of a grid, using the same FPU, and either adds every point's result into one exactly rounded sum or writes one result per point. See [Phase 4](#phase-4-expression-unit-and-integrals).
 
 The FPU rounds to nearest even, handles subnormal numbers without flushing them to zero, returns one canonical NaN, and reports the five IEEE flags (invalid, divide by zero, overflow, underflow, inexact). [Numerics](docs/numerics.md) defines every rule. Add, multiply, conversions and compares are pipelined and accept one operation per clock; divide and square root compute one bit per clock and take 33 clocks each.
 
@@ -18,7 +19,7 @@ The design has a 256 KiB scratchpad, a command processor, a UART link configured
 
 The Python driver provides the same command interface through either a serial connection or a software simulator. Two reference models check the arithmetic: an exact Python model that uses rational numbers, and a C model that uses the PC's own floating-point hardware. A third comparison against NumPy checks the Python model itself.
 
-Verification uses seven UVM environments in SystemVerilog UVM 1.2 (Vivado xsim) and pyuvm (cocotb with Verilator and Icarus), covering the FPU block, the whole design through its UART pins, the whole design through its Ethernet pins, and the CORDIC unit alone. They include sequencers, layered command-to-byte sequences, virtual sequences, scoreboards, and coverage. Each of the 12 phase 2 FPU operations passed one million generated simulation vectors, with result bits and flags compared exactly against the C model.
+I now check the design with nine UVM environments in SystemVerilog UVM 1.2 (Vivado xsim) and pyuvm (cocotb with Verilator and Icarus). I test the FPU block, the whole design through its UART and Ethernet pins, and the CORDIC unit, exact accumulator and expression unit on their own. I use sequencers, layered command-to-byte sequences, virtual sequences, scoreboards and coverage to follow what actually happens. Each of the 12 phase 2 FPU operations passed one million generated simulation vectors, with result bits and flags compared exactly against the C model.
 
 On 2026-10-13 I tested phase 2 on the Nexys A7-100T through COM3. All 65,536 scratchpad words read back correctly, a 4,096-word FILL took exactly 4,097 cycles, and all 9 calculations checked by hand returned the expected answers. The board also passed 5,000 vectors for each of the 12 FPU operations, 60,000 total, with no result or flag mismatches against the Python model. The device test run passed 23 tests: 20 used the board and 3 used their own simulator. No CRC or framing errors remained afterwards.
 
@@ -38,18 +39,23 @@ On 2026-10-21 I tested it on the board over a direct cable to the laptop. Ping, 
 
 ```text
 hw/rtl/          UART, packet framing, command processor, scratchpad,
-                 kernel engine, fp32 units (hw/rtl/fp), Ethernet/UDP
+                 kernel engine, fp32 units and the exact accumulator
+                 (hw/rtl/fp), expression unit (hw/rtl/evu), Ethernet/UDP
                  transport (hw/rtl/eth), core and board tops
 hw/constraints/ Nexys A7-100T pin and clock constraints
 hw/scripts/     Vivado build and programming, xsim, UVM and pyuvm runners
 hw/tb/          Reference vectors, SV and pyuvm UVM environments, RMII PHY
                 model, board-level Ethernet test, cocotb tests
-sw/mathaccel/   Python driver, UART/UDP/simulator transports, fp32 and
-                Ethernet reference models, CLI
-sw/tests/       Driver, framing, Ethernet, and reference-model tests
+sw/mathaccel/   Python driver, UART/UDP/simulator transports, fp32,
+                CORDIC, EVU and Ethernet reference models, SymPy
+                compiler (compiler/), calculus tools (calc.py), CLI
+sw/tests/       Driver, framing, Ethernet, reference-model, compiler,
+                calc and CPU-benchmark tests
 spec/accel.toml Protocol constants shared by hardware and software
-tools/          Generator for the HDL and Python protocol constants
-docs/           Protocol, numerics, verification, and HDL reading guide
+tools/          Spec and CORDIC table generators, ULP measurement, board
+                comparison, CPU benchmark and report generator
+docs/           Protocol, numerics, verification, phase plans, CPU
+                comparison, errors log, and HDL reading guide
 .github/        Software and RTL simulation workflow
 ```
 
@@ -65,9 +71,45 @@ On 2026-11-03 I tested the six functions on the Nexys A7-100T over Ethernet: one
 
 The CLI's `fp` and `fptest` cover all eighteen operations; `fptest --op phase3` checks the six functions bit for bit against the CORDIC model and measures their ULP error against mpmath. The [phase 3 plan](docs/phase3-plan.md) records the original design goals. For a guided explanation of the implemented stages, start with [Follow one CORDIC operation](docs/hdl-reading-guide.md#follow-one-cordic-operation).
 
+## Phase 4: expression unit and integrals
+
+I got to the point where one FPU operation per array wasn't enough. For something like `x^2*sin(x)`, I had to start several kernels and keep the intermediate arrays in scratchpad. So in Phase 4 I added a small expression unit, or EVU. I compile the expression with SymPy on the laptop, upload its bytecode and tables once, and let the board work through every grid point. I can ask for one result per point, or one exact sum at the end. The arrays don't have to come back to the laptop between instructions. I wrote a [walk through one Phase 4 calculation](docs/phase4-reading-guide.md) to connect the host setup to the RTL stages.
+
+- **31 points in flight.** I give each point a context with its own registers. A ready queue hands the FPU one instruction per clock from whichever point is ready, so while one point waits 52 clocks for a sine, the others keep the FPU busy.
+- **An exact accumulator.** I add every point's result into a 320-bit fixed-point register with no rounding until the end, one term per clock. The answer doesn't depend on the order the points finish in, which matters because they finish out of order.
+- **Host tools.** I put the calculation entry points in `sw/mathaccel/calc.py`: `integrate_nd`, `line_integral`, `surface_flux`, `grad`, `div`, `curl_at` and `root_find`, and `mathaccel calc` puts them on the command line. By default I run each integral again on a finer rule and report `NOT CONVERGED` if the answers disagree beyond tolerance. If that finer run cannot fit, I report that I could not check convergence. NaN, infinity and invalid operations are reported, never hidden in a number.
+
+The part I was most curious about was whether the whole thing would still agree bit for bit once I mixed instructions and let points finish out of order. On 2026-11-05 I ran it on the board over Ethernet and the UART. All 22 integration rules of my 13 class problems, up to 2,097,152 points, matched the bit-accurate model exactly, with 0 mismatches in any result, flag or `aux` word. On every converged rule the answer was within 1.38 ULP of a 40-digit reference. 100 random programs, 62,000 map-mode results and 6 root-finding cases matched too, and every cycle count came out the same over both links. The full design meets 100 MHz with +0.287 ns of slack in 30.8% of the FPGA's LUTs. [Verification](docs/verification.md#phase-4-board-results) has the details, and the [phase 4 plan](docs/phase4-plan.md) has each milestone's gate.
+
+### Against my laptop's CPU
+
+I always knew the laptop would be faster in real time, and it is, on every rule. What I found more interesting was how much work I got out of each clock. I use that as an architecture comparison, with the precision and summing differences alongside it; wall time is still what tells me how long I'll wait. Its Intel i7-11800H ran at a measured 3.9 to 4.3 GHz during the tests, so it gets **39x to 43x more clock cycles per second** than my FPU's 100 MHz, and that clock gap already matters in the single-thread comparison. I measured threaded cases separately too; AVX-512 support alone does not tell me which instructions each case used.
+
+Clock for clock, on the rules of 4,096 points or more:
+
+| program | my FPU, clocks per point | NumPy FP64 | compiled Numba, one thread |
+|---|---|---|---|
+| `sin(x)` | **4.0** | 23.5 | 17.6 |
+| `sin(50x)^2` | **10.0** | 29.9 | 22.2 |
+| `exp(-x)` | **7.9** | 21.9 | 12.5 |
+| `exp(-x^2-y^2)`, 1M points | **12.1** | 67.2 | 13.7 |
+| `r^3 sin(θ) cos^2(θ)` | 16.1 | 144.6 | **4.4** |
+| `(x+y+z)^2`, 2M points | 12.0 | 38.5 | **3.8** |
+| `1/sqrt(x^2+y^2+c)`, 1M points | 66.6 | 63.2 | **6.1** |
+
+I put the lowest clock count in each row in bold.
+
+- **My FPU uses fewer clocks per point than the NumPy FP64 baseline on 8 of 10 large rules,** and fewer than compiled Numba on every program built around a sine or an exponential: 4.4x fewer on `sin`.
+- **Why:** the CORDIC unit is fully pipelined, so a sine costs one issue slot, the same as an add, while the CPU runs a library routine for each one. 31 contexts hide the 52-clock latency, so the FPU issues on 88% to 100% of clocks on divide-free programs. I can feed the exact sum one term per clock, then pay a fixed 29 clocks to finish it. Grid points come from counters and tables sit in block RAM, so nothing ever waits on a cache.
+- **Where the CPU wins clock for clock:** divides and square roots, because my divider takes 33 clocks and handles one at a time, and work the compiler can move out of the inner loop, because the EVU runs every instruction at every point.
+- **Accuracy:** the board's answer is the same on every run and in any order. A plain fp32 loop on the CPU drifted up to 16,379 ULP on the same rules and changed with the thread count. NumPy's pairwise sum stays within 2 ULP, close to the board.
+- **Real time:** repeat runs on the board were 14x to 495x slower than single-threaded Numba. The clock gap explains most of it: on `sin` a 41x clock gap shrinks to 9.3x in kernel time, because the FPU needs about a quarter of the clocks per point.
+
+I measured the CPU's package energy too. The board's needs an external power meter, since the Nexys A7 has no sensor the design can read. [The CPU comparison](docs/phase4-cpu-comparison.md) has every table, the method, the energy, and a clock-by-clock profile of where the EVU spends its time. I kept the [measurement inputs](docs/evidence/phase4/README.md) with the source so I can rebuild those tables later. I kept the faults, fixes and still-open Ethernet issue in my [errors log](docs/errors_log.md).
+
 ## Where I want to take it
 
-With the arithmetic units and functions working, I want to build a direct calculation interface for algebra and calculus, including expression evaluation and numerical integration. Later hardware could add operations that come up in my classes: phasor calculations, field sums, Laplace and Poisson problems, and semiconductor carrier calculations.
+With the arithmetic units, functions and integrals working, I want to make the calculation interface quicker to use day to day. Later hardware could add operations that come up in my classes: phasor calculations, field sums, Laplace and Poisson problems, and semiconductor carrier calculations.
 
 The interface should make the requested operation and its inputs clear. I would like to type requests in plain text, such as "5 divided by 9", and have a small text model translate them into the explicit operations the FPGA runs. That model would only pick the operation and operands; it would not solve problems. I still need to choose the equations, set up the problem, and understand the result. I also want to measure the time spent transferring data and computing it, so any claim about speed comes from an actual calculation benchmark.
 
@@ -99,6 +141,15 @@ python hw/scripts/run_uvm.py board          # nexys_top with the MMCM/ODDR model
 python hw/scripts/run_pyuvm.py eth          # Ethernet, pyuvm
 python hw/scripts/run_pyuvm.py cordic --test CordicRegressTest --n 5000
 python hw/scripts/run_pyuvm.py fpu16 --test FpuRegressTest --n 3000
+python hw/scripts/run_pyuvm.py accum --test AccumRegressTest
+python hw/scripts/run_pyuvm.py evu --test EvuRegressTest --n 120
+```
+
+The calculus tools work on the simulator or the board:
+
+```bash
+mathaccel --port sim calc --help
+python tools/evu_board.py --port udpsim --random 60
 ```
 
 To build and program the Nexys A7-100T with Vivado 2023.2:

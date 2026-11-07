@@ -20,8 +20,9 @@
 // acceptance, and CORDIC results 54 clocks after acceptance when nothing else
 // is using the result port (one more clock for the FIFO), and never later than
 // 54 + AGE_MAX + 9 = 95 clocks (see the age rule below).
-// Op codes 18-31 go to fp_misc, which returns NaN with the invalid flag
-// (cmd_proc never sends them; it rejects them with BAD_ARG).
+// Op codes 18-30 go to fp_misc, which returns NaN with the invalid flag, and op
+// code 31 is the expression unit's internal move (cmd_proc never sends any of
+// these; it rejects them with BAD_ARG).
 //
 // Result collisions: the three 6-clock units have identical latency and
 // only one request enters per clock, so at most one of them finishes in any
@@ -59,6 +60,8 @@
 // c_cnt is a promise of storage for unfinished CORDIC work; f_cnt counts
 // actual stored results. Checking only f_cnt would admit work whose result
 // arrives later to find that every FIFO entry has already been used.
+// For Phase 4 I also accept the internal LOAD move through fp_misc.
+// I keep its latency and tag path aligned with the short arithmetic ops.
 module fpu
   import accel_pkg::*;
   import fp_pkg::*;

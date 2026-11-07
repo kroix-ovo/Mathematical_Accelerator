@@ -23,7 +23,12 @@ from mathaccel.driver.protocol import RESP_BIT, Frame, FrameError
 
 
 class DeviceModel:
-    """Scratchpad, command responses and kernel timing through phase 3."""
+    """Scratchpad, command responses and kernel timing through phase 4.
+
+    The EVU kernel's clock count isn't predicted exactly (see cycle_bounds in
+    evu_model.py), so a reply from it reports the low bound, and evu_bounds keeps
+    both bounds for a scoreboard to check the real count against.
+    """
 
     def __init__(self) -> None:
         # Like configured FPGA block RAM, a new model starts with zero words.
@@ -32,6 +37,7 @@ class DeviceModel:
         self.crc_errors = 0
         self.frame_errors = 0
         self.last_cycles = 0
+        self.evu_bounds: tuple[int, int] | None = None
 
     # Validate link packets before any command is allowed to touch memory.
 
@@ -151,10 +157,47 @@ class DeviceModel:
                 self.mem[f + k] = fl
                 aux |= fl
             cycles = fpu_kernel_cycles(fop, count)
+        elif kernel == Kernel.EVU:
+            status, cycles, aux = self._run_evu(args)
+            if status != Status.OK:
+                return status, b""
         else:
             return Status.BAD_KERNEL, b""
         self.last_cycles = cycles
         return Status.OK, struct.pack("<II", cycles, aux)
+
+
+    # I validate before executing or updating memory, just as the EVU does.
+    # The simulator reports a lower cycle bound; it is a numerical oracle,
+    # not a clock-accurate replacement for the ready/retry queues in RTL.
+    def _run_evu(self, args: bytes) -> tuple[int, int, int]:
+        """Check and run a descriptor. Returns (status, cycles, aux)."""
+        # Imported here because evu_model imports this module.
+        from mathaccel import evu_model
+        from mathaccel.compiler import evu_isa
+
+        if len(args) != 4:
+            return Status.BAD_LEN, 0, 0
+        (desc,) = struct.unpack("<I", args)
+        if not self._in_range(desc, spec.EVU_DESC_WORDS):
+            return Status.BAD_ADDR, 0, 0
+
+        def read(address: int) -> int:
+            return int(self.mem[address])
+
+        status = evu_isa.check_descriptor(read, desc)
+        if status != Status.OK:
+            return status, 0, 0
+        run, r, f = evu_isa.read_descriptor(read, desc)
+        result = evu_model.execute(run)
+        if run.reduce:
+            self.mem[r] = result.sum
+            self.mem[f] = result.sum_flags
+        else:
+            self.mem[r:r + run.points] = result.results
+            self.mem[f:f + run.points] = result.flags
+        self.evu_bounds = evu_model.cycle_bounds(run)
+        return Status.OK, self.evu_bounds[0], result.aux
 
 
 CORDIC_OPS = (FpuOp.SIN, FpuOp.COS, FpuOp.ATAN2, FpuOp.HYPOT, FpuOp.EXP, FpuOp.LN)

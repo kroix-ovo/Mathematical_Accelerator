@@ -14,6 +14,8 @@
 // These instances exist at the same time; their order in the file does not
 // prescribe an execution order. Follow valid/ready and the selected memory
 // ports to see when bytes, commands and results actually move.
+// I carry the EVU completion status through the core alongside cycles and
+// aux, so the command processor can report a bad descriptor to the host.
 module accel_core
   import accel_pkg::*;
 #(
@@ -142,6 +144,7 @@ module accel_core
   logic [7:0]            k_kernel;
   logic [8*21-1:0]       k_args;
   logic [31:0]           k_cycles, k_aux;
+  logic [7:0]            k_status;
   logic                  kb_we;
   logic [SCRATCH_AW-1:0] kb_addr;
   logic [31:0]           kb_wdata;
@@ -158,7 +161,7 @@ module accel_core
 
   kernel_engine u_kern (
       .clk, .rst, .start(k_start), .kernel(k_kernel), .args(k_args),
-      .busy(k_busy), .done(k_done), .cycles(k_cycles), .aux(k_aux),
+      .busy(k_busy), .done(k_done), .cycles(k_cycles), .aux(k_aux), .status(k_status),
       .m_en(k_en), .m_we(k_we), .m_addr(k_addr), .m_wdata(k_wdata), .m_rdata,
       .b_we(kb_we), .b_addr(kb_addr), .b_wdata(kb_wdata));
 
@@ -173,7 +176,7 @@ module accel_core
       .tb_we, .tb_addr(tb_waddr), .tb_wdata,
       .tx_start, .tx_op, .tx_tag, .tx_len, .tx_busy,
       .m_en(c_en), .m_we(c_we), .m_addr(c_addr), .m_wdata(c_wdata), .m_rdata,
-      .k_start, .k_kernel, .k_args, .k_done, .k_cycles, .k_aux,
+      .k_start, .k_kernel, .k_args, .k_done, .k_status, .k_cycles, .k_aux,
       .crc_errors, .frame_errors, .busy(cmd_busy));
 
   // Reply bytes travel through framing, a one-entry register, COBS encoding,

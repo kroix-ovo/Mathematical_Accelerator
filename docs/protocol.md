@@ -22,15 +22,16 @@ A response has `op | 0x80`, the same `tag`, and a payload whose **first byte is 
 | Condition | Device behaviour |
 |---|---|
 | CRC mismatch | frame dropped, `crc_errors` counter +1, no response |
-| Frame starts arriving while a command is running | frame dropped, `frame_errors` +1, no response |
+| UART frame starts arriving while a command is running | frame dropped, `frame_errors` +1, no response |
+| UDP datagram arrives while a command is running | one datagram is held and run afterwards; any more are dropped with no response and no counter (LED6 lights). See [UDP transport](#udp-transport) |
 | COBS error, frame < 6 bytes, `len` ≠ actual length, `len` > max | frame dropped, `frame_errors` +1, no response |
 | Unknown `op` | response with status `BAD_OP` |
 | Bad payload length for op | status `BAD_LEN` |
 | Address range outside scratchpad | status `BAD_ADDR` |
 | Unknown kernel | status `BAD_KERNEL` |
-| Kernel argument out of range (FPU op code ≥ 18 in this version) | status `BAD_ARG` |
+| Kernel argument out of range (FPU op code ≥ 18, or a bad EVU descriptor or program) | status `BAD_ARG` |
 
-The host treats a missing response as a timeout and retries with a new tag.
+The host treats a missing response as a timeout. For a command that's safe to repeat it retries with a new tag. An EVU RUN is never resent, because over UDP a resend is held and runs a second time: the driver asks STATUS instead to find out whether the run is still going, finished, or never started.
 
 ## Commands
 
@@ -42,9 +43,9 @@ The host treats a missing response as a timeout and retries with a new tag.
 | 0x04 | RUN | kernel:u8, args… | cycles:u32, aux:u32 |
 | 0x05 | STATUS | — | crc_errors:u16, frame_errors:u16, last_cycles:u32 |
 
-Addresses and counts are in **32-bit words**. RUN is synchronous: the response is sent when the kernel finishes, and `cycles` is the number of core clock cycles the kernel was busy. `aux` is a kernel-specific result word: the OR of every element's exception flags for the FPU kernel, and 0 for NOP and FILL.
+Addresses and counts are in **32-bit words**. RUN is synchronous: the response is sent when the kernel finishes, and `cycles` is the number of core clock cycles the kernel was busy. `aux` is a kernel-specific result word: the OR of every element's exception flags for the FPU kernel, the OR of every point's flags for the EVU kernel, and 0 for NOP and FILL.
 
-Version 0.2 added the FPU kernel, the `aux` word in RUN replies, and the `BAD_ARG` status. Version 0.3 added FPU op codes 12–17 (the phase 3 functions); nothing else changed.
+Version 0.2 added the FPU kernel, the `aux` word in RUN replies, and the `BAD_ARG` status. Version 0.3 added FPU op codes 12–17 (the phase 3 functions); nothing else changed. Version 0.4 added the EVU kernel; nothing else changed.
 
 ## Kernels
 
@@ -53,6 +54,7 @@ Version 0.2 added the FPU kernel, the `aux` word in RUN replies, and the `BAD_AR
 | 0x00 | NOP | — | 1 |
 | 0x01 | FILL | base:u32, count:u32, value:u32 | count + 1 |
 | 0x02 | FPU | fop:u8, count:u32, a:u32, b:u32, r:u32, f:u32 | 4·count + 9 (DIV, SQRT: 33·count + 6; SIN … LN: 4·count + 56); 1 when count = 0 |
+| 0x03 | EVU | desc:u32 | depends on the run, see [EVU kernel](#evu-kernel) |
 
 ### FPU kernel
 
@@ -73,7 +75,55 @@ Codes 12–17 are computed by the CORDIC unit with a target error below 1 ULP of
 
 The exact arithmetic rules (rounding, subnormals, NaN results, flags) are in [numerics.md](numerics.md).
 
-The Python reference model (`sw/mathaccel/driver/model.py`) implements this document exactly. It serves as the simulator backend and as the golden model for the RTL testbenches.
+### EVU kernel
+
+The expression unit runs a small program once per point of a grid. `desc` is the word address of a 16-word descriptor in the scratchpad, which names everything else the run needs. The host writes these with WRITE_MEM first, and can run the same descriptor as many times as it likes.
+
+| word | field | meaning |
+|---|---|---|
+| 0 | mode | 1: reduce, add every point's output into one sum. 0: map, one result per point. |
+| 1 | prog | address of the instruction words |
+| 2 | prog_len | how many instruction words, 1 to 256 |
+| 3 | const | address of the constants |
+| 4 | const_len | how many constants, 0 to 64 |
+| 5, 6, 7 | n0, n1, n2 | grid size, each 1 to 65,535. An unused dimension holds 1. At most 2^32 points in all. |
+| 8 | r | where results go |
+| 9 | f | where flags go |
+| 10–15 | tables | six node tables, one word each: base address in bits 15..0, the dimension that indexes it in bits 17..16. A word of 0 is fine for an unused table. |
+
+One instruction is one 32-bit word:
+
+| bits | field | meaning |
+|---|---|---|
+| 31..27 | op | an FPU op code 0–17, or 31 for LOAD |
+| 26 | last | this is the final instruction, and its result is the point's output |
+| 25..20 | dst | destination register, 0 to 63 |
+| 19..13 | a | first source. Bit 6 set: constant, low bits its number. Clear: register. For LOAD this field is the table number instead. |
+| 12..6 | b | second source, coded the same way |
+| 5..0 | | must be zero |
+
+An FPU op does `R[dst] = op(a, b)`. LOAD does `R[dst] = table[a][i]`, where `i` is this point's index along the table's dimension. Points are numbered in grid order with the last dimension fastest, so point `p` is `n2·(n1·i0 + i1) + i2`. A program runs from word 0 to the first word marked last. If no word is marked last, the word at `prog_len − 1` counts as last.
+
+In map mode `r[p]` receives the output of point `p` and `f[p]` the OR of the flags of all its instructions. In reduce mode the outputs are added exactly, with no rounding until the end, so the order points finish in can't change the answer. `r[0]` then receives the sum, rounded once to fp32, and `f[0]` the flags of that sum: NX and OF from the rounding, NV for an sNaN or +∞ and −∞ together, the same as repeated ADD would give. `aux` is the OR of the flags of every point, in both modes. Reading the results takes a READ_MEM.
+
+Checks happen in this order, and a run that fails any of them writes nothing and changes neither `last_cycles` nor the unit's readiness for the next run:
+
+1. Payload length: 5 bytes including the kernel byte (`BAD_LEN`).
+2. All 16 descriptor words inside the scratchpad (`BAD_ADDR`).
+3. Every field (`BAD_ARG`): mode 0 or 1, prog_len, const_len and each grid size in the ranges above, no table with dimension 3 or anything set above bit 17, and at most 2^32 points.
+4. Every address (`BAD_ADDR`): prog, const, r and f are below 65,536, the program and constants lie inside the scratchpad, every table does, used or not, using the grid size of its dimension, and in map mode so do `r[0..points-1]` and `f[0..points-1]`.
+5. Every word up to prog_len, including any after the first last bit (`BAD_ARG`): a known op, a table number below 6 for LOAD, every constant source below const_len, and bits 5..0 zero.
+
+The first failed step decides the status. Step 5 runs while the program is copied in, so it takes a few more clocks than the others.
+
+A program can't hang the board: it has no branches, so every point finishes. A large grid can still take a long time, and the board answers nothing else until it finishes. Two things are the host's job, because the hardware doesn't check them, and doing either gives undefined results:
+
+* Reading a register no earlier instruction of the same point wrote. The value is whatever an earlier point left there.
+* Letting `r` or `f` overlap the descriptor, program, constants or tables, or letting map mode's `r` and `f` overlap each other. Points finish out of order, so the order of those writes isn't fixed.
+
+`cycles` isn't a fixed formula here, because it depends on how the points line up in the FPU. A run takes about 70 clocks plus `prog_len + const_len`, plus 29 in reduce mode, plus the points. With no divide or square root and a few hundred points or more, a point takes close to one clock per instruction; `docs/phase4-plan.md` has measurements. Each divide or square root in a program adds about 33 clocks per point, because that unit takes one at a time.
+
+The Python reference model (`sw/mathaccel/driver/model.py`) implements this document exactly. It serves as the simulator backend and as the golden model for the RTL testbenches. The one thing it doesn't predict exactly is `cycles` of an EVU run: it gives a low and a high bound, and the testbenches check the real count against them.
 
 ## UDP transport
 
@@ -109,6 +159,6 @@ What the board does with each received frame, in the order it checks:
 
 The board does not check the UDP checksum of received datagrams; the Ethernet FCS and the CRC-16 inside every frame already cover those bytes.
 
-Two received frames can wait in the board at once. The board passes a datagram's frames to the command processor one at a time and waits for each reply to be sent before passing on the next frame. A host that sends several requests without waiting therefore gets every reply as long as no more than two datagrams are waiting. Only one ping waits at a time; another echo request that arrives meanwhile is dropped.
+The board has two receive slots. It passes a datagram's frames to the command processor one at a time and waits for each reply to be sent before passing on the next frame, and a datagram keeps its slot until its own last command has finished. So while the core is idle two datagrams can wait, but while a command is running one slot is taken by that command and only one more datagram fits. That one is held and runs when the command finishes. Anything after it is dropped with no reply and no counter, and only LED6 shows it. I measured this on the board in phase 4: during a 1.46 s EVU run a second RUN was held and ran again afterwards, and two PINGs sent after it got no reply. A host that sends several requests without waiting gets every reply as long as no more than two datagrams are waiting and nothing long is running. Only one ping waits at a time; another echo request that arrives meanwhile is dropped.
 
-Both transports are always active and share one command processor, scratchpad and set of kernels. Memory written over UDP can be read over the UART. STATUS reports `crc_errors` and `frame_errors` summed over both transports. If frames finish arriving on both transports on the same clock cycle, the UDP frame is processed and the UART frame is dropped without being counted. A frame on one transport that completes while a command from the other is running is dropped the same way. The host's timeout and retry covers both cases. In practice they only happen when two programs use the two transports at the same moment.
+Both transports are always active and share one command processor, scratchpad and set of kernels. Memory written over UDP can be read over the UART. STATUS reports `crc_errors` and `frame_errors` summed over both transports. If frames finish arriving on both transports on the same clock cycle, the UDP frame is processed and the UART frame is dropped without being counted. A UART frame that completes while a UDP command is running is dropped the same way; a UDP datagram that arrives while a UART command is running waits in a receive slot as described above. The host's timeout and retry covers both cases. In practice they only happen when two programs use the two transports at the same moment.
