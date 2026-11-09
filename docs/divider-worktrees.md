@@ -5,10 +5,11 @@ split the division and square-root units first. The five linked checkouts are
 ready for the later divider experiments. They share Git history and objects,
 but each has its own branch, index, working files and local build directory.
 
-**The split is still pending.** I created `baseline/divider-experiments-start`
-at the setup commit. I have not created `baseline/divsqrt-split`, because no
-verified split implementation exists yet. I will not start algorithm changes
-in these worktrees until they all contain that verified baseline.
+**The split is done.** I created `baseline/divider-experiments-start` at the
+setup commit, and `baseline/divsqrt-split` at `02c785e` once the split passed
+its gate. On 2026-11-09 I fast-forwarded all five worktrees to it with the
+commands below and checked that they shared that full SHA before changing any
+divider. The results are in [divider-comparison.md](divider-comparison.md).
 
 | Directory under the main folder | Branch | What I will change later |
 |---|---|---|

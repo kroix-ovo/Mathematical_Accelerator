@@ -13,6 +13,7 @@ Quick list so I don't lose track. The full write-ups are in the dated entries be
 - **E-03:** extra UDP datagrams during a run get dropped silently (2026-11-05).
 - **E-04:** a run can't be cancelled (2026-11-05).
 - **E-05:** 99th-percentile round trip got worse on the new Realtek driver (2026-10-21).
+- **E-49:** the Ethernet transmit checksum path has almost no timing margin, and it failed the SRT divider's build (2026-11-09).
 
 ---
 
@@ -193,3 +194,23 @@ Quick list so I don't lose track. The full write-ups are in the dated entries be
 
 **E-01. Ethernet went quiet after sitting idle. (open)** After about 40 minutes with no traffic from me, the board stopped answering ARP, ping and UDP. Windows still said the adapter was Up at 100 Mbps but had no ARP entry for the board. The UART was fine: v0.4, and `last_cycles` still held my last run (388,212,137), so the board hadn't reset and the core was healthy. UDP had answered STATUS right before the idle stretch. Then I reprogrammed it before reading any LEDs, which threw away the evidence. Two reprograms later the link was still `Disconnected`, and it still was on 2026-11-07. Could be the board's receive path, the PHY, or the laptop's adapter; nothing I have separates them. First time the design has sat idle that long and then been asked to talk.
 **Fix so far:** none. Next time, before touching the board: read LED5, LED6 and LED8 to LED14, check the adapter in Windows, get STATUS over the UART, then try a replug at the laptop end. Once the link's back I'll run an idle watcher that sends a UDP STATUS at about 10, 20 and 40 minutes, with a UART STATUS each time, and see if it happens again. If it's the PHY, the MDIO fix for E-02 probably covers it.
+
+## 2026-11-08 to 2026-11-09: divider split and experiments
+
+**E-44. Two cycle-bound tests assumed the 33-clock divider.** Experiment A's 20-clock divider failed `test_cycle_bounds_follow_the_divider`, which wanted the divide program's bound to be over 30 clocks per point higher than the plain one. My new overlap test made the same assumption about one lane, so it would have failed for D, B and E.
+**Fix:** both tests now compute the expected floor from `DIV_INTERVAL`, `DIV_LANES` and the square-root constants (`324e24f`), cherry-picked identically into every branch. The baseline's numbers didn't change.
+
+**E-45. My overlap probe never saw a pipelined divider busy.** `DsProbe` counted the divider as busy while its `in_ready` was low. B's pipelined divider is almost never refusing, so the probe reported 0 clocks of divide/sqrt overlap and the regression failed, though every result was right.
+**Fix:** in B and E, the probe counts a divide as in progress while it holds a queue place (`u_div.cnt != 0`). Then B's regression showed 4,127 clocks of overlap.
+
+**E-46. A comment I generated was too long for ruff.** My candidate script wrote a `LAT_CORD_MAX` comment of 129 characters in D, B and E, and D's lint step failed.
+**Fix:** shortened it in all three before B's and E's gates ran.
+
+**E-47. `cmd.exe` split `STEPS=1` at the equals sign.** Passing `-tclargs STEPS=1` to Vivado through `vivado.bat` gave synthesis a generic called `1`. Quoting it got the quotes through to Tcl as part of the value. Same trap as the xsim plusargs in verification.md.
+**Fix:** `build_div.tcl` strips quotes from its arguments, and I pass the argument quoted.
+
+**E-48. Vivado sometimes couldn't read its own install files.** Three out-of-context builds stopped at synthesis with `couldn't read file "C:/Xilinx/Vivado/2023.2/scripts/rt/..."`, twice while I was starting several at once and once with only one running. Running the same command again worked every time. There was also a second, idle `vivado.exe` I hadn't started, which I left alone. I don't know what was holding the files.
+**Fix so far:** retried. If it keeps happening, check for an antivirus scan of `C:\Xilinx` and start Vivado runs one at a time.
+
+**E-49. The Ethernet checksum path failed the SRT divider's full build. (open)** Experiment C routed at WNS -0.101 ns. Its worst path was `u_enc/rd_reg` → `u_eth/u_tx/psum_reg`, nothing to do with the divider: out of context the SRT divider had +1.356 ns. It is also the worst path in B's build (+0.191). Every build has had only 0.05 to 0.3 ns of slack, so placement changes elsewhere can push this path over.
+**Fix so far:** none; I counted C as failing timing, as my rule says. The path needs its own look (a register stage or a narrower adder) before I merge any divider.
