@@ -13,4 +13,7 @@ def git_env(root: Path) -> dict[str, str]:
         if len(target) > 2 and target[1] == ":":
             env["GIT_DIR"] = f"/mnt/{target[0].lower()}/{target[3:]}"
             env["GIT_WORK_TREE"] = str(root)
+            # Match Windows checkout semantics without changing repository config.
+            env.update(GIT_CONFIG_COUNT="2", GIT_CONFIG_KEY_0="core.autocrlf", GIT_CONFIG_VALUE_0="true",
+                       GIT_CONFIG_KEY_1="core.filemode", GIT_CONFIG_VALUE_1="false")
     return env
