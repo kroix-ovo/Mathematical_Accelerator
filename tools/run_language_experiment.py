@@ -10,6 +10,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from language_git import git_env
+
 BASELINE = "98be2be8e8b0fd9e1f600631fb54dae9638ce726"
 VARIANTS = ("software-control", "python-optimized", "rust-hybrid", "c-hybrid")
 
@@ -26,10 +28,11 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     trees = {name: (args.worktrees / name).resolve() for name in VARIANTS}
     control = trees["software-control"]
-    head = subprocess.check_output(["git", "-C", str(control), "rev-parse", "HEAD"], text=True).strip()
+    head = subprocess.check_output(["git", "-C", str(control), "rev-parse", "HEAD"],
+                                   env=git_env(control), text=True).strip()
     if head != BASELINE:
         raise RuntimeError("control HEAD changed")
-    subprocess.run(["git", "-C", str(control), "diff", "--exit-code", "HEAD"], check=True)
+    subprocess.run(["git", "-C", str(control), "diff", "--exit-code", "HEAD"], env=git_env(control), check=True)
     source_hashes = {name: hashlib.sha256((tree / "sw/mathaccel/driver/framing.py").read_bytes()).hexdigest()
                      for name, tree in trees.items() if name != "software-control"}
     if len(set(source_hashes.values())) != 1:
@@ -37,12 +40,12 @@ def main():
     for name, tree in trees.items():
         # All remaining Python production files must be the unchanged baseline.
         changed = subprocess.check_output(["git", "-C", str(tree), "diff", "--name-only", BASELINE,
-                                           "--", "sw/mathaccel"], text=True).splitlines()
+                                           "--", "sw/mathaccel"], env=git_env(tree), text=True).splitlines()
         if set(changed) - {"sw/mathaccel/driver/framing.py"}:
             raise RuntimeError(f"uncontrolled production changes in {name}: {changed}")
     envs = {}
     for name, tree in trees.items():
-        envs[name] = dict(os.environ, PYTHONPATH=str(tree / "sw"),
+        envs[name] = dict(git_env(tree), PYTHONPATH=str(tree / "sw"),
                           PYTHONHASHSEED="0", OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
                           MATHACCEL_FRAMING="native" if name in ("rust-hybrid", "c-hybrid") else "python")
     if args.tests:
