@@ -149,12 +149,18 @@ def main():
         # Long compiler cases need fewer samples. Do not publish unsupported tail estimates.
         count = min(args.samples, 11) if "compile" in name else args.samples
         samples = []
+        phases = []
         cpu = time.process_time_ns()
         wall = time.perf_counter_ns()
         for _ in range(count):
             start = time.perf_counter_ns()
-            fn()
+            result = fn()
             samples.append(time.perf_counter_ns() - start)
+            if hasattr(result, "write_seconds"):
+                phases.append({"upload_ns": result.write_seconds * 1e9,
+                               "run_roundtrip_ns": result.run_seconds * 1e9,
+                               "readback_ns": result.read_seconds * 1e9,
+                               "model_cycles": result.cycles})
         wall = time.perf_counter_ns() - wall
         cpu = time.process_time_ns() - cpu
         results[name] = {"samples_ns": samples, "median_ns": float(np.median(samples)),
@@ -162,7 +168,7 @@ def main():
                          "p99_ns": float(np.percentile(samples, 99)) if count >= 1000 else None,
                          "p999_ns": float(np.percentile(samples, 99.9)) if count >= 10000 else None,
                          "operations_per_second": count * 1e9 / wall,
-                         "process_cpu_percent": cpu / wall * 100}
+                         "process_cpu_percent": cpu / wall * 100, "evu_phases": phases}
     for dev in handles:
         dev.close()
     native = getattr(framing, "BACKEND", "original-python")
@@ -170,8 +176,11 @@ def main():
         import resource
         peak_rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     except ImportError:
-        import psutil
-        peak_rss = psutil.Process().memory_info().peak_wset / 1024
+        try:
+            import psutil
+            peak_rss = psutil.Process().memory_info().peak_wset / 1024
+        except ImportError:
+            peak_rss = None
     def version(command):
         try:
             return subprocess.check_output(command, stderr=subprocess.STDOUT, text=True).strip()

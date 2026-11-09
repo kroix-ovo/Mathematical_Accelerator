@@ -116,16 +116,19 @@ def _select_backend():
 
     def native_crc(data: bytes, crc: int = 0xFFFF) -> int:
         # Preserve the original empty-input and arbitrary-integer seed behavior.
-        return native.crc16(data, crc & 0xFFFF) if data else crc
+        return native.crc16(bytes(data), crc & 0xFFFF) if data else crc
+
+    def native_encode(data: bytes) -> bytes:
+        return native.cobs_encode(bytes(data))
 
     def native_decode(data: bytes) -> bytes:
         try:
-            return native.cobs_decode(data)
+            return native.cobs_decode(bytes(data))
         except ValueError as e:
             raise CobsError(str(e)) from e
 
     crc16 = native_crc
-    cobs_encode = native.cobs_encode
+    cobs_encode = native_encode
     cobs_decode = native_decode
     BACKEND = native.backend
 
