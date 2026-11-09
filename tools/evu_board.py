@@ -324,6 +324,44 @@ def long_mixed(dev: Device) -> int:
     return (not same) + (not got.in_bounds)
 
 
+def divide_runs(dev: Device) -> int:
+    """Divide-heavy runs big enough to show a divider's steady rate on the board.
+
+    These are the same three runs EvuProfileTest simulates. The class list's
+    divide-only rules have 32 to 64 points, where setting up the run takes most of
+    the clocks, so they can't tell my divider candidates apart."""
+    # I time each run the same way as the class problems (fastest of REPEATS with
+    # the image loaded), so the kernel clocks and the wall time line up with the
+    # simulated profile in docs/divider-comparison.md.
+    x = sp.symbols("x", real=True)
+    fermi = next(p for p in PROBLEMS if p.name == "fermi_half")
+    runs = [("fermi_large", integral_run(fermi.expr, fermi.axes([(1024, 16)]))),
+            ("lorentz_large", integral_run(1 / (1 + x**2), [Axis(x, -4, 4, 1024, 16)])),
+            ("two_divides", integral_run(x / (1 + x**2) + 1 / (2 + x), [Axis(x, 0, 1, 1024, 16)]))]
+    failures = 0
+    say()
+    say("| divide run | points | match | cycles | low..high | clocks/pt | in bounds | kernel ms | repeat ms |")
+    say("|---|---|---|---|---|---|---|---|---|")
+    for name, run in runs:
+        want = evu_model.execute(run)
+        got = dev.evu_run(run)
+        same = int(got.results[0]) == want.sum and int(got.flags[0]) == want.sum_flags and got.aux == want.aux
+        image = memory_image(run)
+        again, cycles = repeat_time(dev, run, image)
+        # The repeats must leave the same answer behind as the first run.
+        repeat_bits = dev.read_words(image.r, 2)
+        same = same and int(repeat_bits[0]) == want.sum and int(repeat_bits[1]) == want.sum_flags
+        inside = got.in_bounds and all(got.bounds[0] <= c <= got.bounds[1] for c in cycles)
+        failures += (not same) + (not inside)
+        if not same:
+            say(f"MISMATCH {name}: board 0x{int(got.results[0]):08X}/{int(got.flags[0]):05b} aux {got.aux:05b}, "
+                f"model 0x{want.sum:08X}/{want.sum_flags:05b} aux {want.aux:05b}")
+        say(f"| {name} | {run.points:,} | {'yes' if same else 'NO'} | {got.cycles:,} "
+            f"| {got.bounds[0]:,}..{got.bounds[1]:,} | {got.cycles / run.points:.1f} | {'yes' if inside else 'NO'} "
+            f"| {got.seconds * 1e3:.3f} | {again * 1e3:.2f} |")
+    return failures
+
+
 def slow_run(seconds: float) -> Run:
     """A reduce run that takes about this long. A divide per point is 33 clocks."""
     points = int(seconds * spec.CLK_HZ / 34)
@@ -441,6 +479,7 @@ def main() -> int:
                 failures += map_checks(dev)
                 failures += root_checks(dev, reference)
                 failures += long_mixed(dev)
+                failures += divide_runs(dev)
                 failures += random_programs(dev, args.random, args.seed)
             end = dev.status()
             say()
