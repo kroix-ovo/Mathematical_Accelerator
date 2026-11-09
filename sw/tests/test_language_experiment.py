@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import random
+import runpy
 import subprocess
 import types
 from collections import deque
@@ -22,8 +23,10 @@ BASELINE = "98be2be8e8b0fd9e1f600631fb54dae9638ce726"
 @pytest.fixture(scope="module")
 def control():
     root = Path(__file__).resolve().parents[2]
+    git_env = runpy.run_path(str(root / "tools/language_git.py"))["git_env"]
     source = subprocess.check_output(
-        ["git", "-C", str(root), "show", f"{BASELINE}:sw/mathaccel/driver/framing.py"], text=True)
+        ["git", "-C", str(root), "show", f"{BASELINE}:sw/mathaccel/driver/framing.py"],
+        env=git_env(root), text=True)
     module = types.ModuleType("control_framing")
     exec(compile(source, "control_framing.py", "exec"), module.__dict__)
     return module
