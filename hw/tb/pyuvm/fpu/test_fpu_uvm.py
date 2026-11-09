@@ -596,7 +596,10 @@ class DsProbe(uvm_component):
             await ReadOnly()
             if int(dut.rst.value):
                 continue
-            div_busy, sqrt_busy = not int(dut.div_in_ready.value), not int(dut.sqrt_in_ready.value)
+            # This divider is pipelined and nearly always ready, so "busy" means
+            # it has divides in progress: in its pipeline or waiting in its queue.
+            div_busy = int(dut.u_div.cnt.value) != 0
+            sqrt_busy = not int(dut.sqrt_in_ready.value)
             div_hold, sqrt_hold = int(dut.div_hold.value), int(dut.sqrt_hold.value)
             self.overlap += div_busy and sqrt_busy
             self.both_hold += div_hold and sqrt_hold
