@@ -1,0 +1,53 @@
+ Downloading crates ...
+  Downloaded heck v0.5.0
+  Downloaded memoffset v0.9.1
+  Downloaded unindent v0.2.4
+  Downloaded autocfg v1.5.1
+  Downloaded pyo3-macros v0.27.2
+  Downloaded indoc v2.0.8
+  Downloaded rustversion v1.0.23
+  Downloaded pyo3-build-config v0.27.2
+  Downloaded quote v1.0.47
+  Downloaded target-lexicon v0.13.5
+  Downloaded once_cell v1.21.4
+  Downloaded unicode-ident v1.0.27
+  Downloaded proc-macro2 v1.0.107
+  Downloaded pyo3-ffi v0.27.2
+  Downloaded pyo3-macros-backend v0.27.2
+  Downloaded syn v2.0.119
+  Downloaded libc v0.2.191
+  Downloaded pyo3 v0.27.2
+   Compiling target-lexicon v0.13.5
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling autocfg v1.5.1
+   Compiling libc v0.2.191
+   Compiling heck v0.5.0
+   Compiling indoc v2.0.8
+   Compiling unindent v0.2.4
+   Compiling once_cell v1.21.4
+   Compiling memoffset v0.9.1
+   Compiling pyo3-build-config v0.27.2
+   Compiling syn v2.0.119
+   Compiling pyo3-ffi v0.27.2
+   Compiling pyo3-macros-backend v0.27.2
+   Compiling pyo3 v0.27.2
+   Compiling pyo3-macros v0.27.2
+   Compiling mathaccel-framing v0.1.0 (/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/rust-hybrid/native/rust)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 26.84s
+     Running unittests src/lib.rs (native/rust/target/debug/deps/_framing_native-d8edaecf7f3877ab)
+
+running 3 tests
+test codec::tests::crc_known_and_chunks ... ok
+test codec::tests::exact_vectors ... ok
+test codec::tests::malformed ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests _framing_native
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
