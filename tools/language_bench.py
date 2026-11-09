@@ -92,7 +92,7 @@ def main():
         cases[f"compile_cold/{name}"] = cold
     # Force many live intermediate values through an unevaluated expression.
     terms = [sp.sin(x + sp.Rational(k, 100)) for k in range(16)]
-    pressure = sp.Add(*(sp.Mul(a, b, evaluate=False) for a, b in zip(terms, terms[1:] + terms[:1])))
+    pressure = sp.Add(*(sp.Mul(a, b, evaluate=False) for a, b in zip(terms, terms[1:] + terms[:1], strict=True)))
     fingerprints["compile/pressure"] = compile_record(pressure, {x: 0})
     cases["compile_warm/pressure"] = lambda: compile_record(pressure, {x: 0})
     for problem in PROBLEMS:

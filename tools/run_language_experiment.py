@@ -70,7 +70,7 @@ def main():
                 raise RuntimeError(f"wrong backend: {name}: {result['backend']}")
             rounds.append((name, target.name, result))
     reference = rounds[0][2]["fingerprints"]
-    for name, filename, result in rounds:
+    for _name, filename, result in rounds:
         if result["fingerprints"] != reference:
             raise AssertionError(f"output differential failed: {filename}")
     summary = {"baseline": BASELINE, "python_source_sha256": source_hashes,
