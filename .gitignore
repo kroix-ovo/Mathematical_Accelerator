@@ -12,3 +12,5 @@ __pycache__/
 xsim.dir/
 sim_build/
 results.xml
+# I keep the linked experiment checkouts inside this folder, outside the tracked sources.
+/worktrees/
