@@ -25,7 +25,9 @@ foreach f {hw/rtl/pkg/accel_pkg.sv hw/rtl/fp/fp_pkg.sv hw/rtl/fp/fp_div.sv} {
 }
 
 set generics {}
-foreach arg $argv { lappend generics -generic $arg }
+# cmd.exe splits an unquoted argument at "=", so a quoted one may arrive with its
+# quotes; I strip them.
+foreach arg $argv { lappend generics -generic [string trim $arg {"}] }
 synth_design -top fp_div -part $part -mode out_of_context {*}$generics
 
 create_clock -name clk -period 10.000 [get_ports clk]
