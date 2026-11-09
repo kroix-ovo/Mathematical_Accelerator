@@ -1,0 +1,18 @@
+........................................................................ [ 15%]
+........................................................................ [ 30%]
+........................................................................ [ 45%]
+........................................................................ [ 60%]
+........................................................................ [ 75%]
+........................................................................ [ 90%]
+...........................................                              [100%]
+=============================== warnings summary ===============================
+sw/tests/test_calc.py::test_cli_refuses_a_huge_run
+  /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/c-hybrid/sw/mathaccel/calc.py:335: UserWarning: this run takes at least 1351.7 s and can't be cancelled
+    reply = _reduce(dev, run, max_seconds)
+
+sw/tests/test_cpu_bench.py::test_parallel_numba_gives_a_close_answer
+  /tmp/mathaccel-language-py311/lib/python3.11/site-packages/numba/np/ufunc/parallel.py:373: NumbaWarning: The TBB threading layer requires TBB version 2021 update 6 or later i.e., TBB_INTERFACE_VERSION >= 12060. Found TBB_INTERFACE_VERSION = 12050. The TBB threading layer is disabled.
+    warnings.warn(problem)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+475 passed, 2 warnings in 44.81s
