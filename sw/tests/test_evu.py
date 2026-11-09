@@ -466,3 +466,17 @@ def test_cycle_bounds_follow_the_divider():
     divide = Program([Instr(OP_LOAD, 0, 0).encode(), Instr(FpuOp.DIV, 1, reg(0), reg(0), last=True).encode()])
     slow = Run(divide, run.tables, run.grid)
     assert M.cycle_bounds(slow)[0] - M.cycle_bounds(run)[0] > 30 * run.points
+
+
+def test_cycle_bounds_let_divide_and_sqrt_overlap():
+    """fp_div and fp_sqrt are separate units, so a point with one of each is
+    bounded by the slower unit's interval, not by the two intervals added."""
+    run = _small_run()
+    both = Program([Instr(OP_LOAD, 0, 0).encode(), Instr(FpuOp.SQRT, 1, reg(0)).encode(),
+                    Instr(FpuOp.DIV, 2, reg(0), reg(1), last=True).encode()])
+    two_div = Program([Instr(OP_LOAD, 0, 0).encode(), Instr(FpuOp.DIV, 1, reg(0), reg(0)).encode(),
+                       Instr(FpuOp.DIV, 2, reg(0), reg(1), last=True).encode()])
+    low_both = M.cycle_bounds(Run(both, run.tables, run.grid))[0]
+    low_two = M.cycle_bounds(Run(two_div, run.tables, run.grid))[0]
+    copy = low_both - max(M.DIV_INTERVAL, M.SQRT_INTERVAL) * run.points
+    assert low_two == copy + 2 * M.DIV_INTERVAL * run.points

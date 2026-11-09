@@ -830,9 +830,11 @@ class EvuProfileTest(uvm_test):
 
     Needs --param PROFILE=1. This drives the pins itself with no monitors: a Python
     call on every clock would make the 70-million-clock runs impractical. It checks
-    three things per run: the categories add up to the whole run, the issue count
-    is exactly instructions times points, and the sum and flags equal the model's.
-    Set FPU_N to skip runs with more points than that.
+    four things per run: the categories add up to the whole run, the issue count
+    is exactly instructions times points, the sum and flags equal the model's, and
+    the run's length is inside evu_model.cycle_bounds. The bounds are in board
+    clocks, which are these clocks plus the 2 that kernel_engine adds around the
+    unit. Set FPU_N to skip runs with more points than that.
     """
 
     async def word(self, address: int, value: int | None = None) -> int:
@@ -878,11 +880,15 @@ class EvuProfileTest(uvm_test):
             want = evu_model.execute(run)
             got = (await self.word(image.r), await self.word(image.f))
             issued = counts["issue_arith"] + counts["issue_load"]
-            good = issued == len(run.program.words) * run.points and got == (want.sum, want.sum_flags)
+            low, high = evu_model.cycle_bounds(run)
+            inside = low <= clocks + 2 <= high
+            good = (issued == len(run.program.words) * run.points and got == (want.sum, want.sum_flags)
+                    and inside)
             self.bad += not good
             rows.append({"name": name, "points": run.points, "instructions": len(run.program.words), "clocks": clocks,
-                         "counts": counts, "good": good})
-            self.logger.info(f"PROFILE {name} {run.points} points {clocks} clocks issue {issued} good {good}")
+                         "counts": counts, "good": good, "low": low, "high": high})
+            self.logger.info(f"PROFILE {name} {run.points} points {clocks} clocks issue {issued} "
+                             f"bounds {low}..{high} good {good}")
         PROFILE_OUT.write_text(json.dumps(rows, indent=1) + "\n", encoding="utf-8")
         self.drop_objection()
 
