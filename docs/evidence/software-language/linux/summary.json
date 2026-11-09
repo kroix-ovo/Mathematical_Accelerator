@@ -1,0 +1,4013 @@
+{
+  "baseline": "98be2be8e8b0fd9e1f600631fb54dae9638ce726",
+  "python_source_sha256": {
+    "python-optimized": "2949d082581b2f94122bfe3a7eb4f4812fc88a51c84da9d8c99a9b203689a933",
+    "rust-hybrid": "2949d082581b2f94122bfe3a7eb4f4812fc88a51c84da9d8c99a9b203689a933",
+    "c-hybrid": "2949d082581b2f94122bfe3a7eb4f4812fc88a51c84da9d8c99a9b203689a933"
+  },
+  "fingerprints_equal": true,
+  "raw_files": [
+    "round-0-software-control.json",
+    "round-0-python-optimized.json",
+    "round-0-rust-hybrid.json",
+    "round-0-c-hybrid.json",
+    "round-1-python-optimized.json",
+    "round-1-rust-hybrid.json",
+    "round-1-c-hybrid.json",
+    "round-1-software-control.json",
+    "round-2-rust-hybrid.json",
+    "round-2-c-hybrid.json",
+    "round-2-software-control.json",
+    "round-2-python-optimized.json",
+    "round-3-c-hybrid.json",
+    "round-3-software-control.json",
+    "round-3-python-optimized.json",
+    "round-3-rust-hybrid.json"
+  ],
+  "variants": {
+    "software-control": {
+      "head": "98be2be8e8b0fd9e1f600631fb54dae9638ce726",
+      "peak_rss_kib_median": 86440.0,
+      "cases": {
+        "boundary/crc_empty": {
+          "median_ns": 201.5,
+          "round_medians_ns": [
+            326.0,
+            172.0,
+            229.0,
+            174.0
+          ]
+        },
+        "crc/0": {
+          "median_ns": 277.0,
+          "round_medians_ns": [
+            345.0,
+            171.0,
+            223.0,
+            331.0
+          ]
+        },
+        "encode/0": {
+          "median_ns": 600.5,
+          "round_medians_ns": [
+            571.0,
+            421.0,
+            630.0,
+            801.0
+          ]
+        },
+        "decode/0": {
+          "median_ns": 708.0,
+          "round_medians_ns": [
+            666.0,
+            438.0,
+            750.0,
+            826.0
+          ]
+        },
+        "packet_encode/0": {
+          "median_ns": 5428.0,
+          "round_medians_ns": [
+            5486.0,
+            5101.0,
+            8808.0,
+            5370.0
+          ]
+        },
+        "packet_decode/0": {
+          "median_ns": 6001.0,
+          "round_medians_ns": [
+            5803.0,
+            8032.0,
+            6199.0,
+            5487.0
+          ]
+        },
+        "crc/16": {
+          "median_ns": 14199.0,
+          "round_medians_ns": [
+            14233.0,
+            13322.0,
+            21341.0,
+            14165.0
+          ]
+        },
+        "encode/16": {
+          "median_ns": 1363.5,
+          "round_medians_ns": [
+            1381.0,
+            1322.0,
+            2239.0,
+            1346.0
+          ]
+        },
+        "decode/16": {
+          "median_ns": 729.0,
+          "round_medians_ns": [
+            1051.0,
+            515.0,
+            917.0,
+            541.0
+          ]
+        },
+        "packet_encode/16": {
+          "median_ns": 19858.0,
+          "round_medians_ns": [
+            19975.0,
+            19142.0,
+            22571.0,
+            19741.0
+          ]
+        },
+        "packet_decode/16": {
+          "median_ns": 21270.5,
+          "round_medians_ns": [
+            19869.0,
+            22672.0,
+            32914.0,
+            18227.0
+          ]
+        },
+        "crc/256": {
+          "median_ns": 254930.0,
+          "round_medians_ns": [
+            229811.0,
+            224492.0,
+            323766.0,
+            280049.0
+          ]
+        },
+        "encode/256": {
+          "median_ns": 15958.0,
+          "round_medians_ns": [
+            14624.0,
+            13868.0,
+            21181.0,
+            17292.0
+          ]
+        },
+        "decode/256": {
+          "median_ns": 1587.0,
+          "round_medians_ns": [
+            1915.0,
+            1259.0,
+            1231.0,
+            2196.0
+          ]
+        },
+        "packet_encode/256": {
+          "median_ns": 269194.0,
+          "round_medians_ns": [
+            267133.0,
+            240368.0,
+            367919.0,
+            271255.0
+          ]
+        },
+        "packet_decode/256": {
+          "median_ns": 254358.0,
+          "round_medians_ns": [
+            284332.0,
+            213656.0,
+            263643.0,
+            245073.0
+          ]
+        },
+        "crc/1024": {
+          "median_ns": 1104611.5,
+          "round_medians_ns": [
+            1238946.0,
+            939977.0,
+            1014502.0,
+            1194721.0
+          ]
+        },
+        "encode/1024": {
+          "median_ns": 55908.0,
+          "round_medians_ns": [
+            62890.0,
+            52172.0,
+            55679.0,
+            56137.0
+          ]
+        },
+        "decode/1024": {
+          "median_ns": 2645.5,
+          "round_medians_ns": [
+            2596.0,
+            2680.0,
+            2611.0,
+            4494.0
+          ]
+        },
+        "packet_encode/1024": {
+          "median_ns": 1338691.0,
+          "round_medians_ns": [
+            1511047.0,
+            1298977.0,
+            1378405.0,
+            1198180.0
+          ]
+        },
+        "packet_decode/1024": {
+          "median_ns": 1007617.0,
+          "round_medians_ns": [
+            947161.0,
+            899511.0,
+            1096745.0,
+            1068073.0
+          ]
+        },
+        "parse/sympy": {
+          "median_ns": 320039.5,
+          "round_medians_ns": [
+            317042.0,
+            308537.0,
+            323037.0,
+            359977.0
+          ]
+        },
+        "compile_warm/small": {
+          "median_ns": 179430.0,
+          "round_medians_ns": [
+            158314.0,
+            242205.0,
+            158768.0,
+            200092.0
+          ]
+        },
+        "compile_cold/small": {
+          "median_ns": 224278.0,
+          "round_medians_ns": [
+            228692.0,
+            219864.0,
+            217733.0,
+            393966.0
+          ]
+        },
+        "compile_warm/repeated": {
+          "median_ns": 287779.5,
+          "round_medians_ns": [
+            230045.0,
+            348722.0,
+            193857.0,
+            345514.0
+          ]
+        },
+        "compile_cold/repeated": {
+          "median_ns": 615393.0,
+          "round_medians_ns": [
+            646451.0,
+            584335.0,
+            773087.0,
+            499352.0
+          ]
+        },
+        "compile_warm/transcendental": {
+          "median_ns": 341882.0,
+          "round_medians_ns": [
+            330606.0,
+            344538.0,
+            339226.0,
+            558791.0
+          ]
+        },
+        "compile_cold/transcendental": {
+          "median_ns": 1357016.0,
+          "round_medians_ns": [
+            1627408.0,
+            1130571.0,
+            1265501.0,
+            1448531.0
+          ]
+        },
+        "compile_warm/large": {
+          "median_ns": 6067346.0,
+          "round_medians_ns": [
+            7257281.0,
+            5885713.0,
+            6248979.0,
+            5814750.0
+          ]
+        },
+        "compile_cold/large": {
+          "median_ns": 32398749.5,
+          "round_medians_ns": [
+            31007958.0,
+            34158038.0,
+            27645200.0,
+            33789541.0
+          ]
+        },
+        "compile_warm/near_limit": {
+          "median_ns": 11128121.5,
+          "round_medians_ns": [
+            10883351.0,
+            10115632.0,
+            11372892.0,
+            12755311.0
+          ]
+        },
+        "compile_cold/near_limit": {
+          "median_ns": 75210368.0,
+          "round_medians_ns": [
+            73395040.0,
+            73274716.0,
+            77025696.0,
+            82233929.0
+          ]
+        },
+        "compile_warm/over_limit": {
+          "median_ns": 10178742.0,
+          "round_medians_ns": [
+            8905518.0,
+            9930217.0,
+            10729782.0,
+            10427267.0
+          ]
+        },
+        "compile_cold/over_limit": {
+          "median_ns": 79526299.5,
+          "round_medians_ns": [
+            79853243.0,
+            84939272.0,
+            79199356.0,
+            74050442.0
+          ]
+        },
+        "compile_warm/unsupported": {
+          "median_ns": 56013.5,
+          "round_medians_ns": [
+            37050.0,
+            47680.0,
+            65274.0,
+            64347.0
+          ]
+        },
+        "compile_cold/unsupported": {
+          "median_ns": 254589.0,
+          "round_medians_ns": [
+            166723.0,
+            232197.0,
+            283089.0,
+            276981.0
+          ]
+        },
+        "compile_warm/nonfinite": {
+          "median_ns": 39963.5,
+          "round_medians_ns": [
+            35790.0,
+            45144.0,
+            38161.0,
+            41766.0
+          ]
+        },
+        "compile_cold/nonfinite": {
+          "median_ns": 73012.0,
+          "round_medians_ns": [
+            50221.0,
+            76066.0,
+            76387.0,
+            69958.0
+          ]
+        },
+        "compile_warm/pressure": {
+          "median_ns": 3104192.5,
+          "round_medians_ns": [
+            3572919.0,
+            3214602.0,
+            2789498.0,
+            2993783.0
+          ]
+        },
+        "class_compile/sin": {
+          "median_ns": 509870.5,
+          "round_medians_ns": [
+            442034.0,
+            463295.0,
+            556446.0,
+            725443.0
+          ]
+        },
+        "image/sin": {
+          "median_ns": 32118.5,
+          "round_medians_ns": [
+            30768.0,
+            33778.0,
+            31912.0,
+            32325.0
+          ]
+        },
+        "class_compile/poly_box": {
+          "median_ns": 783357.5,
+          "round_medians_ns": [
+            743583.0,
+            731927.0,
+            826540.0,
+            823132.0
+          ]
+        },
+        "image/poly_box": {
+          "median_ns": 61050.5,
+          "round_medians_ns": [
+            57856.0,
+            64932.0,
+            60365.0,
+            61736.0
+          ]
+        },
+        "class_compile/gaussian_2d": {
+          "median_ns": 1602083.0,
+          "round_medians_ns": [
+            1611157.0,
+            2634465.0,
+            1593009.0,
+            1453373.0
+          ]
+        },
+        "image/gaussian_2d": {
+          "median_ns": 73569.5,
+          "round_medians_ns": [
+            69484.0,
+            109818.0,
+            74528.0,
+            72611.0
+          ]
+        },
+        "class_compile/charge_sphere": {
+          "median_ns": 1538654.5,
+          "round_medians_ns": [
+            1622669.0,
+            1447880.0,
+            1966665.0,
+            1454640.0
+          ]
+        },
+        "image/charge_sphere": {
+          "median_ns": 88266.5,
+          "round_medians_ns": [
+            85172.0,
+            83946.0,
+            91361.0,
+            101480.0
+          ]
+        },
+        "class_compile/circulation": {
+          "median_ns": 1032522.0,
+          "round_medians_ns": [
+            1292191.0,
+            673114.0,
+            772853.0,
+            1383862.0
+          ]
+        },
+        "image/circulation": {
+          "median_ns": 31733.5,
+          "round_medians_ns": [
+            28381.0,
+            26137.0,
+            35086.0,
+            37404.0
+          ]
+        },
+        "class_compile/flux_sphere": {
+          "median_ns": 2091132.0,
+          "round_medians_ns": [
+            1839953.0,
+            1629556.0,
+            2342311.0,
+            2644781.0
+          ]
+        },
+        "image/flux_sphere": {
+          "median_ns": 116298.0,
+          "round_medians_ns": [
+            115866.0,
+            112628.0,
+            116730.0,
+            134435.0
+          ]
+        },
+        "class_compile/dipole_power": {
+          "median_ns": 1146693.5,
+          "round_medians_ns": [
+            1080274.0,
+            1156299.0,
+            1137088.0,
+            1399379.0
+          ]
+        },
+        "image/dipole_power": {
+          "median_ns": 57882.0,
+          "round_medians_ns": [
+            57820.0,
+            56235.0,
+            57944.0,
+            61307.0
+          ]
+        },
+        "class_compile/loop_bfield": {
+          "median_ns": 1166625.0,
+          "round_medians_ns": [
+            1806046.0,
+            1087415.0,
+            1170708.0,
+            1162542.0
+          ]
+        },
+        "image/loop_bfield": {
+          "median_ns": 68296.0,
+          "round_medians_ns": [
+            95833.0,
+            66462.0,
+            67375.0,
+            69217.0
+          ]
+        },
+        "class_compile/plate_potential": {
+          "median_ns": 1910097.5,
+          "round_medians_ns": [
+            2678417.0,
+            1402562.0,
+            1637508.0,
+            2182687.0
+          ]
+        },
+        "image/plate_potential": {
+          "median_ns": 74657.5,
+          "round_medians_ns": [
+            99439.0,
+            71477.0,
+            76202.0,
+            73113.0
+          ]
+        },
+        "class_compile/fermi_half": {
+          "median_ns": 887194.0,
+          "round_medians_ns": [
+            1546734.0,
+            773440.0,
+            861528.0,
+            912860.0
+          ]
+        },
+        "image/fermi_half": {
+          "median_ns": 64390.5,
+          "round_medians_ns": [
+            63604.0,
+            58207.0,
+            65177.0,
+            75924.0
+          ]
+        },
+        "class_compile/decay_wide": {
+          "median_ns": 784077.0,
+          "round_medians_ns": [
+            972762.0,
+            566896.0,
+            595392.0,
+            1097588.0
+          ]
+        },
+        "image/decay_wide": {
+          "median_ns": 60536.0,
+          "round_medians_ns": [
+            60676.0,
+            70882.0,
+            59171.0,
+            60396.0
+          ]
+        },
+        "class_compile/rf_oscillatory": {
+          "median_ns": 830723.0,
+          "round_medians_ns": [
+            641546.0,
+            1217958.0,
+            1007294.0,
+            654152.0
+          ]
+        },
+        "image/rf_oscillatory": {
+          "median_ns": 158088.0,
+          "round_medians_ns": [
+            153885.0,
+            162291.0,
+            144808.0,
+            172278.0
+          ]
+        },
+        "class_compile/cube_large": {
+          "median_ns": 1069423.0,
+          "round_medians_ns": [
+            967395.0,
+            1071013.0,
+            1067833.0,
+            1547238.0
+          ]
+        },
+        "image/cube_large": {
+          "median_ns": 84780.5,
+          "round_medians_ns": [
+            74003.0,
+            63985.0,
+            95558.0,
+            105809.0
+          ]
+        },
+        "sim/ping": {
+          "median_ns": 52893.0,
+          "round_medians_ns": [
+            52078.0,
+            49031.0,
+            88517.0,
+            53708.0
+          ]
+        },
+        "sim/status": {
+          "median_ns": 49540.5,
+          "round_medians_ns": [
+            87907.0,
+            42506.0,
+            47000.0,
+            52081.0
+          ]
+        },
+        "sim/nop": {
+          "median_ns": 61091.5,
+          "round_medians_ns": [
+            93763.0,
+            50027.0,
+            48467.0,
+            72156.0
+          ]
+        },
+        "sim/fpu/ADD": {
+          "median_ns": 1466933.0,
+          "round_medians_ns": [
+            1482550.0,
+            1410040.0,
+            1550408.0,
+            1451316.0
+          ]
+        },
+        "sim/fpu/DIV": {
+          "median_ns": 1629252.5,
+          "round_medians_ns": [
+            1641553.0,
+            1650944.0,
+            1616952.0,
+            1526879.0
+          ]
+        },
+        "sim/fpu/SIN": {
+          "median_ns": 2095061.5,
+          "round_medians_ns": [
+            2097166.0,
+            1759498.0,
+            2205158.0,
+            2092957.0
+          ]
+        },
+        "sim/transfer/1": {
+          "median_ns": 159892.5,
+          "round_medians_ns": [
+            124616.0,
+            195169.0,
+            214776.0,
+            108847.0
+          ]
+        },
+        "sim/transfer/255": {
+          "median_ns": 4839697.5,
+          "round_medians_ns": [
+            4795788.0,
+            4551771.0,
+            5137083.0,
+            4883607.0
+          ]
+        },
+        "sim/transfer/256": {
+          "median_ns": 5041347.0,
+          "round_medians_ns": [
+            5071450.0,
+            5076027.0,
+            4566422.0,
+            5011244.0
+          ]
+        },
+        "sim/transfer/4096": {
+          "median_ns": 82692739.5,
+          "round_medians_ns": [
+            84343069.0,
+            97163269.0,
+            81042410.0,
+            72264657.0
+          ]
+        },
+        "sim/evu_full/map": {
+          "median_ns": 1141307.0,
+          "round_medians_ns": [
+            1111476.0,
+            1797730.0,
+            1036652.0,
+            1171138.0
+          ]
+        },
+        "sim/evu_loaded/map": {
+          "median_ns": 279390.0,
+          "round_medians_ns": [
+            247170.0,
+            464002.0,
+            242224.0,
+            311610.0
+          ]
+        },
+        "sim/evu_full/cordic": {
+          "median_ns": 1077749.0,
+          "round_medians_ns": [
+            979678.0,
+            1980765.0,
+            1159744.0,
+            995754.0
+          ]
+        },
+        "sim/evu_loaded/cordic": {
+          "median_ns": 451963.5,
+          "round_medians_ns": [
+            520051.0,
+            745416.0,
+            383876.0,
+            357044.0
+          ]
+        },
+        "sim/evu_full/division": {
+          "median_ns": 1045729.5,
+          "round_medians_ns": [
+            1038288.0,
+            1913476.0,
+            1053171.0,
+            993900.0
+          ]
+        },
+        "sim/evu_loaded/division": {
+          "median_ns": 420771.5,
+          "round_medians_ns": [
+            422886.0,
+            713484.0,
+            418657.0,
+            400585.0
+          ]
+        },
+        "class_evu/sin": {
+          "median_ns": 1188946.0,
+          "round_medians_ns": [
+            1249827.0,
+            1998448.0,
+            1101977.0,
+            1128065.0
+          ]
+        },
+        "class_evu/poly_box": {
+          "median_ns": 1590572.5,
+          "round_medians_ns": [
+            1574027.0,
+            3263082.0,
+            1607118.0,
+            1460094.0
+          ]
+        },
+        "class_evu/gaussian_2d": {
+          "median_ns": 4754543.5,
+          "round_medians_ns": [
+            5459601.0,
+            7013141.0,
+            4049486.0,
+            3613303.0
+          ]
+        },
+        "class_evu/charge_sphere": {
+          "median_ns": 10814495.0,
+          "round_medians_ns": [
+            11063823.0,
+            14767484.0,
+            10565167.0,
+            9241428.0
+          ]
+        },
+        "class_evu/circulation": {
+          "median_ns": 1651493.0,
+          "round_medians_ns": [
+            1568238.0,
+            2756913.0,
+            1514083.0,
+            1734748.0
+          ]
+        },
+        "class_evu/flux_sphere": {
+          "median_ns": 7470815.0,
+          "round_medians_ns": [
+            7855903.0,
+            8725269.0,
+            6818181.0,
+            7085727.0
+          ]
+        },
+        "class_evu/dipole_power": {
+          "median_ns": 1947839.0,
+          "round_medians_ns": [
+            2056216.0,
+            2158677.0,
+            1839462.0,
+            1793342.0
+          ]
+        },
+        "class_evu/loop_bfield": {
+          "median_ns": 2859851.5,
+          "round_medians_ns": [
+            3190355.0,
+            2761877.0,
+            2957826.0,
+            2301008.0
+          ]
+        },
+        "class_evu/plate_potential": {
+          "median_ns": 4215232.5,
+          "round_medians_ns": [
+            3976698.0,
+            4182922.0,
+            4247543.0,
+            4941208.0
+          ]
+        },
+        "class_evu/fermi_half": {
+          "median_ns": 2933430.0,
+          "round_medians_ns": [
+            3352109.0,
+            3283462.0,
+            2583398.0,
+            2372419.0
+          ]
+        },
+        "class_evu/decay_wide": {
+          "median_ns": 4299083.0,
+          "round_medians_ns": [
+            3754145.0,
+            4844021.0,
+            4876833.0,
+            3402951.0
+          ]
+        },
+        "class_evu/rf_oscillatory": {
+          "median_ns": 12306964.0,
+          "round_medians_ns": [
+            11788086.0,
+            16433849.0,
+            12825842.0,
+            11707519.0
+          ]
+        },
+        "class_evu/cube_large": {
+          "median_ns": 2975752.5,
+          "round_medians_ns": [
+            2513639.0,
+            3744314.0,
+            3437866.0,
+            2008219.0
+          ]
+        },
+        "udpsim/ping": {
+          "median_ns": 183317.0,
+          "round_medians_ns": [
+            183172.0,
+            215859.0,
+            183462.0,
+            156604.0
+          ]
+        },
+        "udpsim/status": {
+          "median_ns": 163742.0,
+          "round_medians_ns": [
+            141205.0,
+            186279.0,
+            192511.0,
+            140555.0
+          ]
+        },
+        "udpsim/nop": {
+          "median_ns": 165868.0,
+          "round_medians_ns": [
+            165827.0,
+            235263.0,
+            165909.0,
+            142310.0
+          ]
+        },
+        "udpsim/fpu/ADD": {
+          "median_ns": 2466662.5,
+          "round_medians_ns": [
+            2496444.0,
+            2526397.0,
+            2436881.0,
+            2045779.0
+          ]
+        },
+        "udpsim/fpu/DIV": {
+          "median_ns": 2389401.0,
+          "round_medians_ns": [
+            2978952.0,
+            2150133.0,
+            2519074.0,
+            2259728.0
+          ]
+        },
+        "udpsim/fpu/SIN": {
+          "median_ns": 3279159.5,
+          "round_medians_ns": [
+            3627279.0,
+            2627013.0,
+            3170273.0,
+            3388046.0
+          ]
+        },
+        "udpsim/transfer/1": {
+          "median_ns": 417819.5,
+          "round_medians_ns": [
+            426205.0,
+            379504.0,
+            409434.0,
+            462304.0
+          ]
+        },
+        "udpsim/transfer/255": {
+          "median_ns": 5229510.5,
+          "round_medians_ns": [
+            5296357.0,
+            5077271.0,
+            5162664.0,
+            6474722.0
+          ]
+        },
+        "udpsim/transfer/256": {
+          "median_ns": 5527661.0,
+          "round_medians_ns": [
+            7157252.0,
+            5489419.0,
+            5518826.0,
+            5536496.0
+          ]
+        },
+        "udpsim/transfer/4096": {
+          "median_ns": 85961446.0,
+          "round_medians_ns": [
+            86096722.0,
+            85826170.0,
+            88439215.0,
+            71002733.0
+          ]
+        },
+        "udpsim/evu_full/map": {
+          "median_ns": 1806281.5,
+          "round_medians_ns": [
+            1817132.0,
+            2681657.0,
+            1795431.0,
+            1572278.0
+          ]
+        },
+        "udpsim/evu_loaded/map": {
+          "median_ns": 520044.5,
+          "round_medians_ns": [
+            514153.0,
+            659561.0,
+            525936.0,
+            441434.0
+          ]
+        },
+        "udpsim/evu_full/cordic": {
+          "median_ns": 2020102.5,
+          "round_medians_ns": [
+            2002158.0,
+            2654472.0,
+            2038047.0,
+            1496644.0
+          ]
+        },
+        "udpsim/evu_loaded/cordic": {
+          "median_ns": 814734.0,
+          "round_medians_ns": [
+            815308.0,
+            1007386.0,
+            814160.0,
+            643717.0
+          ]
+        },
+        "udpsim/evu_full/division": {
+          "median_ns": 2207413.5,
+          "round_medians_ns": [
+            2228706.0,
+            2384948.0,
+            2186121.0,
+            1613929.0
+          ]
+        },
+        "udpsim/evu_loaded/division": {
+          "median_ns": 856611.5,
+          "round_medians_ns": [
+            838578.0,
+            1033769.0,
+            874645.0,
+            641381.0
+          ]
+        }
+      }
+    },
+    "python-optimized": {
+      "head": "4562e49b38670b6de129a49ee01a38f2c506f028",
+      "peak_rss_kib_median": 86298.0,
+      "cases": {
+        "boundary/crc_empty": {
+          "median_ns": 138.0,
+          "round_medians_ns": [
+            136.0,
+            140.0,
+            269.0,
+            126.0
+          ]
+        },
+        "crc/0": {
+          "median_ns": 163.0,
+          "round_medians_ns": [
+            180.0,
+            146.0,
+            263.0,
+            135.0
+          ]
+        },
+        "encode/0": {
+          "median_ns": 543.0,
+          "round_medians_ns": [
+            668.0,
+            418.0,
+            843.0,
+            391.0
+          ]
+        },
+        "decode/0": {
+          "median_ns": 426.5,
+          "round_medians_ns": [
+            423.0,
+            430.0,
+            462.0,
+            393.0
+          ]
+        },
+        "packet_encode/0": {
+          "median_ns": 1817.0,
+          "round_medians_ns": [
+            1779.0,
+            1855.0,
+            1874.0,
+            1685.0
+          ]
+        },
+        "packet_decode/0": {
+          "median_ns": 2124.0,
+          "round_medians_ns": [
+            2123.0,
+            2125.0,
+            2279.0,
+            1963.0
+          ]
+        },
+        "crc/16": {
+          "median_ns": 231.5,
+          "round_medians_ns": [
+            211.0,
+            252.0,
+            314.0,
+            194.0
+          ]
+        },
+        "encode/16": {
+          "median_ns": 1299.5,
+          "round_medians_ns": [
+            1286.0,
+            1313.0,
+            1362.0,
+            1216.0
+          ]
+        },
+        "decode/16": {
+          "median_ns": 467.0,
+          "round_medians_ns": [
+            463.0,
+            471.0,
+            497.0,
+            439.0
+          ]
+        },
+        "packet_encode/16": {
+          "median_ns": 2656.5,
+          "round_medians_ns": [
+            2603.0,
+            2710.0,
+            2789.0,
+            2459.0
+          ]
+        },
+        "packet_decode/16": {
+          "median_ns": 2009.0,
+          "round_medians_ns": [
+            2009.0,
+            2009.0,
+            2757.0,
+            1874.0
+          ]
+        },
+        "crc/256": {
+          "median_ns": 802.0,
+          "round_medians_ns": [
+            796.0,
+            808.0,
+            841.0,
+            729.0
+          ]
+        },
+        "encode/256": {
+          "median_ns": 13584.5,
+          "round_medians_ns": [
+            13617.0,
+            13552.0,
+            14212.0,
+            12210.0
+          ]
+        },
+        "decode/256": {
+          "median_ns": 1134.5,
+          "round_medians_ns": [
+            1132.0,
+            1137.0,
+            1200.0,
+            1068.0
+          ]
+        },
+        "packet_encode/256": {
+          "median_ns": 15447.5,
+          "round_medians_ns": [
+            15675.0,
+            15220.0,
+            16293.0,
+            14074.0
+          ]
+        },
+        "packet_decode/256": {
+          "median_ns": 3398.0,
+          "round_medians_ns": [
+            3454.0,
+            3342.0,
+            5212.0,
+            3104.0
+          ]
+        },
+        "crc/1024": {
+          "median_ns": 2800.5,
+          "round_medians_ns": [
+            2949.0,
+            2652.0,
+            3136.0,
+            2437.0
+          ]
+        },
+        "encode/1024": {
+          "median_ns": 52976.5,
+          "round_medians_ns": [
+            53187.0,
+            52766.0,
+            75027.0,
+            46634.0
+          ]
+        },
+        "decode/1024": {
+          "median_ns": 2578.0,
+          "round_medians_ns": [
+            2602.0,
+            2554.0,
+            2639.0,
+            2289.0
+          ]
+        },
+        "packet_encode/1024": {
+          "median_ns": 55902.5,
+          "round_medians_ns": [
+            56113.0,
+            55692.0,
+            61475.0,
+            50292.0
+          ]
+        },
+        "packet_decode/1024": {
+          "median_ns": 6631.0,
+          "round_medians_ns": [
+            6593.0,
+            6669.0,
+            7123.0,
+            6087.0
+          ]
+        },
+        "parse/sympy": {
+          "median_ns": 330667.5,
+          "round_medians_ns": [
+            292886.0,
+            368449.0,
+            424884.0,
+            272115.0
+          ]
+        },
+        "compile_warm/small": {
+          "median_ns": 154488.5,
+          "round_medians_ns": [
+            148138.0,
+            260803.0,
+            160839.0,
+            131855.0
+          ]
+        },
+        "compile_cold/small": {
+          "median_ns": 225439.5,
+          "round_medians_ns": [
+            206193.0,
+            358502.0,
+            244686.0,
+            202002.0
+          ]
+        },
+        "compile_warm/repeated": {
+          "median_ns": 215753.0,
+          "round_medians_ns": [
+            191834.0,
+            332649.0,
+            239672.0,
+            191363.0
+          ]
+        },
+        "compile_cold/repeated": {
+          "median_ns": 593724.5,
+          "round_medians_ns": [
+            468315.0,
+            762950.0,
+            719134.0,
+            455345.0
+          ]
+        },
+        "compile_warm/transcendental": {
+          "median_ns": 386725.0,
+          "round_medians_ns": [
+            326007.0,
+            352038.0,
+            516134.0,
+            421412.0
+          ]
+        },
+        "compile_cold/transcendental": {
+          "median_ns": 1204571.0,
+          "round_medians_ns": [
+            1233709.0,
+            1175433.0,
+            2077769.0,
+            1048025.0
+          ]
+        },
+        "compile_warm/large": {
+          "median_ns": 5432102.5,
+          "round_medians_ns": [
+            4862106.0,
+            6002099.0,
+            6621799.0,
+            4745997.0
+          ]
+        },
+        "compile_cold/large": {
+          "median_ns": 28004348.0,
+          "round_medians_ns": [
+            27025641.0,
+            28882838.0,
+            34541474.0,
+            27125858.0
+          ]
+        },
+        "compile_warm/near_limit": {
+          "median_ns": 11215212.0,
+          "round_medians_ns": [
+            11223767.0,
+            11206657.0,
+            13365403.0,
+            9338572.0
+          ]
+        },
+        "compile_cold/near_limit": {
+          "median_ns": 71122336.0,
+          "round_medians_ns": [
+            70864708.0,
+            71379964.0,
+            85819754.0,
+            55933332.0
+          ]
+        },
+        "compile_warm/over_limit": {
+          "median_ns": 10056861.5,
+          "round_medians_ns": [
+            9739543.0,
+            10374180.0,
+            12878754.0,
+            7409742.0
+          ]
+        },
+        "compile_cold/over_limit": {
+          "median_ns": 72938841.0,
+          "round_medians_ns": [
+            69568223.0,
+            76309459.0,
+            82509167.0,
+            59346070.0
+          ]
+        },
+        "compile_warm/unsupported": {
+          "median_ns": 38461.5,
+          "round_medians_ns": [
+            38717.0,
+            38206.0,
+            48649.0,
+            37020.0
+          ]
+        },
+        "compile_cold/unsupported": {
+          "median_ns": 165376.5,
+          "round_medians_ns": [
+            172607.0,
+            254086.0,
+            158146.0,
+            144876.0
+          ]
+        },
+        "compile_warm/nonfinite": {
+          "median_ns": 36654.0,
+          "round_medians_ns": [
+            39682.0,
+            39358.0,
+            33610.0,
+            33950.0
+          ]
+        },
+        "compile_cold/nonfinite": {
+          "median_ns": 56203.5,
+          "round_medians_ns": [
+            66745.0,
+            61775.0,
+            36876.0,
+            50632.0
+          ]
+        },
+        "compile_warm/pressure": {
+          "median_ns": 2860701.0,
+          "round_medians_ns": [
+            2819066.0,
+            2902336.0,
+            3424501.0,
+            2229146.0
+          ]
+        },
+        "class_compile/sin": {
+          "median_ns": 445535.5,
+          "round_medians_ns": [
+            414148.0,
+            549092.0,
+            476923.0,
+            396152.0
+          ]
+        },
+        "image/sin": {
+          "median_ns": 31373.0,
+          "round_medians_ns": [
+            31265.0,
+            31592.0,
+            31481.0,
+            28295.0
+          ]
+        },
+        "class_compile/poly_box": {
+          "median_ns": 839886.0,
+          "round_medians_ns": [
+            827191.0,
+            855516.0,
+            852581.0,
+            635595.0
+          ]
+        },
+        "image/poly_box": {
+          "median_ns": 61434.0,
+          "round_medians_ns": [
+            58980.0,
+            74871.0,
+            63888.0,
+            52905.0
+          ]
+        },
+        "class_compile/gaussian_2d": {
+          "median_ns": 2051327.0,
+          "round_medians_ns": [
+            1512758.0,
+            2256169.0,
+            1953356.0,
+            2149298.0
+          ]
+        },
+        "image/gaussian_2d": {
+          "median_ns": 82003.5,
+          "round_medians_ns": [
+            69562.0,
+            94445.0,
+            101620.0,
+            63375.0
+          ]
+        },
+        "class_compile/charge_sphere": {
+          "median_ns": 1519721.0,
+          "round_medians_ns": [
+            1482559.0,
+            1556883.0,
+            2410571.0,
+            1129819.0
+          ]
+        },
+        "image/charge_sphere": {
+          "median_ns": 86309.0,
+          "round_medians_ns": [
+            83727.0,
+            88891.0,
+            115094.0,
+            74363.0
+          ]
+        },
+        "class_compile/circulation": {
+          "median_ns": 717495.5,
+          "round_medians_ns": [
+            670870.0,
+            764121.0,
+            775949.0,
+            581722.0
+          ]
+        },
+        "image/circulation": {
+          "median_ns": 27715.0,
+          "round_medians_ns": [
+            28204.0,
+            27226.0,
+            31482.0,
+            23656.0
+          ]
+        },
+        "class_compile/flux_sphere": {
+          "median_ns": 1688421.5,
+          "round_medians_ns": [
+            1809867.0,
+            1566976.0,
+            1888961.0,
+            1565477.0
+          ]
+        },
+        "image/flux_sphere": {
+          "median_ns": 110917.5,
+          "round_medians_ns": [
+            111502.0,
+            110333.0,
+            128736.0,
+            100902.0
+          ]
+        },
+        "class_compile/dipole_power": {
+          "median_ns": 1122471.0,
+          "round_medians_ns": [
+            995606.0,
+            1249336.0,
+            1325249.0,
+            954551.0
+          ]
+        },
+        "image/dipole_power": {
+          "median_ns": 54826.5,
+          "round_medians_ns": [
+            55858.0,
+            53795.0,
+            58912.0,
+            52643.0
+          ]
+        },
+        "class_compile/loop_bfield": {
+          "median_ns": 1130253.0,
+          "round_medians_ns": [
+            1073785.0,
+            1186721.0,
+            1375802.0,
+            958484.0
+          ]
+        },
+        "image/loop_bfield": {
+          "median_ns": 68682.0,
+          "round_medians_ns": [
+            69123.0,
+            70083.0,
+            68241.0,
+            64717.0
+          ]
+        },
+        "class_compile/plate_potential": {
+          "median_ns": 1759405.5,
+          "round_medians_ns": [
+            1533306.0,
+            2252535.0,
+            1971780.0,
+            1547031.0
+          ]
+        },
+        "image/plate_potential": {
+          "median_ns": 73448.5,
+          "round_medians_ns": [
+            71825.0,
+            75072.0,
+            75239.0,
+            69336.0
+          ]
+        },
+        "class_compile/fermi_half": {
+          "median_ns": 1076579.5,
+          "round_medians_ns": [
+            878605.0,
+            843330.0,
+            1393528.0,
+            1274554.0
+          ]
+        },
+        "image/fermi_half": {
+          "median_ns": 60434.0,
+          "round_medians_ns": [
+            78668.0,
+            60243.0,
+            60625.0,
+            56819.0
+          ]
+        },
+        "class_compile/decay_wide": {
+          "median_ns": 614670.0,
+          "round_medians_ns": [
+            538327.0,
+            600964.0,
+            628376.0,
+            671473.0
+          ]
+        },
+        "image/decay_wide": {
+          "median_ns": 59922.0,
+          "round_medians_ns": [
+            57198.0,
+            83307.0,
+            62185.0,
+            57659.0
+          ]
+        },
+        "class_compile/rf_oscillatory": {
+          "median_ns": 759030.0,
+          "round_medians_ns": [
+            571521.0,
+            735253.0,
+            782807.0,
+            927240.0
+          ]
+        },
+        "image/rf_oscillatory": {
+          "median_ns": 145993.5,
+          "round_medians_ns": [
+            145740.0,
+            146247.0,
+            149089.0,
+            136576.0
+          ]
+        },
+        "class_compile/cube_large": {
+          "median_ns": 1002296.0,
+          "round_medians_ns": [
+            889782.0,
+            1277907.0,
+            1114810.0,
+            829659.0
+          ]
+        },
+        "image/cube_large": {
+          "median_ns": 78791.0,
+          "round_medians_ns": [
+            68573.0,
+            84471.0,
+            98319.0,
+            73111.0
+          ]
+        },
+        "sim/ping": {
+          "median_ns": 23748.5,
+          "round_medians_ns": [
+            21686.0,
+            15842.0,
+            27790.0,
+            25811.0
+          ]
+        },
+        "sim/status": {
+          "median_ns": 22957.5,
+          "round_medians_ns": [
+            19989.0,
+            14967.0,
+            28312.0,
+            25926.0
+          ]
+        },
+        "sim/nop": {
+          "median_ns": 21077.5,
+          "round_medians_ns": [
+            14045.0,
+            30055.0,
+            15308.0,
+            26847.0
+          ]
+        },
+        "sim/fpu/ADD": {
+          "median_ns": 816921.0,
+          "round_medians_ns": [
+            716792.0,
+            917050.0,
+            1040391.0,
+            637066.0
+          ]
+        },
+        "sim/fpu/DIV": {
+          "median_ns": 685151.5,
+          "round_medians_ns": [
+            665692.0,
+            704611.0,
+            943752.0,
+            642984.0
+          ]
+        },
+        "sim/fpu/SIN": {
+          "median_ns": 1229005.5,
+          "round_medians_ns": [
+            1251893.0,
+            1206118.0,
+            1572331.0,
+            963650.0
+          ]
+        },
+        "sim/transfer/1": {
+          "median_ns": 46399.5,
+          "round_medians_ns": [
+            81395.0,
+            43082.0,
+            48346.0,
+            44453.0
+          ]
+        },
+        "sim/transfer/255": {
+          "median_ns": 403146.0,
+          "round_medians_ns": [
+            392548.0,
+            413744.0,
+            538825.0,
+            367718.0
+          ]
+        },
+        "sim/transfer/256": {
+          "median_ns": 454400.0,
+          "round_medians_ns": [
+            465642.0,
+            443158.0,
+            492049.0,
+            417987.0
+          ]
+        },
+        "sim/transfer/4096": {
+          "median_ns": 7087998.5,
+          "round_medians_ns": [
+            7205890.0,
+            6970107.0,
+            9196898.0,
+            5984901.0
+          ]
+        },
+        "sim/evu_full/map": {
+          "median_ns": 368398.5,
+          "round_medians_ns": [
+            603412.0,
+            355978.0,
+            380819.0,
+            327030.0
+          ]
+        },
+        "sim/evu_loaded/map": {
+          "median_ns": 194678.0,
+          "round_medians_ns": [
+            221969.0,
+            224880.0,
+            167387.0,
+            161303.0
+          ]
+        },
+        "sim/evu_full/cordic": {
+          "median_ns": 656607.5,
+          "round_medians_ns": [
+            786539.0,
+            564502.0,
+            748713.0,
+            455176.0
+          ]
+        },
+        "sim/evu_loaded/cordic": {
+          "median_ns": 337986.5,
+          "round_medians_ns": [
+            530409.0,
+            321939.0,
+            354034.0,
+            256982.0
+          ]
+        },
+        "sim/evu_full/division": {
+          "median_ns": 582350.5,
+          "round_medians_ns": [
+            935995.0,
+            524095.0,
+            640606.0,
+            460056.0
+          ]
+        },
+        "sim/evu_loaded/division": {
+          "median_ns": 439489.0,
+          "round_medians_ns": [
+            428688.0,
+            459591.0,
+            450290.0,
+            283553.0
+          ]
+        },
+        "class_evu/sin": {
+          "median_ns": 664259.5,
+          "round_medians_ns": [
+            693789.0,
+            634730.0,
+            828536.0,
+            562828.0
+          ]
+        },
+        "class_evu/poly_box": {
+          "median_ns": 1045339.5,
+          "round_medians_ns": [
+            1549002.0,
+            1185468.0,
+            905211.0,
+            774189.0
+          ]
+        },
+        "class_evu/gaussian_2d": {
+          "median_ns": 2921086.0,
+          "round_medians_ns": [
+            3300760.0,
+            2667348.0,
+            3174824.0,
+            2502952.0
+          ]
+        },
+        "class_evu/charge_sphere": {
+          "median_ns": 8591613.5,
+          "round_medians_ns": [
+            8496137.0,
+            8877711.0,
+            8687090.0,
+            8186007.0
+          ]
+        },
+        "class_evu/circulation": {
+          "median_ns": 621855.0,
+          "round_medians_ns": [
+            581692.0,
+            640243.0,
+            603467.0,
+            816954.0
+          ]
+        },
+        "class_evu/flux_sphere": {
+          "median_ns": 4957415.0,
+          "round_medians_ns": [
+            4682219.0,
+            5461953.0,
+            5232611.0,
+            4142792.0
+          ]
+        },
+        "class_evu/dipole_power": {
+          "median_ns": 963534.5,
+          "round_medians_ns": [
+            1009601.0,
+            917468.0,
+            1296640.0,
+            826305.0
+          ]
+        },
+        "class_evu/loop_bfield": {
+          "median_ns": 1106694.5,
+          "round_medians_ns": [
+            1263458.0,
+            1261876.0,
+            951513.0,
+            946023.0
+          ]
+        },
+        "class_evu/plate_potential": {
+          "median_ns": 2077856.5,
+          "round_medians_ns": [
+            2895777.0,
+            2064096.0,
+            2091617.0,
+            1623833.0
+          ]
+        },
+        "class_evu/fermi_half": {
+          "median_ns": 1470753.0,
+          "round_medians_ns": [
+            1539793.0,
+            1594421.0,
+            1401713.0,
+            900189.0
+          ]
+        },
+        "class_evu/decay_wide": {
+          "median_ns": 1326647.5,
+          "round_medians_ns": [
+            1858420.0,
+            1246303.0,
+            1406992.0,
+            1026983.0
+          ]
+        },
+        "class_evu/rf_oscillatory": {
+          "median_ns": 2733502.5,
+          "round_medians_ns": [
+            2258285.0,
+            3208792.0,
+            3208720.0,
+            2088383.0
+          ]
+        },
+        "class_evu/cube_large": {
+          "median_ns": 1819821.0,
+          "round_medians_ns": [
+            1451456.0,
+            2188186.0,
+            2251927.0,
+            1015855.0
+          ]
+        },
+        "udpsim/ping": {
+          "median_ns": 131361.5,
+          "round_medians_ns": [
+            102231.0,
+            158206.0,
+            173536.0,
+            104517.0
+          ]
+        },
+        "udpsim/status": {
+          "median_ns": 128841.0,
+          "round_medians_ns": [
+            117383.0,
+            140299.0,
+            142813.0,
+            92647.0
+          ]
+        },
+        "udpsim/nop": {
+          "median_ns": 137185.5,
+          "round_medians_ns": [
+            117448.0,
+            156923.0,
+            175586.0,
+            103661.0
+          ]
+        },
+        "udpsim/fpu/ADD": {
+          "median_ns": 1515021.0,
+          "round_medians_ns": [
+            1480157.0,
+            1549885.0,
+            1594917.0,
+            1136053.0
+          ]
+        },
+        "udpsim/fpu/DIV": {
+          "median_ns": 1468349.5,
+          "round_medians_ns": [
+            1457726.0,
+            1478973.0,
+            1650960.0,
+            1170706.0
+          ]
+        },
+        "udpsim/fpu/SIN": {
+          "median_ns": 1875771.0,
+          "round_medians_ns": [
+            1784346.0,
+            2090494.0,
+            1967196.0,
+            1628792.0
+          ]
+        },
+        "udpsim/transfer/1": {
+          "median_ns": 298138.0,
+          "round_medians_ns": [
+            303398.0,
+            292878.0,
+            331988.0,
+            262430.0
+          ]
+        },
+        "udpsim/transfer/255": {
+          "median_ns": 752238.0,
+          "round_medians_ns": [
+            680726.0,
+            823750.0,
+            848706.0,
+            645578.0
+          ]
+        },
+        "udpsim/transfer/256": {
+          "median_ns": 986733.5,
+          "round_medians_ns": [
+            938094.0,
+            1250285.0,
+            1035373.0,
+            840479.0
+          ]
+        },
+        "udpsim/transfer/4096": {
+          "median_ns": 12514359.0,
+          "round_medians_ns": [
+            11995700.0,
+            14404861.0,
+            13033018.0,
+            10723184.0
+          ]
+        },
+        "udpsim/evu_full/map": {
+          "median_ns": 1108816.5,
+          "round_medians_ns": [
+            970387.0,
+            1247246.0,
+            1526657.0,
+            921289.0
+          ]
+        },
+        "udpsim/evu_loaded/map": {
+          "median_ns": 465668.0,
+          "round_medians_ns": [
+            402953.0,
+            528383.0,
+            608368.0,
+            392014.0
+          ]
+        },
+        "udpsim/evu_full/cordic": {
+          "median_ns": 1212070.0,
+          "round_medians_ns": [
+            1177484.0,
+            1246656.0,
+            1825083.0,
+            1114709.0
+          ]
+        },
+        "udpsim/evu_loaded/cordic": {
+          "median_ns": 670824.0,
+          "round_medians_ns": [
+            632120.0,
+            709528.0,
+            989967.0,
+            578349.0
+          ]
+        },
+        "udpsim/evu_full/division": {
+          "median_ns": 1382538.5,
+          "round_medians_ns": [
+            1278786.0,
+            1486291.0,
+            2011651.0,
+            1180325.0
+          ]
+        },
+        "udpsim/evu_loaded/division": {
+          "median_ns": 716026.0,
+          "round_medians_ns": [
+            699202.0,
+            732850.0,
+            822596.0,
+            641136.0
+          ]
+        }
+      }
+    },
+    "rust-hybrid": {
+      "head": "581f3b484c0b4a991c05ec997e2b2adc9c63d0e3",
+      "peak_rss_kib_median": 86414.0,
+      "cases": {
+        "boundary/crc_empty": {
+          "median_ns": 192.0,
+          "round_medians_ns": [
+            228.0,
+            156.0,
+            333.0,
+            142.0
+          ]
+        },
+        "crc/0": {
+          "median_ns": 174.5,
+          "round_medians_ns": [
+            209.0,
+            140.0,
+            291.0,
+            131.0
+          ]
+        },
+        "encode/0": {
+          "median_ns": 350.0,
+          "round_medians_ns": [
+            428.0,
+            272.0,
+            628.0,
+            249.0
+          ]
+        },
+        "decode/0": {
+          "median_ns": 437.0,
+          "round_medians_ns": [
+            581.0,
+            293.0,
+            644.0,
+            254.0
+          ]
+        },
+        "packet_encode/0": {
+          "median_ns": 2015.0,
+          "round_medians_ns": [
+            2700.0,
+            1330.0,
+            2862.0,
+            1256.0
+          ]
+        },
+        "packet_decode/0": {
+          "median_ns": 2391.0,
+          "round_medians_ns": [
+            3173.0,
+            1609.0,
+            3374.0,
+            1456.0
+          ]
+        },
+        "crc/16": {
+          "median_ns": 377.5,
+          "round_medians_ns": [
+            696.0,
+            324.0,
+            350.0,
+            405.0
+          ]
+        },
+        "encode/16": {
+          "median_ns": 327.5,
+          "round_medians_ns": [
+            448.0,
+            303.0,
+            352.0,
+            276.0
+          ]
+        },
+        "decode/16": {
+          "median_ns": 323.0,
+          "round_medians_ns": [
+            487.0,
+            305.0,
+            341.0,
+            271.0
+          ]
+        },
+        "packet_encode/16": {
+          "median_ns": 1468.5,
+          "round_medians_ns": [
+            2756.0,
+            1415.0,
+            1522.0,
+            1256.0
+          ]
+        },
+        "packet_decode/16": {
+          "median_ns": 1692.0,
+          "round_medians_ns": [
+            1703.0,
+            1681.0,
+            2821.0,
+            1524.0
+          ]
+        },
+        "crc/256": {
+          "median_ns": 963.0,
+          "round_medians_ns": [
+            974.0,
+            952.0,
+            1240.0,
+            851.0
+          ]
+        },
+        "encode/256": {
+          "median_ns": 525.5,
+          "round_medians_ns": [
+            533.0,
+            518.0,
+            965.0,
+            461.0
+          ]
+        },
+        "decode/256": {
+          "median_ns": 343.5,
+          "round_medians_ns": [
+            341.0,
+            346.0,
+            677.0,
+            307.0
+          ]
+        },
+        "packet_encode/256": {
+          "median_ns": 2355.0,
+          "round_medians_ns": [
+            2213.0,
+            2497.0,
+            3634.0,
+            2051.0
+          ]
+        },
+        "packet_decode/256": {
+          "median_ns": 3041.0,
+          "round_medians_ns": [
+            2435.0,
+            4123.0,
+            3647.0,
+            2182.0
+          ]
+        },
+        "crc/1024": {
+          "median_ns": 3123.5,
+          "round_medians_ns": [
+            2950.0,
+            3453.0,
+            3297.0,
+            2646.0
+          ]
+        },
+        "encode/1024": {
+          "median_ns": 1418.0,
+          "round_medians_ns": [
+            1507.0,
+            2331.0,
+            1329.0,
+            1105.0
+          ]
+        },
+        "decode/1024": {
+          "median_ns": 632.5,
+          "round_medians_ns": [
+            553.0,
+            1081.0,
+            712.0,
+            465.0
+          ]
+        },
+        "packet_encode/1024": {
+          "median_ns": 5552.5,
+          "round_medians_ns": [
+            5197.0,
+            5908.0,
+            7830.0,
+            4677.0
+          ]
+        },
+        "packet_decode/1024": {
+          "median_ns": 4771.5,
+          "round_medians_ns": [
+            4789.0,
+            4754.0,
+            5121.0,
+            4316.0
+          ]
+        },
+        "parse/sympy": {
+          "median_ns": 331839.5,
+          "round_medians_ns": [
+            369505.0,
+            294174.0,
+            513968.0,
+            243686.0
+          ]
+        },
+        "compile_warm/small": {
+          "median_ns": 154892.0,
+          "round_medians_ns": [
+            159589.0,
+            150195.0,
+            268981.0,
+            131418.0
+          ]
+        },
+        "compile_cold/small": {
+          "median_ns": 229274.0,
+          "round_medians_ns": [
+            338362.0,
+            224211.0,
+            234337.0,
+            180953.0
+          ]
+        },
+        "compile_warm/repeated": {
+          "median_ns": 222500.0,
+          "round_medians_ns": [
+            237395.0,
+            207605.0,
+            272244.0,
+            183591.0
+          ]
+        },
+        "compile_cold/repeated": {
+          "median_ns": 670309.5,
+          "round_medians_ns": [
+            614170.0,
+            726449.0,
+            963926.0,
+            417795.0
+          ]
+        },
+        "compile_warm/transcendental": {
+          "median_ns": 389149.5,
+          "round_medians_ns": [
+            609171.0,
+            334404.0,
+            443895.0,
+            310083.0
+          ]
+        },
+        "compile_cold/transcendental": {
+          "median_ns": 1533301.0,
+          "round_medians_ns": [
+            1454704.0,
+            1611898.0,
+            1805373.0,
+            1002314.0
+          ]
+        },
+        "compile_warm/large": {
+          "median_ns": 6009169.0,
+          "round_medians_ns": [
+            6822068.0,
+            5196270.0,
+            8115609.0,
+            4574845.0
+          ]
+        },
+        "compile_cold/large": {
+          "median_ns": 30064120.0,
+          "round_medians_ns": [
+            34084594.0,
+            29326194.0,
+            30802046.0,
+            24350591.0
+          ]
+        },
+        "compile_warm/near_limit": {
+          "median_ns": 10045911.0,
+          "round_medians_ns": [
+            11686827.0,
+            9286090.0,
+            10805732.0,
+            7448232.0
+          ]
+        },
+        "compile_cold/near_limit": {
+          "median_ns": 66024379.5,
+          "round_medians_ns": [
+            66350405.0,
+            65698354.0,
+            69634546.0,
+            56999155.0
+          ]
+        },
+        "compile_warm/over_limit": {
+          "median_ns": 9251135.5,
+          "round_medians_ns": [
+            8855580.0,
+            11005295.0,
+            9646691.0,
+            7980772.0
+          ]
+        },
+        "compile_cold/over_limit": {
+          "median_ns": 71494975.5,
+          "round_medians_ns": [
+            72750892.0,
+            70239059.0,
+            74576358.0,
+            56989110.0
+          ]
+        },
+        "compile_warm/unsupported": {
+          "median_ns": 42974.0,
+          "round_medians_ns": [
+            43262.0,
+            46938.0,
+            42686.0,
+            41159.0
+          ]
+        },
+        "compile_cold/unsupported": {
+          "median_ns": 186636.5,
+          "round_medians_ns": [
+            250642.0,
+            196396.0,
+            176877.0,
+            148951.0
+          ]
+        },
+        "compile_warm/nonfinite": {
+          "median_ns": 26220.0,
+          "round_medians_ns": [
+            24784.0,
+            29932.0,
+            27656.0,
+            21567.0
+          ]
+        },
+        "compile_cold/nonfinite": {
+          "median_ns": 40294.0,
+          "round_medians_ns": [
+            38573.0,
+            76120.0,
+            42015.0,
+            34013.0
+          ]
+        },
+        "compile_warm/pressure": {
+          "median_ns": 3368330.5,
+          "round_medians_ns": [
+            3114476.0,
+            3622185.0,
+            3892464.0,
+            2286551.0
+          ]
+        },
+        "class_compile/sin": {
+          "median_ns": 631855.0,
+          "round_medians_ns": [
+            427429.0,
+            853611.0,
+            836281.0,
+            365186.0
+          ]
+        },
+        "image/sin": {
+          "median_ns": 41192.5,
+          "round_medians_ns": [
+            56104.0,
+            39602.0,
+            42783.0,
+            26948.0
+          ]
+        },
+        "class_compile/poly_box": {
+          "median_ns": 930144.0,
+          "round_medians_ns": [
+            799954.0,
+            1304393.0,
+            1060334.0,
+            626400.0
+          ]
+        },
+        "image/poly_box": {
+          "median_ns": 63097.0,
+          "round_medians_ns": [
+            59228.0,
+            66966.0,
+            80627.0,
+            51518.0
+          ]
+        },
+        "class_compile/gaussian_2d": {
+          "median_ns": 1522295.5,
+          "round_medians_ns": [
+            1439353.0,
+            1605238.0,
+            2491792.0,
+            1197036.0
+          ]
+        },
+        "image/gaussian_2d": {
+          "median_ns": 70416.5,
+          "round_medians_ns": [
+            68201.0,
+            72632.0,
+            88727.0,
+            61681.0
+          ]
+        },
+        "class_compile/charge_sphere": {
+          "median_ns": 2090439.0,
+          "round_medians_ns": [
+            1700301.0,
+            2480577.0,
+            2925839.0,
+            1635125.0
+          ]
+        },
+        "image/charge_sphere": {
+          "median_ns": 85828.5,
+          "round_medians_ns": [
+            83658.0,
+            87999.0,
+            128969.0,
+            71932.0
+          ]
+        },
+        "class_compile/circulation": {
+          "median_ns": 1049769.5,
+          "round_medians_ns": [
+            1271073.0,
+            943334.0,
+            1047841.0,
+            1051698.0
+          ]
+        },
+        "image/circulation": {
+          "median_ns": 30679.5,
+          "round_medians_ns": [
+            28158.0,
+            26133.0,
+            33201.0,
+            43347.0
+          ]
+        },
+        "class_compile/flux_sphere": {
+          "median_ns": 1934470.0,
+          "round_medians_ns": [
+            3335641.0,
+            1689066.0,
+            2179874.0,
+            1405728.0
+          ]
+        },
+        "image/flux_sphere": {
+          "median_ns": 116085.0,
+          "round_medians_ns": [
+            119852.0,
+            112318.0,
+            135284.0,
+            98258.0
+          ]
+        },
+        "class_compile/dipole_power": {
+          "median_ns": 1224515.0,
+          "round_medians_ns": [
+            1545848.0,
+            1040066.0,
+            1408964.0,
+            862141.0
+          ]
+        },
+        "image/dipole_power": {
+          "median_ns": 61955.5,
+          "round_medians_ns": [
+            59042.0,
+            68783.0,
+            64869.0,
+            50537.0
+          ]
+        },
+        "class_compile/loop_bfield": {
+          "median_ns": 1156775.5,
+          "round_medians_ns": [
+            1159925.0,
+            1153626.0,
+            1482068.0,
+            897717.0
+          ]
+        },
+        "image/loop_bfield": {
+          "median_ns": 76773.5,
+          "round_medians_ns": [
+            82690.0,
+            70857.0,
+            91388.0,
+            59889.0
+          ]
+        },
+        "class_compile/plate_potential": {
+          "median_ns": 1691740.5,
+          "round_medians_ns": [
+            2202785.0,
+            1660215.0,
+            1723266.0,
+            1362443.0
+          ]
+        },
+        "image/plate_potential": {
+          "median_ns": 83360.5,
+          "round_medians_ns": [
+            87078.0,
+            77920.0,
+            87868.0,
+            79643.0
+          ]
+        },
+        "class_compile/fermi_half": {
+          "median_ns": 982517.0,
+          "round_medians_ns": [
+            995631.0,
+            969403.0,
+            1129694.0,
+            933197.0
+          ]
+        },
+        "image/fermi_half": {
+          "median_ns": 66457.5,
+          "round_medians_ns": [
+            66890.0,
+            79827.0,
+            66025.0,
+            63555.0
+          ]
+        },
+        "class_compile/decay_wide": {
+          "median_ns": 843409.0,
+          "round_medians_ns": [
+            599763.0,
+            746721.0,
+            940097.0,
+            1092921.0
+          ]
+        },
+        "image/decay_wide": {
+          "median_ns": 63866.5,
+          "round_medians_ns": [
+            62415.0,
+            71329.0,
+            63490.0,
+            64243.0
+          ]
+        },
+        "class_compile/rf_oscillatory": {
+          "median_ns": 826995.5,
+          "round_medians_ns": [
+            616929.0,
+            1121232.0,
+            727918.0,
+            926073.0
+          ]
+        },
+        "image/rf_oscillatory": {
+          "median_ns": 150369.5,
+          "round_medians_ns": [
+            147541.0,
+            153198.0,
+            157674.0,
+            138143.0
+          ]
+        },
+        "class_compile/cube_large": {
+          "median_ns": 998885.5,
+          "round_medians_ns": [
+            996335.0,
+            842875.0,
+            1919046.0,
+            1001436.0
+          ]
+        },
+        "image/cube_large": {
+          "median_ns": 70380.5,
+          "round_medians_ns": [
+            73473.0,
+            67288.0,
+            106685.0,
+            61802.0
+          ]
+        },
+        "sim/ping": {
+          "median_ns": 9674.0,
+          "round_medians_ns": [
+            9667.0,
+            9681.0,
+            16215.0,
+            8862.0
+          ]
+        },
+        "sim/status": {
+          "median_ns": 9489.5,
+          "round_medians_ns": [
+            17074.0,
+            8954.0,
+            10025.0,
+            8376.0
+          ]
+        },
+        "sim/nop": {
+          "median_ns": 9663.5,
+          "round_medians_ns": [
+            9940.0,
+            9387.0,
+            10739.0,
+            8826.0
+          ]
+        },
+        "sim/fpu/ADD": {
+          "median_ns": 640340.5,
+          "round_medians_ns": [
+            663491.0,
+            617190.0,
+            708117.0,
+            552905.0
+          ]
+        },
+        "sim/fpu/DIV": {
+          "median_ns": 653986.0,
+          "round_medians_ns": [
+            652461.0,
+            609165.0,
+            655511.0,
+            915307.0
+          ]
+        },
+        "sim/fpu/SIN": {
+          "median_ns": 1170531.0,
+          "round_medians_ns": [
+            967119.0,
+            1007185.0,
+            1342924.0,
+            1333877.0
+          ]
+        },
+        "sim/transfer/1": {
+          "median_ns": 35665.5,
+          "round_medians_ns": [
+            30122.0,
+            35743.0,
+            35588.0,
+            46767.0
+          ]
+        },
+        "sim/transfer/255": {
+          "median_ns": 69255.5,
+          "round_medians_ns": [
+            82083.0,
+            52374.0,
+            56428.0,
+            84235.0
+          ]
+        },
+        "sim/transfer/256": {
+          "median_ns": 98127.0,
+          "round_medians_ns": [
+            115224.0,
+            78550.0,
+            139290.0,
+            81030.0
+          ]
+        },
+        "sim/transfer/4096": {
+          "median_ns": 839401.5,
+          "round_medians_ns": [
+            788884.0,
+            822503.0,
+            856300.0,
+            997558.0
+          ]
+        },
+        "sim/evu_full/map": {
+          "median_ns": 324916.0,
+          "round_medians_ns": [
+            286191.0,
+            447050.0,
+            301137.0,
+            348695.0
+          ]
+        },
+        "sim/evu_loaded/map": {
+          "median_ns": 225696.0,
+          "round_medians_ns": [
+            209527.0,
+            151615.0,
+            252588.0,
+            241865.0
+          ]
+        },
+        "sim/evu_full/cordic": {
+          "median_ns": 466020.5,
+          "round_medians_ns": [
+            475024.0,
+            437239.0,
+            688828.0,
+            457017.0
+          ]
+        },
+        "sim/evu_loaded/cordic": {
+          "median_ns": 290093.0,
+          "round_medians_ns": [
+            283730.0,
+            296456.0,
+            334181.0,
+            281903.0
+          ]
+        },
+        "sim/evu_full/division": {
+          "median_ns": 449613.5,
+          "round_medians_ns": [
+            448457.0,
+            427903.0,
+            508375.0,
+            450770.0
+          ]
+        },
+        "sim/evu_loaded/division": {
+          "median_ns": 299447.0,
+          "round_medians_ns": [
+            290885.0,
+            310439.0,
+            308009.0,
+            288940.0
+          ]
+        },
+        "class_evu/sin": {
+          "median_ns": 492981.0,
+          "round_medians_ns": [
+            499411.0,
+            486551.0,
+            582072.0,
+            481198.0
+          ]
+        },
+        "class_evu/poly_box": {
+          "median_ns": 778231.0,
+          "round_medians_ns": [
+            781154.0,
+            775308.0,
+            756739.0,
+            795291.0
+          ]
+        },
+        "class_evu/gaussian_2d": {
+          "median_ns": 2262618.5,
+          "round_medians_ns": [
+            2329481.0,
+            2168495.0,
+            2498298.0,
+            2195756.0
+          ]
+        },
+        "class_evu/charge_sphere": {
+          "median_ns": 7707452.0,
+          "round_medians_ns": [
+            7433199.0,
+            7981705.0,
+            9404213.0,
+            7164103.0
+          ]
+        },
+        "class_evu/circulation": {
+          "median_ns": 574595.5,
+          "round_medians_ns": [
+            659954.0,
+            507974.0,
+            487065.0,
+            641217.0
+          ]
+        },
+        "class_evu/flux_sphere": {
+          "median_ns": 5780655.5,
+          "round_medians_ns": [
+            6441481.0,
+            7005399.0,
+            5109114.0,
+            5119830.0
+          ]
+        },
+        "class_evu/dipole_power": {
+          "median_ns": 1129694.0,
+          "round_medians_ns": [
+            806020.0,
+            1443133.0,
+            1318816.0,
+            940572.0
+          ]
+        },
+        "class_evu/loop_bfield": {
+          "median_ns": 1185517.0,
+          "round_medians_ns": [
+            883355.0,
+            1714897.0,
+            1288095.0,
+            1082939.0
+          ]
+        },
+        "class_evu/plate_potential": {
+          "median_ns": 2172226.0,
+          "round_medians_ns": [
+            1741088.0,
+            2297132.0,
+            2477850.0,
+            2047320.0
+          ]
+        },
+        "class_evu/fermi_half": {
+          "median_ns": 1357846.0,
+          "round_medians_ns": [
+            1408116.0,
+            1702125.0,
+            1307576.0,
+            1208866.0
+          ]
+        },
+        "class_evu/decay_wide": {
+          "median_ns": 1089298.5,
+          "round_medians_ns": [
+            1032739.0,
+            1104375.0,
+            1792108.0,
+            1074222.0
+          ]
+        },
+        "class_evu/rf_oscillatory": {
+          "median_ns": 2406438.0,
+          "round_medians_ns": [
+            2494638.0,
+            2055678.0,
+            3073419.0,
+            2318238.0
+          ]
+        },
+        "class_evu/cube_large": {
+          "median_ns": 1134028.5,
+          "round_medians_ns": [
+            1061262.0,
+            1181391.0,
+            1780672.0,
+            1086666.0
+          ]
+        },
+        "udpsim/ping": {
+          "median_ns": 98654.0,
+          "round_medians_ns": [
+            97324.0,
+            99984.0,
+            136492.0,
+            94189.0
+          ]
+        },
+        "udpsim/status": {
+          "median_ns": 99972.0,
+          "round_medians_ns": [
+            97854.0,
+            102090.0,
+            128229.0,
+            97186.0
+          ]
+        },
+        "udpsim/nop": {
+          "median_ns": 116298.5,
+          "round_medians_ns": [
+            103881.0,
+            129421.0,
+            128716.0,
+            97291.0
+          ]
+        },
+        "udpsim/fpu/ADD": {
+          "median_ns": 1268331.5,
+          "round_medians_ns": [
+            1300317.0,
+            1236346.0,
+            1558885.0,
+            1139708.0
+          ]
+        },
+        "udpsim/fpu/DIV": {
+          "median_ns": 1310521.5,
+          "round_medians_ns": [
+            1347639.0,
+            1273404.0,
+            1549685.0,
+            1092688.0
+          ]
+        },
+        "udpsim/fpu/SIN": {
+          "median_ns": 1892687.5,
+          "round_medians_ns": [
+            1953135.0,
+            1832240.0,
+            2158278.0,
+            1415242.0
+          ]
+        },
+        "udpsim/transfer/1": {
+          "median_ns": 281118.5,
+          "round_medians_ns": [
+            281870.0,
+            280367.0,
+            299194.0,
+            208470.0
+          ]
+        },
+        "udpsim/transfer/255": {
+          "median_ns": 331592.0,
+          "round_medians_ns": [
+            333671.0,
+            343188.0,
+            329513.0,
+            266210.0
+          ]
+        },
+        "udpsim/transfer/256": {
+          "median_ns": 565490.0,
+          "round_medians_ns": [
+            578290.0,
+            716094.0,
+            552690.0,
+            453826.0
+          ]
+        },
+        "udpsim/transfer/4096": {
+          "median_ns": 5141131.0,
+          "round_medians_ns": [
+            5228264.0,
+            5053998.0,
+            5392344.0,
+            4536479.0
+          ]
+        },
+        "udpsim/evu_full/map": {
+          "median_ns": 1028591.0,
+          "round_medians_ns": [
+            984691.0,
+            1072491.0,
+            1074217.0,
+            931732.0
+          ]
+        },
+        "udpsim/evu_loaded/map": {
+          "median_ns": 458264.0,
+          "round_medians_ns": [
+            474284.0,
+            442244.0,
+            519458.0,
+            381681.0
+          ]
+        },
+        "udpsim/evu_full/cordic": {
+          "median_ns": 1231668.5,
+          "round_medians_ns": [
+            1250296.0,
+            1213041.0,
+            1678264.0,
+            1083131.0
+          ]
+        },
+        "udpsim/evu_loaded/cordic": {
+          "median_ns": 639245.5,
+          "round_medians_ns": [
+            655822.0,
+            622669.0,
+            784023.0,
+            554995.0
+          ]
+        },
+        "udpsim/evu_full/division": {
+          "median_ns": 1526679.5,
+          "round_medians_ns": [
+            1523777.0,
+            1554290.0,
+            1529582.0,
+            1123452.0
+          ]
+        },
+        "udpsim/evu_loaded/division": {
+          "median_ns": 781449.0,
+          "round_medians_ns": [
+            827836.0,
+            735062.0,
+            923627.0,
+            595706.0
+          ]
+        }
+      }
+    },
+    "c-hybrid": {
+      "head": "629587f4de549ca9da4be766a41a6e6702735db9",
+      "peak_rss_kib_median": 86240.0,
+      "cases": {
+        "boundary/crc_empty": {
+          "median_ns": 209.5,
+          "round_medians_ns": [
+            231.0,
+            188.0,
+            273.0,
+            182.0
+          ]
+        },
+        "crc/0": {
+          "median_ns": 149.5,
+          "round_medians_ns": [
+            148.0,
+            179.0,
+            151.0,
+            137.0
+          ]
+        },
+        "encode/0": {
+          "median_ns": 297.5,
+          "round_medians_ns": [
+            296.0,
+            306.0,
+            299.0,
+            292.0
+          ]
+        },
+        "decode/0": {
+          "median_ns": 302.0,
+          "round_medians_ns": [
+            304.0,
+            304.0,
+            300.0,
+            298.0
+          ]
+        },
+        "packet_encode/0": {
+          "median_ns": 1386.0,
+          "round_medians_ns": [
+            1440.0,
+            1377.0,
+            1395.0,
+            1376.0
+          ]
+        },
+        "packet_decode/0": {
+          "median_ns": 1696.5,
+          "round_medians_ns": [
+            1715.0,
+            1678.0,
+            1741.0,
+            1605.0
+          ]
+        },
+        "crc/16": {
+          "median_ns": 437.5,
+          "round_medians_ns": [
+            726.0,
+            362.0,
+            513.0,
+            362.0
+          ]
+        },
+        "encode/16": {
+          "median_ns": 344.0,
+          "round_medians_ns": [
+            676.0,
+            335.0,
+            350.0,
+            338.0
+          ]
+        },
+        "decode/16": {
+          "median_ns": 362.0,
+          "round_medians_ns": [
+            370.0,
+            354.0,
+            627.0,
+            351.0
+          ]
+        },
+        "packet_encode/16": {
+          "median_ns": 1924.5,
+          "round_medians_ns": [
+            1498.0,
+            1476.0,
+            2351.0,
+            2802.0
+          ]
+        },
+        "packet_decode/16": {
+          "median_ns": 2376.5,
+          "round_medians_ns": [
+            2933.0,
+            1726.0,
+            1820.0,
+            3437.0
+          ]
+        },
+        "crc/256": {
+          "median_ns": 1044.5,
+          "round_medians_ns": [
+            1028.0,
+            999.0,
+            1061.0,
+            1426.0
+          ]
+        },
+        "encode/256": {
+          "median_ns": 615.5,
+          "round_medians_ns": [
+            549.0,
+            670.0,
+            561.0,
+            1084.0
+          ]
+        },
+        "decode/256": {
+          "median_ns": 497.0,
+          "round_medians_ns": [
+            427.0,
+            554.0,
+            440.0,
+            820.0
+          ]
+        },
+        "packet_encode/256": {
+          "median_ns": 2413.0,
+          "round_medians_ns": [
+            3807.0,
+            2316.0,
+            2397.0,
+            2429.0
+          ]
+        },
+        "packet_decode/256": {
+          "median_ns": 2633.0,
+          "round_medians_ns": [
+            2610.0,
+            2526.0,
+            2656.0,
+            3478.0
+          ]
+        },
+        "crc/1024": {
+          "median_ns": 3188.5,
+          "round_medians_ns": [
+            3142.0,
+            3447.0,
+            3235.0,
+            3111.0
+          ]
+        },
+        "encode/1024": {
+          "median_ns": 1932.5,
+          "round_medians_ns": [
+            1822.0,
+            2422.0,
+            2043.0,
+            1250.0
+          ]
+        },
+        "decode/1024": {
+          "median_ns": 875.5,
+          "round_medians_ns": [
+            985.0,
+            1197.0,
+            766.0,
+            680.0
+          ]
+        },
+        "packet_encode/1024": {
+          "median_ns": 7334.0,
+          "round_medians_ns": [
+            6921.0,
+            7747.0,
+            5796.0,
+            7917.0
+          ]
+        },
+        "packet_decode/1024": {
+          "median_ns": 6563.5,
+          "round_medians_ns": [
+            8911.0,
+            5087.0,
+            6557.0,
+            6570.0
+          ]
+        },
+        "parse/sympy": {
+          "median_ns": 350730.0,
+          "round_medians_ns": [
+            394334.0,
+            317828.0,
+            383632.0,
+            312178.0
+          ]
+        },
+        "compile_warm/small": {
+          "median_ns": 166018.0,
+          "round_medians_ns": [
+            242023.0,
+            148211.0,
+            164937.0,
+            167099.0
+          ]
+        },
+        "compile_cold/small": {
+          "median_ns": 236767.5,
+          "round_medians_ns": [
+            233165.0,
+            237451.0,
+            398145.0,
+            236084.0
+          ]
+        },
+        "compile_warm/repeated": {
+          "median_ns": 207098.5,
+          "round_medians_ns": [
+            210308.0,
+            197506.0,
+            230763.0,
+            203889.0
+          ]
+        },
+        "compile_cold/repeated": {
+          "median_ns": 639235.0,
+          "round_medians_ns": [
+            694460.0,
+            520496.0,
+            694853.0,
+            584010.0
+          ]
+        },
+        "compile_warm/transcendental": {
+          "median_ns": 391696.0,
+          "round_medians_ns": [
+            553478.0,
+            352855.0,
+            394324.0,
+            389068.0
+          ]
+        },
+        "compile_cold/transcendental": {
+          "median_ns": 1386887.5,
+          "round_medians_ns": [
+            1607857.0,
+            1206844.0,
+            1255257.0,
+            1518518.0
+          ]
+        },
+        "compile_warm/large": {
+          "median_ns": 5764484.5,
+          "round_medians_ns": [
+            4988418.0,
+            4991886.0,
+            6609861.0,
+            6537083.0
+          ]
+        },
+        "compile_cold/large": {
+          "median_ns": 31896976.0,
+          "round_medians_ns": [
+            33083062.0,
+            25996635.0,
+            37037967.0,
+            30710890.0
+          ]
+        },
+        "compile_warm/near_limit": {
+          "median_ns": 11309518.5,
+          "round_medians_ns": [
+            12362114.0,
+            11034303.0,
+            11325382.0,
+            11293655.0
+          ]
+        },
+        "compile_cold/near_limit": {
+          "median_ns": 81716479.5,
+          "round_medians_ns": [
+            75997190.0,
+            82052696.0,
+            81380263.0,
+            82906778.0
+          ]
+        },
+        "compile_warm/over_limit": {
+          "median_ns": 10971803.5,
+          "round_medians_ns": [
+            10147248.0,
+            11371807.0,
+            10571800.0,
+            12527385.0
+          ]
+        },
+        "compile_cold/over_limit": {
+          "median_ns": 94492316.0,
+          "round_medians_ns": [
+            73393850.0,
+            94555844.0,
+            94428788.0,
+            100592707.0
+          ]
+        },
+        "compile_warm/unsupported": {
+          "median_ns": 50724.5,
+          "round_medians_ns": [
+            44610.0,
+            56839.0,
+            42922.0,
+            69251.0
+          ]
+        },
+        "compile_cold/unsupported": {
+          "median_ns": 204462.0,
+          "round_medians_ns": [
+            179545.0,
+            210914.0,
+            198010.0,
+            367855.0
+          ]
+        },
+        "compile_warm/nonfinite": {
+          "median_ns": 32567.0,
+          "round_medians_ns": [
+            25896.0,
+            29698.0,
+            35436.0,
+            41711.0
+          ]
+        },
+        "compile_cold/nonfinite": {
+          "median_ns": 75083.0,
+          "round_medians_ns": [
+            50840.0,
+            86188.0,
+            68211.0,
+            81955.0
+          ]
+        },
+        "compile_warm/pressure": {
+          "median_ns": 4307280.5,
+          "round_medians_ns": [
+            3245487.0,
+            5030373.0,
+            3858551.0,
+            4756010.0
+          ]
+        },
+        "class_compile/sin": {
+          "median_ns": 525490.5,
+          "round_medians_ns": [
+            524170.0,
+            1100412.0,
+            482876.0,
+            526811.0
+          ]
+        },
+        "image/sin": {
+          "median_ns": 48041.0,
+          "round_medians_ns": [
+            46917.0,
+            49165.0,
+            39098.0,
+            59845.0
+          ]
+        },
+        "class_compile/poly_box": {
+          "median_ns": 981312.5,
+          "round_medians_ns": [
+            832880.0,
+            1129745.0,
+            778141.0,
+            1260521.0
+          ]
+        },
+        "image/poly_box": {
+          "median_ns": 71096.5,
+          "round_medians_ns": [
+            64380.0,
+            74324.0,
+            67869.0,
+            89160.0
+          ]
+        },
+        "class_compile/gaussian_2d": {
+          "median_ns": 1922182.0,
+          "round_medians_ns": [
+            1525886.0,
+            2108818.0,
+            1888670.0,
+            1955694.0
+          ]
+        },
+        "image/gaussian_2d": {
+          "median_ns": 83398.5,
+          "round_medians_ns": [
+            79220.0,
+            119499.0,
+            76676.0,
+            87577.0
+          ]
+        },
+        "class_compile/charge_sphere": {
+          "median_ns": 1866828.0,
+          "round_medians_ns": [
+            1517163.0,
+            2043869.0,
+            1947399.0,
+            1786257.0
+          ]
+        },
+        "image/charge_sphere": {
+          "median_ns": 92708.5,
+          "round_medians_ns": [
+            91423.0,
+            106243.0,
+            93505.0,
+            91912.0
+          ]
+        },
+        "class_compile/circulation": {
+          "median_ns": 1093349.5,
+          "round_medians_ns": [
+            711831.0,
+            1333173.0,
+            1351055.0,
+            853526.0
+          ]
+        },
+        "image/circulation": {
+          "median_ns": 29058.0,
+          "round_medians_ns": [
+            26555.0,
+            29203.0,
+            28930.0,
+            29186.0
+          ]
+        },
+        "class_compile/flux_sphere": {
+          "median_ns": 2290285.5,
+          "round_medians_ns": [
+            1895006.0,
+            2356517.0,
+            2224054.0,
+            3272760.0
+          ]
+        },
+        "image/flux_sphere": {
+          "median_ns": 127177.5,
+          "round_medians_ns": [
+            116370.0,
+            170435.0,
+            130872.0,
+            123483.0
+          ]
+        },
+        "class_compile/dipole_power": {
+          "median_ns": 1721460.5,
+          "round_medians_ns": [
+            1029863.0,
+            1882705.0,
+            1560216.0,
+            1959654.0
+          ]
+        },
+        "image/dipole_power": {
+          "median_ns": 61148.5,
+          "round_medians_ns": [
+            57242.0,
+            114106.0,
+            60209.0,
+            62088.0
+          ]
+        },
+        "class_compile/loop_bfield": {
+          "median_ns": 1518533.0,
+          "round_medians_ns": [
+            1042375.0,
+            1952610.0,
+            1340846.0,
+            1696220.0
+          ]
+        },
+        "image/loop_bfield": {
+          "median_ns": 75198.5,
+          "round_medians_ns": [
+            67949.0,
+            137417.0,
+            76686.0,
+            73711.0
+          ]
+        },
+        "class_compile/plate_potential": {
+          "median_ns": 1889696.0,
+          "round_medians_ns": [
+            1458930.0,
+            2826390.0,
+            1647911.0,
+            2131481.0
+          ]
+        },
+        "image/plate_potential": {
+          "median_ns": 91976.0,
+          "round_medians_ns": [
+            73354.0,
+            127603.0,
+            83245.0,
+            100707.0
+          ]
+        },
+        "class_compile/fermi_half": {
+          "median_ns": 1310419.0,
+          "round_medians_ns": [
+            869267.0,
+            1792296.0,
+            1151188.0,
+            1469650.0
+          ]
+        },
+        "image/fermi_half": {
+          "median_ns": 85964.5,
+          "round_medians_ns": [
+            78281.0,
+            116107.0,
+            93648.0,
+            64107.0
+          ]
+        },
+        "class_compile/decay_wide": {
+          "median_ns": 631648.0,
+          "round_medians_ns": [
+            575683.0,
+            1184406.0,
+            620104.0,
+            643192.0
+          ]
+        },
+        "image/decay_wide": {
+          "median_ns": 71917.5,
+          "round_medians_ns": [
+            62865.0,
+            99078.0,
+            80970.0,
+            61683.0
+          ]
+        },
+        "class_compile/rf_oscillatory": {
+          "median_ns": 823707.5,
+          "round_medians_ns": [
+            621378.0,
+            915876.0,
+            1116311.0,
+            731539.0
+          ]
+        },
+        "image/rf_oscillatory": {
+          "median_ns": 188235.0,
+          "round_medians_ns": [
+            168752.0,
+            231418.0,
+            207718.0,
+            159658.0
+          ]
+        },
+        "class_compile/cube_large": {
+          "median_ns": 1411728.5,
+          "round_medians_ns": [
+            1502478.0,
+            1702759.0,
+            1320979.0,
+            1124571.0
+          ]
+        },
+        "image/cube_large": {
+          "median_ns": 92947.5,
+          "round_medians_ns": [
+            103394.0,
+            125467.0,
+            82501.0,
+            82327.0
+          ]
+        },
+        "sim/ping": {
+          "median_ns": 19087.5,
+          "round_medians_ns": [
+            10407.0,
+            20866.0,
+            18845.0,
+            19330.0
+          ]
+        },
+        "sim/status": {
+          "median_ns": 14648.0,
+          "round_medians_ns": [
+            18306.0,
+            19708.0,
+            10990.0,
+            10253.0
+          ]
+        },
+        "sim/nop": {
+          "median_ns": 20001.0,
+          "round_medians_ns": [
+            22320.0,
+            20889.0,
+            19113.0,
+            10577.0
+          ]
+        },
+        "sim/fpu/ADD": {
+          "median_ns": 857985.5,
+          "round_medians_ns": [
+            852284.0,
+            863687.0,
+            944374.0,
+            691777.0
+          ]
+        },
+        "sim/fpu/DIV": {
+          "median_ns": 874602.5,
+          "round_medians_ns": [
+            1021215.0,
+            727990.0,
+            1140659.0,
+            697415.0
+          ]
+        },
+        "sim/fpu/SIN": {
+          "median_ns": 1205149.0,
+          "round_medians_ns": [
+            1192761.0,
+            1217537.0,
+            1274401.0,
+            1022220.0
+          ]
+        },
+        "sim/transfer/1": {
+          "median_ns": 37763.0,
+          "round_medians_ns": [
+            33262.0,
+            42264.0,
+            31808.0,
+            48510.0
+          ]
+        },
+        "sim/transfer/255": {
+          "median_ns": 67680.0,
+          "round_medians_ns": [
+            57614.0,
+            81679.0,
+            57562.0,
+            77746.0
+          ]
+        },
+        "sim/transfer/256": {
+          "median_ns": 118327.0,
+          "round_medians_ns": [
+            119977.0,
+            154717.0,
+            84204.0,
+            116677.0
+          ]
+        },
+        "sim/transfer/4096": {
+          "median_ns": 1014356.5,
+          "round_medians_ns": [
+            940764.0,
+            1202899.0,
+            895078.0,
+            1087949.0
+          ]
+        },
+        "sim/evu_full/map": {
+          "median_ns": 411269.5,
+          "round_medians_ns": [
+            472318.0,
+            437304.0,
+            343371.0,
+            385235.0
+          ]
+        },
+        "sim/evu_loaded/map": {
+          "median_ns": 162587.0,
+          "round_medians_ns": [
+            239448.0,
+            170171.0,
+            155003.0,
+            152548.0
+          ]
+        },
+        "sim/evu_full/cordic": {
+          "median_ns": 511348.0,
+          "round_medians_ns": [
+            447636.0,
+            540161.0,
+            704537.0,
+            482535.0
+          ]
+        },
+        "sim/evu_loaded/cordic": {
+          "median_ns": 365922.0,
+          "round_medians_ns": [
+            295473.0,
+            477828.0,
+            436371.0,
+            274898.0
+          ]
+        },
+        "sim/evu_full/division": {
+          "median_ns": 571234.0,
+          "round_medians_ns": [
+            482859.0,
+            687242.0,
+            659398.0,
+            483070.0
+          ]
+        },
+        "sim/evu_loaded/division": {
+          "median_ns": 380222.5,
+          "round_medians_ns": [
+            302487.0,
+            476718.0,
+            370816.0,
+            389629.0
+          ]
+        },
+        "class_evu/sin": {
+          "median_ns": 660024.0,
+          "round_medians_ns": [
+            518908.0,
+            956307.0,
+            801140.0,
+            499132.0
+          ]
+        },
+        "class_evu/poly_box": {
+          "median_ns": 890525.0,
+          "round_medians_ns": [
+            786679.0,
+            957920.0,
+            1542883.0,
+            823130.0
+          ]
+        },
+        "class_evu/gaussian_2d": {
+          "median_ns": 2613476.0,
+          "round_medians_ns": [
+            2347152.0,
+            2700115.0,
+            2526837.0,
+            2844774.0
+          ]
+        },
+        "class_evu/charge_sphere": {
+          "median_ns": 9294543.5,
+          "round_medians_ns": [
+            8741774.0,
+            9847313.0,
+            8561822.0,
+            9866204.0
+          ]
+        },
+        "class_evu/circulation": {
+          "median_ns": 700384.5,
+          "round_medians_ns": [
+            1202110.0,
+            687444.0,
+            713325.0,
+            560150.0
+          ]
+        },
+        "class_evu/flux_sphere": {
+          "median_ns": 5555916.5,
+          "round_medians_ns": [
+            6260236.0,
+            5128132.0,
+            5615380.0,
+            5496453.0
+          ]
+        },
+        "class_evu/dipole_power": {
+          "median_ns": 930863.5,
+          "round_medians_ns": [
+            949555.0,
+            996107.0,
+            912172.0,
+            857307.0
+          ]
+        },
+        "class_evu/loop_bfield": {
+          "median_ns": 1043259.5,
+          "round_medians_ns": [
+            949153.0,
+            1042219.0,
+            1044300.0,
+            1622755.0
+          ]
+        },
+        "class_evu/plate_potential": {
+          "median_ns": 2082391.5,
+          "round_medians_ns": [
+            2139673.0,
+            2425763.0,
+            1984830.0,
+            2025110.0
+          ]
+        },
+        "class_evu/fermi_half": {
+          "median_ns": 1277325.0,
+          "round_medians_ns": [
+            1131736.0,
+            1543049.0,
+            997178.0,
+            1422914.0
+          ]
+        },
+        "class_evu/decay_wide": {
+          "median_ns": 1311692.0,
+          "round_medians_ns": [
+            1035633.0,
+            1522264.0,
+            1101120.0,
+            1873365.0
+          ]
+        },
+        "class_evu/rf_oscillatory": {
+          "median_ns": 2427964.5,
+          "round_medians_ns": [
+            2400678.0,
+            2455251.0,
+            2287512.0,
+            2731217.0
+          ]
+        },
+        "class_evu/cube_large": {
+          "median_ns": 1253234.5,
+          "round_medians_ns": [
+            1255961.0,
+            1187338.0,
+            1250508.0,
+            2059166.0
+          ]
+        },
+        "udpsim/ping": {
+          "median_ns": 103536.5,
+          "round_medians_ns": [
+            103098.0,
+            103562.0,
+            103511.0,
+            141967.0
+          ]
+        },
+        "udpsim/status": {
+          "median_ns": 102770.0,
+          "round_medians_ns": [
+            95279.0,
+            110261.0,
+            94022.0,
+            133274.0
+          ]
+        },
+        "udpsim/nop": {
+          "median_ns": 116378.0,
+          "round_medians_ns": [
+            100712.0,
+            132044.0,
+            92996.0,
+            139262.0
+          ]
+        },
+        "udpsim/fpu/ADD": {
+          "median_ns": 1462720.5,
+          "round_medians_ns": [
+            1334886.0,
+            1723883.0,
+            1251078.0,
+            1590555.0
+          ]
+        },
+        "udpsim/fpu/DIV": {
+          "median_ns": 1372760.5,
+          "round_medians_ns": [
+            1313294.0,
+            1771684.0,
+            1308671.0,
+            1432227.0
+          ]
+        },
+        "udpsim/fpu/SIN": {
+          "median_ns": 1845033.5,
+          "round_medians_ns": [
+            1760675.0,
+            1954067.0,
+            1706891.0,
+            1929392.0
+          ]
+        },
+        "udpsim/transfer/1": {
+          "median_ns": 299472.5,
+          "round_medians_ns": [
+            298440.0,
+            300505.0,
+            240552.0,
+            312649.0
+          ]
+        },
+        "udpsim/transfer/255": {
+          "median_ns": 308354.5,
+          "round_medians_ns": [
+            309499.0,
+            307210.0,
+            268298.0,
+            311324.0
+          ]
+        },
+        "udpsim/transfer/256": {
+          "median_ns": 564742.0,
+          "round_medians_ns": [
+            565787.0,
+            563697.0,
+            520381.0,
+            670025.0
+          ]
+        },
+        "udpsim/transfer/4096": {
+          "median_ns": 5232573.0,
+          "round_medians_ns": [
+            5503363.0,
+            5325217.0,
+            5088886.0,
+            5139929.0
+          ]
+        },
+        "udpsim/evu_full/map": {
+          "median_ns": 1063414.0,
+          "round_medians_ns": [
+            1148608.0,
+            1043772.0,
+            1083056.0,
+            945555.0
+          ]
+        },
+        "udpsim/evu_loaded/map": {
+          "median_ns": 463966.5,
+          "round_medians_ns": [
+            466939.0,
+            460994.0,
+            487839.0,
+            406999.0
+          ]
+        },
+        "udpsim/evu_full/cordic": {
+          "median_ns": 1226175.0,
+          "round_medians_ns": [
+            1131091.0,
+            1218919.0,
+            1399141.0,
+            1233431.0
+          ]
+        },
+        "udpsim/evu_loaded/cordic": {
+          "median_ns": 660631.0,
+          "round_medians_ns": [
+            557354.0,
+            661831.0,
+            659431.0,
+            691246.0
+          ]
+        },
+        "udpsim/evu_full/division": {
+          "median_ns": 1333702.0,
+          "round_medians_ns": [
+            1107968.0,
+            1421711.0,
+            1253617.0,
+            1413787.0
+          ]
+        },
+        "udpsim/evu_loaded/division": {
+          "median_ns": 617920.5,
+          "round_medians_ns": [
+            579967.0,
+            647770.0,
+            588071.0,
+            970130.0
+          ]
+        }
+      }
+    }
+  }
+}

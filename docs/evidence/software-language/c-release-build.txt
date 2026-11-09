@@ -1,0 +1,7 @@
+running build_ext
+building '_framing_native' extension
+cc -pthread -Wsign-compare -Wunreachable-code -DNDEBUG -g -fwrapv -O3 -Wall -O3 -fstack-protector -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fPIC -fPIC -I/tmp/mathaccel-language-py311/include -I/home/kroix/.local/share/uv/python/cpython-3.11.18-linux-x86_64-gnu/include/python3.11 -c bindings.c -o build/temp.linux-x86_64-cpython-311/bindings.o -O3 -std=c11 -Wall -Wextra
+cc -pthread -Wsign-compare -Wunreachable-code -DNDEBUG -g -fwrapv -O3 -Wall -O3 -fstack-protector -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fPIC -fPIC -I/tmp/mathaccel-language-py311/include -I/home/kroix/.local/share/uv/python/cpython-3.11.18-linux-x86_64-gnu/include/python3.11 -c codec.c -o build/temp.linux-x86_64-cpython-311/codec.o -O3 -std=c11 -Wall -Wextra
+cc -pthread -shared -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now -Wl,--build-id=sha1 -Wl,--exclude-libs,ALL build/temp.linux-x86_64-cpython-311/bindings.o build/temp.linux-x86_64-cpython-311/codec.o -L/home/kroix/.local/share/uv/python/cpython-3.11.18-linux-x86_64-gnu/lib -o build/lib.linux-x86_64-cpython-311/_framing_native.cpython-311-x86_64-linux-gnu.so
+copying build/lib.linux-x86_64-cpython-311/_framing_native.cpython-311-x86_64-linux-gnu.so -> 
+release build wall seconds: 1.602
