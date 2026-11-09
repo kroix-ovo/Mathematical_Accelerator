@@ -861,6 +861,13 @@ class EvuProfileTest(uvm_test):
         x, y = sp.symbols("x y", real=True)
         mixed = sp.sin(x) * sp.exp(-y) / (1 + x**2) + sp.sqrt(y) * sp.cos(x * y) + x * y
         runs.append(("long_mixed", integral_run(mixed, [Axis(x, 0, 2, 16, 16), Axis(y, 0.1, 2, 16, 16)])))
+        # Divide-heavy runs large enough to show a divider's steady rate. The class
+        # list's divide-only rules (fermi_half, dipole_power) have 32 to 64 points,
+        # where setting up the run takes a large share of the clocks.
+        fermi = next(p for p in PROBLEMS if p.name == "fermi_half")
+        runs.append(("fermi_large", integral_run(fermi.expr, fermi.axes([(1024, 16)]))))
+        runs.append(("lorentz_large", integral_run(1 / (1 + x**2), [Axis(x, -4, 4, 1024, 16)])))
+        runs.append(("two_divides", integral_run(x / (1 + x**2) + 1 / (2 + x), [Axis(x, 0, 1, 1024, 16)])))
         for name, run in runs:
             if run.points > limit:
                 continue
