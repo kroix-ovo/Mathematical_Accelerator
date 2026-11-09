@@ -68,8 +68,8 @@ def main():
         "repeated": (sp.sin(x) + sp.cos(x)) ** 2 + sp.sin(x) + sp.cos(x),
         "transcendental": sp.exp(-x * x) + sp.sin(x) / (x + 2),
         "large": sp.Add(*(sp.sin(x + sp.Rational(k, 100)) for k in range(40))),
-        "near_limit": sp.Add(*(sp.sin(x + sp.Rational(k, 100)) for k in range(80))),
-        "over_limit": sp.Add(*(sp.sin(x + sp.Rational(k, 100)) for k in range(90))),
+        "near_limit": sp.Add(*(sp.sin(sp.sin(x + sp.Rational(k, 100))) for k in range(64))),
+        "over_limit": sp.Add(*(sp.sin(sp.sin(x + sp.Rational(k, 100))) for k in range(65))),
         "unsupported": sp.erf(x),
         "nonfinite": sp.oo,
     }
@@ -83,6 +83,8 @@ def main():
 
     for name, expr in expressions.items():
         fingerprints[f"compile/{name}"] = compile_record(expr, {x: 0})
+        if name == "near_limit":
+            assert len(fingerprints[f"compile/{name}"][0]) == 255
         cases[f"compile_warm/{name}"] = lambda e=expr: compile_record(e, {x: 0})
 
         def cold(e=expr):
