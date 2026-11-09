@@ -3,6 +3,7 @@ import os
 
 from setuptools import Extension, setup
 
+flags = ["/O2"] if os.name == "nt" else ["-O3", "-std=c11", "-Wall", "-Wextra"]
 setup(name="mathaccel-framing-c", version="0.1.0",
       ext_modules=[Extension("_framing_native", ["codec.c", "bindings.c"],
-                             extra_compile_args=["/O2"] if os.name == "nt" else ["-O3", "-std=c11", "-Wall", "-Wextra"])])
+                             extra_compile_args=flags)])
