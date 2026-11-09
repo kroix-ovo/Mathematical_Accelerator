@@ -4,6 +4,7 @@
     python hw/scripts/run_gate.py --vivado        also build and route the full design
     python hw/scripts/run_gate.py --only pyuvm    just the steps whose name starts with "pyuvm"
     python hw/scripts/run_gate.py --list          print the steps without running them
+    python hw/scripts/run_gate.py --only sw --keep   re-run some steps, keep the other results
 
 I wrote this for docs/divider-optimization-task.md. Every divider candidate lives
 in its own worktree, and I need to be sure each one passed exactly the same list,
@@ -12,11 +13,14 @@ to test; every path below is relative to this script's own repository, so a
 worktree tests its own RTL and writes its own build/ folder.
 
 Each step's console output goes to build/gate/<step>.log, and build/gate/summary.json
-records pass/fail, time and the lines I compare between candidates (result counts,
-latencies, the overlap probe). The steps are the CI list from .github/workflows/ci.yml
-plus the SV UVM tests in xsim, the EVU cycle profile and, with --vivado, the routed
-build. Steps that use different simulator build folders run in parallel; steps that
-share one run one after another, because a second build would overwrite the first.
+records pass/fail, time, the commit it ran on and the lines I compare between
+candidates (result counts, latencies, the overlap probe). With --keep, the steps I
+run replace their old rows and every other row stays, still naming the commit it
+ran on, so a test-only fix doesn't force the whole gate to run again. The steps are
+the CI list from .github/workflows/ci.yml plus the SV UVM tests in xsim, the EVU
+cycle profile and, with --vivado, the routed build. Steps that use different
+simulator build folders run in parallel; steps that share one run one after
+another, because a second build would overwrite the first.
 """
 
 from __future__ import annotations
@@ -110,7 +114,7 @@ KEEP = re.compile(r"checked \d+ results|CORDIC results:|divide/sqrt units:|CORDI
                   r"WNS:|passed|failed|PASS:|FAIL:|UVM_ERROR :|UVM_FATAL :")
 
 
-def run_step(name: str, cmd: list[str]) -> dict:
+def run_step(name: str, cmd: list[str], head: str) -> dict:
     """Run one step, keep its whole output in a log file and return a summary row."""
     t0 = time.time()
     if name == "vivado-build":
@@ -120,7 +124,7 @@ def run_step(name: str, cmd: list[str]) -> dict:
     (OUT / f"{name}.log").write_text(out, encoding="utf-8")
     ok = res.returncode == 0
     keep = [ln.strip() for ln in out.splitlines() if KEEP.search(ln)][-40:]
-    row = {"step": name, "ok": ok, "seconds": round(time.time() - t0, 1), "lines": keep}
+    row = {"step": name, "ok": ok, "seconds": round(time.time() - t0, 1), "head": head, "lines": keep}
     print(f"{'PASS' if ok else 'FAIL'}  {name:28s} {row['seconds']:8.1f} s", flush=True)
     return row
 
@@ -133,6 +137,7 @@ def main() -> int:
     ap.add_argument("--skip", action="append", default=[], help="skip steps whose name starts with this")
     ap.add_argument("--jobs", type=int, default=6, help="groups to run at the same time")
     ap.add_argument("--list", action="store_true")
+    ap.add_argument("--keep", action="store_true", help="merge into the existing summary instead of replacing it")
     args = ap.parse_args()
 
     steps = STEPS + ([VIVADO] if args.vivado else [])
@@ -155,7 +160,7 @@ def main() -> int:
         groups.setdefault(group, []).append((name, cmd))
 
     def run_group(items: list[tuple[str, list[str]]]) -> list[dict]:
-        return [run_step(n, c) for n, c in items]
+        return [run_step(n, c, head) for n, c in items]
 
     # The Vivado build uses most of the machine, so it runs after the simulations.
     vivado = groups.pop("vivado", [])
@@ -163,6 +168,13 @@ def main() -> int:
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
         rows = [r for rs in pool.map(run_group, groups.values()) for r in rs]
     rows += run_group(vivado)
+    if args.keep and (OUT / "summary.json").exists():
+        # Keep the old rows I didn't re-run, in the order of STEPS.
+        old = json.loads((OUT / "summary.json").read_text(encoding="utf-8"))
+        done = {r["step"] for r in rows}
+        kept = [dict(r, head=r.get("head", old["head"])) for r in old["steps"] if r["step"] not in done]
+        order = {name: k for k, (name, _, _) in enumerate(STEPS + [VIVADO])}
+        rows = sorted(kept + rows, key=lambda r: order.get(r["step"], len(order)))
     summary = {"root": str(ROOT), "head": head, "dirty": dirty, "seconds": round(time.time() - t0, 1),
                "passed": all(r["ok"] for r in rows), "steps": rows}
     (OUT / "summary.json").write_text(json.dumps(summary, indent=1) + "\n", encoding="utf-8")
