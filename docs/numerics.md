@@ -45,9 +45,9 @@ Underflow uses the "after rounding" tininess rule, the one x86 SSE and RISC-V us
 | fp_addsub | ADD, SUB | 1 per clock | 7 clocks |
 | fp_mul | MUL | 1 per clock | 7 clocks |
 | fp_misc | I2F, F2I, MIN, MAX, EQ, LT, LE | 1 per clock | 7 clocks |
-| fp_div | DIV | 1 at a time | 33 clocks or more (fixed iteration count) |
+| fp_div | DIV | 1 per clock (pipelined) | 24 clocks with a free result port |
 | fp_sqrt | SQRT | 1 at a time, independent of fp_div | 33 clocks or more (fixed iteration count) |
-| fp_cordic | SIN, COS, ATAN2, HYPOT, EXP, LN | 1 per clock while reserved FIFO space is available | 54 clocks with a free result port; at most 96 when mixed ops make it wait (92 is the longest seen) |
+| fp_cordic | SIN, COS, ATAN2, HYPOT, EXP, LN | 1 per clock while reserved FIFO space is available | 54 clocks with a free result port; at most 128 when mixed ops make it wait (up to 32 queued divide results can go first) |
 
 The FPU kernel reads two operands per element through one RAM port, so it issues one element every 4 clocks. Divide and square root issue every 33 clocks. Until 2026-11-08 one fp_divsqrt unit did both; I split it so a divide and a square root can run at the same time, which matters to EVU programs that need both per point. The arithmetic, results and clock counts of each operation are unchanged. At 100 MHz the kernel computes 25 million pipelined operations per second, or 3 million divides. Moving the data over the 2 Mbaud UART takes far longer than the arithmetic, so wall time on the board is set by the link.
 

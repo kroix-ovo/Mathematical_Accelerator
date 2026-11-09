@@ -74,10 +74,10 @@ LAT_PIPE = 7
 # The fewest clocks from an accepted DIV or SQRT to its result. A divider
 # experiment that shortens fp_div lowers LAT_DIV_MIN; the result must never
 # come back sooner than the unit's own pipeline allows.
-LAT_DIV_MIN = 30
+LAT_DIV_MIN = 24
 LAT_SQRT_MIN = 30
 LAT_CORD = 54          # 52 in fp_cordic, one in the FIFO, one output register
-LAT_CORD_MAX = 96      # the FIFO age rule's bound: LAT_CORD + AGE_MAX (32) + 10 (two held divide/sqrt results)
+LAT_CORD_MAX = 128     # the FIFO age rule's bound: LAT_CORD + AGE_MAX (32) + 10 + DQ (32): every promised divide result may go first
 UNARY = {FpuOp.SQRT, FpuOp.I2F, FpuOp.F2I, FpuOp.SIN, FpuOp.COS, FpuOp.EXP, FpuOp.LN}
 
 
@@ -609,6 +609,36 @@ class DsProbe(uvm_component):
                          f"{self.both_hold} clocks both holding a result")
 
 
+class DivQueueProbe(uvm_component):
+    """Watches the pipelined divider's result queue (white box, u_div.cnt and q_cnt).
+
+    Checks that the promised places never exceed DQ and that stored results never
+    exceed promised ones, and counts the clocks where out_urgent stopped requests,
+    so the regression can require that the urgent rule was really exercised."""
+
+    def build_phase(self):
+        self.dut = ConfigDB().get(self, "", "DUT")
+        self.max_cnt = self.max_q = self.urgent = self.errors = 0
+
+    async def run_phase(self):
+        dut = self.dut
+        while True:
+            await FallingEdge(dut.clk)
+            await ReadOnly()
+            if int(dut.rst.value):
+                continue
+            c, q = int(dut.u_div.cnt.value), int(dut.u_div.q_cnt.value)
+            self.max_cnt, self.max_q = max(self.max_cnt, c), max(self.max_q, q)
+            self.urgent += int(dut.div_urgent.value)
+            if c > 32 or q > c:
+                self.errors += 1
+                self.logger.error(f"divide queue counters out of range: cnt={c} q_cnt={q}")
+
+    def report_phase(self):
+        self.logger.info(f"divide queue: at most {self.max_cnt} promised, {self.max_q} stored; "
+                         f"{self.urgent} clocks with out_urgent")
+
+
 def kind_of(x: int) -> str:
     """Classify raw operand bits for coverage without changing the bits sent to the DUT."""
     e, f = (x >> 23) & 0xFF, x & 0x7FFFFF
@@ -645,6 +675,7 @@ class FpuEnv(uvm_env):
         self.cov = FpuCoverage("cov", self)
         self.probe = FifoProbe("probe", self)
         self.ds_probe = DsProbe("ds_probe", self)
+        self.q_probe = DivQueueProbe("q_probe", self)
 
     def connect_phase(self):
         self.agent.req_mon.ap.connect(self.sb.req_fifo.analysis_export)
@@ -688,6 +719,7 @@ class FpuBaseTest(uvm_test):
         sb = self.env.sb
         assert sb.errors == 0 and sb.checked > 0, f"{sb.errors} errors, {sb.checked} checked"
         assert self.env.ds_probe.errors == 0, f"{self.env.ds_probe.errors} hold-rule errors"
+        assert self.env.q_probe.errors == 0, f"{self.env.q_probe.errors} divide queue errors"
 
 
 @pyuvm.test()
@@ -752,6 +784,7 @@ class FpuRegressTest(FpuBaseTest):
         ds = self.env.ds_probe
         assert ds.overlap > 0, "a divide and a square root were never in progress together"
         assert ds.both_hold > 0, "the two units never held a result at the same time"
+        assert self.env.q_probe.urgent > 0, "the divide queue's urgent rule never stopped requests"
         if FD < 64:
             # The small FIFO exists to reach the stall rules; make sure it did.
             assert pr.noroom > 0 and pr.full > 0, f"stall rules not reached: {pr.noroom} / {pr.full}"
