@@ -46,6 +46,11 @@ def main():
     datasets = {n: bytes(rng.randrange(256) for _ in range(n)) for n in (0, 16, 256, 1024)}
     cases = {}
     fingerprints = {}
+    try:
+        from mathaccel import _framing_native
+        cases["boundary/crc_empty"] = lambda: _framing_native.crc16(b"", 0xffff)
+    except ImportError:
+        cases["boundary/crc_empty"] = lambda: framing.crc16(b"", 0xffff)
     for n, data in datasets.items():
         encoded = framing.cobs_encode(data)
         wire = Frame(2, 7, data).encode()[:-1]
@@ -57,6 +62,7 @@ def main():
         fingerprints[f"wire/{n}"] = wire.hex()
 
     x = sp.Symbol("x", real=True)
+    cases["parse/sympy"] = lambda: sp.sympify("sin(x)/(x+2) + exp(-x*x)", locals={"x": x})
     expressions = {
         "small": x * x + 2,
         "repeated": (sp.sin(x) + sp.cos(x)) ** 2 + sp.sin(x) + sp.cos(x),
