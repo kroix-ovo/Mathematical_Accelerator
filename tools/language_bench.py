@@ -116,6 +116,9 @@ def main():
         cases[f"{port}/ping"] = dev.ping
         cases[f"{port}/status"] = dev.status
         cases[f"{port}/nop"] = dev.nop
+        for op in (spec.FpuOp.ADD, spec.FpuOp.DIV, spec.FpuOp.SIN):
+            operands = np.linspace(0.1, 1, 16, dtype=np.float32).view(np.uint32)
+            cases[f"{port}/fpu/{op.name}"] = lambda d=dev, o=op, a=operands: d.fpu(o, a, a)
         for n in (1, 255, 256, 4096):
             words = np.resize(bits, n)
             def transfer(d=dev, w=words):
@@ -134,6 +137,14 @@ def main():
             base = {"map": 10000, "cordic": 12000, "division": 14000}[kind]
             image = dev.evu_load(run, base)
             cases[f"{port}/evu_loaded/{kind}"] = lambda d=dev, i=image, b=reply.bounds: d.evu_start(i, b)
+        if port == "sim":
+            for problem in PROBLEMS:
+                run = integral_run(problem.expr, problem.axes(problem.rules[0]))
+                reply = dev.evu_run(run)
+                fingerprints[f"class_evu/{problem.name}"] = [reply.results.tolist(), reply.flags.tolist(), reply.cycles]
+                # Full class-suite runs can overwrite the preloaded image spans.
+                # Reload only here; repeated loaded-image cases run before these cases.
+                cases[f"class_evu/{problem.name}"] = lambda d=dev, r=run: d.evu_run(r)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     if args.profile:
@@ -153,7 +164,9 @@ def main():
         for _ in range(3):
             fn()
         # Long compiler cases need fewer samples. Do not publish unsupported tail estimates.
-        count = min(args.samples, 11) if "compile" in name else args.samples
+        count = min(args.samples, 11) if "compile" in name or "class_evu" in name else args.samples
+        if name.startswith(("sim/", "udpsim/")):
+            count = min(count, 101)
         samples = []
         phases = []
         cpu = time.process_time_ns()

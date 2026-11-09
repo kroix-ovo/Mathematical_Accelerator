@@ -18,7 +18,7 @@ def main():
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument("--worktrees", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--rounds", type=int, default=3)
+    parser.add_argument("--rounds", type=int, default=4)
     parser.add_argument("--samples", type=int, default=1001)
     parser.add_argument("--tests", action="store_true")
     args = parser.parse_args()
@@ -55,10 +55,8 @@ def main():
     harness = Path(__file__).with_name("language_bench.py")
     rounds = []
     for round_id in range(args.rounds):
-        # Rotate and reverse instead of always measuring the native variants last.
+        # Four rotations put every variant in every measurement position.
         order = list(VARIANTS[round_id % 4:] + VARIANTS[:round_id % 4])
-        if round_id % 2:
-            order.reverse()
         for name in order:
             target = out / f"round-{round_id}-{name}.json"
             print(f"round {round_id}: {name}", flush=True)
