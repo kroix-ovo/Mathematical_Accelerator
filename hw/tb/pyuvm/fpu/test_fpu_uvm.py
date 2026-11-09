@@ -77,7 +77,7 @@ LAT_PIPE = 7
 LAT_DIV_MIN = 24
 LAT_SQRT_MIN = 30
 LAT_CORD = 54          # 52 in fp_cordic, one in the FIFO, one output register
-LAT_CORD_MAX = 128     # the FIFO age rule's bound: LAT_CORD + AGE_MAX (32) + 10 + DQ (32): every promised divide result may go first
+LAT_CORD_MAX = 128     # LAT_CORD + AGE_MAX (32) + 10 + DQ (32): every promised divide may go first
 UNARY = {FpuOp.SQRT, FpuOp.I2F, FpuOp.F2I, FpuOp.SIN, FpuOp.COS, FpuOp.EXP, FpuOp.LN}
 
 
