@@ -91,7 +91,7 @@ What E costs that B doesn't:
 Either pipelined divider changes the FPU integration: the urgent rule, and a CORDIC worst-case bound of 128 clocks instead of 96. If I didn't want that change, A is the cheapest option that keeps the baseline integration: +100 LUTs for 33 → 20 clocks per divide.
 
 Before I merge anything:
-- Run the board correctness and application suite over Ethernet and the UART on E's bitstream (the build is in `worktrees/div-multiplicative/build/vivado/`). I haven't done that, and only that measures first-run and repeat-run wall time.
+- Run the board correctness and application suite over Ethernet and the UART on B and E, which are the two I'm taking to the board, with the split baseline as the reference. `tools/board_suite.py` does it for one candidate at a time (see "Board runs" below). I haven't done that yet, and only that measures first-run and repeat-run wall time.
 - Look at the Ethernet checksum path. It failed C's build and is the worst path in B's, so whichever divider I merge, it will cause trouble sooner or later.
 
 The square-root unit is next. plate_potential and loop_bfield can't go below 33 clocks per point until it gets faster.
@@ -110,3 +110,25 @@ All the evidence came from `hw/scripts/run_gate.py` in each worktree. Each summa
 | E | `6d6e09c` | `083ccbc` | |
 
 Two shared fixes reached every branch as identical cherry-picks: the cycle-bound tests no longer assume a 33-clock divider (`324e24f`), and the gate can re-run some steps and keep the rest (`98be2be`). The full Vivado builds ran from the experiment commits before those script changes, with identical RTL. The problems I hit along the way are E-44 to E-49 in the [errors log](errors_log.md).
+
+## Board runs
+
+I'm taking B and E to the board, and I run the split baseline too, so all three are measured on the same board, laptop and day. The older Phase 4 board reports in `docs/evidence/phase4/` are from the combined unit, and I leave them as they are.
+
+The board reports the same version word for every candidate, so it can't tell me which design it's running. `tools/board_suite.py` ties each report to one bitstream. It records the checkout's commit, the SHA-256 of `build/vivado/nexys_top.bit` and the routed WNS, and it won't run if the bitstream is older than the last RTL commit or the RTL is dirty. Then it programs that exact file over JTAG and runs the bring-up and `evu_board.py` over UDP and the UART, each from the candidate's own checkout. The suite now also has the three 16,384-point divide runs from the simulated profile (fermi_large, lorentz_large, two_divides), because the class list's divide-only rules are too small to tell the dividers apart.
+
+With the laptop's Ethernet port at 192.168.10.1/24 and the board on USB (COM3 here):
+
+    python tools/board_suite.py --track . --program --uart COM3
+    python tools/board_suite.py --track worktrees/div-pipeline --program --uart COM3
+    python tools/board_suite.py --track worktrees/div-multiplicative --program --uart COM3
+
+Each run writes to a new `build/board/<track>-<time>/` folder, with `manifest.json` next to the reports, so nothing older gets overwritten. The bitstreams it will load:
+
+| track | commit with the RTL | bitstream built | full-design WNS |
+|---|---|---|---|
+| split baseline | `main` (tag `baseline/divsqrt-split`) | 2026-11-09 00:19 | +0.052 ns |
+| B pipeline | `div-pipeline` | 2026-11-09 01:20 | +0.191 ns |
+| E reciprocal | `div-multiplicative` | 2026-11-09 01:33 | +0.210 ns |
+
+What a candidate has to show before I merge it: every check passes over both links (bit-exact against the model, every cycle count inside that candidate's own bounds, zero link errors), and the divide runs come in near the simulated 10 clocks per point.
