@@ -244,8 +244,8 @@ CORDIC_TAIL = FPU_PIPE_TAIL + (54 - 7)
 # Every divider experiment changes the DIV_ numbers here, in
 # hw/tb/uvm/dpi/evu_ref.c and in hw/tb/uvm/top/top_scoreboard.svh together.
 DIV_LANES = 1
-DIV_INTERVAL = 33
-DIV_LAST = 39
+DIV_INTERVAL = 1
+DIV_LAST = 30
 SQRT_LANES = 1
 SQRT_INTERVAL = 33
 SQRT_LAST = 39

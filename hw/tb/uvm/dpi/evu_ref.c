@@ -56,7 +56,7 @@ enum {
    has DIV_LANES lanes; the same for square root. They match
    sw/mathaccel/driver/model.py. */
 enum { CYCLES_START = DESC_WORDS + 47, CYCLES_SUM = 29,
-       DIV_LANES = 1, DIV_INTERVAL = 33, SQRT_LANES = 1, SQRT_INTERVAL = 33,
+       DIV_LANES = 1, DIV_INTERVAL = 1, SQRT_LANES = 1, SQRT_INTERVAL = 33,
        SLOW_FAST = 40, SLOW_DIVIDE = 120, SLOW_CORDIC = 160 };
 
 static uint32_t mem[WORDS];
