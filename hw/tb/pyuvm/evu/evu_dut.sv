@@ -47,7 +47,7 @@ module evu_dut
     output logic [7:0]            fpu_req_tag,   // FPU request tag: I send the context number so I can return the result to its registers.
     output logic                  fpu_rsp_valid, // FPU result valid.
     output logic [7:0]            fpu_rsp_tag,   // FPU result tag: I use the returned context number to find the destination and next instruction.
-    output logic                  cov_ds_busy,   // Coverage: the divider is taking no new work.
+    output logic                  cov_ds_busy,   // Coverage: a DIV or SQRT on offer is refused by a divide or square-root unit.
     output logic                  cov_old,       // Coverage: the FPU's age rule is holding requests back.
     output logic                  cov_full,      // Coverage: the CORDIC FIFO has no slot to reserve.
     output logic [5:0]            cov_pending,   // Coverage: points between start and finished.
@@ -83,7 +83,13 @@ module evu_dut
       .req_a(fpu_req_a), .req_b(fpu_req_b), .req_tag(fpu_req_tag),
       .rsp_valid(fpu_rsp_valid), .rsp_result(fpu_rsp_result), .rsp_flags(fpu_rsp_flags), .rsp_tag(fpu_rsp_tag));
 
-  assign cov_ds_busy = !u_fpu.ds_in_ready;
+  // Since the split, fp_div and fp_sqrt are separate units, so "the divider is
+  // busy" depends on which op is on offer: a DIV waits only for fp_div, a SQRT
+  // only for fp_sqrt. A held result that must reach the port stops every request
+  // (fpu.sv's ds_block rule), and I count that as the divider's refusal too, as
+  // the old shared unit's OUT state did.
+  assign cov_ds_busy = ((fpu_req_op == FOP_SQRT) ? !u_fpu.sqrt_in_ready : !u_fpu.div_in_ready) ||
+                       u_fpu.ds_block;
   assign cov_old     = u_fpu.f_old;
   assign cov_full    = !u_fpu.c_room || u_fpu.f_full;
   assign cov_pending = u_evu.pending;

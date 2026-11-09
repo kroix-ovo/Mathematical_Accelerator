@@ -97,7 +97,7 @@ the last write, and `cmd_proc` returns the measured cycle count.
 The FPU kernel streams pairs of words from the scratchpad into
 [`fpu.sv`](../hw/rtl/fp/fpu.sv) and writes each result and its flags back.
 The FPU has one request port (valid/ready handshake) and one result port
-(valid only), and sends every request to one of five units:
+(valid only), and sends every request to one of six units:
 
 - [`fp_addsub.sv`](../hw/rtl/fp/fp_addsub.sv): addition and subtraction. Line up
   the exponents, add the significands, renormalize. Six pipeline stages.
@@ -105,8 +105,11 @@ The FPU has one request port (valid/ready handshake) and one result port
   FPGA's DSP48 multipliers and add the exponents. Six stages.
 - [`fp_misc.sv`](../hw/rtl/fp/fp_misc.sv): integer conversions, min/max and
   compares, also six stages so all three pipelines finish in step.
-- [`fp_divsqrt.sv`](../hw/rtl/fp/fp_divsqrt.sv): binary long division and
-  digit-by-digit square root, one result bit per clock, one operation at a time.
+- [`fp_div.sv`](../hw/rtl/fp/fp_div.sv): binary long division, one quotient
+  bit per clock, one divide at a time.
+- [`fp_sqrt.sv`](../hw/rtl/fp/fp_sqrt.sv): digit-by-digit square root, one root
+  bit per clock, one at a time. It is separate from `fp_div`, so a square root
+  can run while a divide is in progress.
 - [`fp_cordic.sv`](../hw/rtl/fp/fp_cordic.sv): the six phase 3 functions,
   using a pipeline of shifts and additions with argument reduction at the input.
 

@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from run_xsim import find_bin  # noqa: E402
 
 FP_RTL = ["hw/rtl/pkg/accel_pkg.sv", "hw/rtl/fp/fp_pkg.sv", "hw/rtl/fp/fp_addsub.sv",
-          "hw/rtl/fp/fp_mul.sv", "hw/rtl/fp/fp_misc.sv", "hw/rtl/fp/fp_divsqrt.sv",
+          "hw/rtl/fp/fp_mul.sv", "hw/rtl/fp/fp_misc.sv", "hw/rtl/fp/fp_div.sv", "hw/rtl/fp/fp_sqrt.sv",
           "hw/rtl/fp/cordic_pkg.sv", "hw/rtl/fp/fp_cordic.sv", "hw/rtl/fp/fpu.sv"]
 
 ENVS = {

@@ -34,7 +34,14 @@ from mathaccel import cref
 from mathaccel._generated import spec
 from mathaccel._generated.spec import FpuOp
 from mathaccel.compiler.evu_isa import OP_LOAD, SRC_CONST, Run
-from mathaccel.driver.model import CORDIC_OPS, DS_PERIOD, fpu_evaluate
+from mathaccel.driver.model import (
+    CORDIC_OPS,
+    DIV_INTERVAL,
+    DIV_LANES,
+    SQRT_INTERVAL,
+    SQRT_LANES,
+    fpu_evaluate,
+)
 from mathaccel.fp32ref import CANON_NAN, NV, round_fraction
 
 _CREF = cref.load()
@@ -173,16 +180,22 @@ def cycle_bounds(run: Run) -> tuple[int, int]:
     check cycles against these two numbers.
 
     The low bound counts what must happen even with no waiting. The FPU takes one
-    op per clock and the divider one op per 33 clocks. The high bound is every
-    instruction of every point being as slow as it can be, with nothing running at
-    the same time.
+    op per clock, the divider at most DIV_LANES ops per DIV_INTERVAL clocks and
+    the square-root unit SQRT_LANES per SQRT_INTERVAL. The two units work at the
+    same time, so the slowest of the three limits sets the floor, not their sum.
+    I round the units' share down, so the bound stays a lower bound. The high bound
+    is every instruction of every point being as slow as it can be, with nothing
+    running at the same time.
     """
     ops = [i.op for i in run.program.instrs()]
     copy = CYCLES_START + len(run.program.words) + len(run.program.constants)
     if run.reduce:
         copy += CYCLES_SUM
-    divides = sum(op in (FpuOp.DIV, FpuOp.SQRT) for op in ops)
-    low = copy + max(len(ops), divides * DS_PERIOD) * run.points
+    divides = sum(op == FpuOp.DIV for op in ops)
+    roots = sum(op == FpuOp.SQRT for op in ops)
+    floor_ops = max(len(ops) * run.points, divides * DIV_INTERVAL * run.points // DIV_LANES,
+                    roots * SQRT_INTERVAL * run.points // SQRT_LANES)
+    low = copy + floor_ops
     each = sum(_SLOW_DIVIDE if op in (FpuOp.DIV, FpuOp.SQRT) else _SLOW_CORDIC if op in CORDIC_OPS else _SLOW_FAST
                for op in ops)
     return low, copy + 200 + each * run.points
