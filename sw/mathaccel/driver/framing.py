@@ -8,6 +8,18 @@ These helpers do not know about command IDs, addresses, or serial ports.
 
 from __future__ import annotations
 
+import os
+
+
+def _crc_entry(value: int) -> int:
+    crc = value << 8
+    for _ in range(8):
+        crc = ((crc << 1) ^ 0x1021) & 0xFFFF if crc & 0x8000 else (crc << 1) & 0xFFFF
+    return crc
+
+
+_CRC_TABLE = tuple(_crc_entry(i) for i in range(256))
+
 
 def crc16(data: bytes, crc: int = 0xFFFF) -> int:
     """Update the 16-bit checksum with each input byte, starting at 0xFFFF.
@@ -16,12 +28,7 @@ def crc16(data: bytes, crc: int = 0xFFFF) -> int:
     The packet header and payload are covered; the CRC field is excluded.
     """
     for byte in data:
-        # Mix this byte into the high end, then shift through its eight bits.
-        # The polynomial XOR corresponds to the feedback wiring of a CRC.
-        crc ^= byte << 8
-        for _ in range(8):
-            crc = ((crc << 1) ^ 0x1021) if crc & 0x8000 else (crc << 1)
-            crc &= 0xFFFF  # Python integers grow; hardware keeps only 16 bits.
+        crc = ((crc << 8) & 0xFFFF) ^ _CRC_TABLE[((crc >> 8) ^ byte) & 0xFF]
     return crc
 
 
@@ -58,6 +65,7 @@ def cobs_encode(data: bytes) -> bytes:
     return bytes(out)
 
 
+
 def cobs_decode(data: bytes) -> bytes:
     """Restore raw bytes from one encoded frame with its delimiter removed."""
     out = bytearray()
@@ -82,3 +90,45 @@ def cobs_decode(data: bytes) -> bytes:
             # block does not add a trailing raw zero of its own.
             out.append(0)
     return bytes(out)
+
+
+# All three experiments carry this exact selector. Native code is optional;
+# request it explicitly to make a missing build fail rather than skew a run.
+BACKEND = "python"
+_python_crc16 = crc16
+_python_cobs_encode = cobs_encode
+_python_cobs_decode = cobs_decode
+
+
+def _select_backend():
+    global BACKEND, crc16, cobs_encode, cobs_decode
+    selection = os.environ.get("MATHACCEL_FRAMING", "auto")
+    if selection not in ("auto", "python", "native"):
+        raise ValueError("MATHACCEL_FRAMING must be auto, python or native")
+    if selection == "python":
+        return
+    try:
+        from mathaccel import _framing_native as native
+    except ImportError:
+        if selection == "native":
+            raise
+        return
+
+    def native_crc(data: bytes, crc: int = 0xFFFF) -> int:
+        # Preserve the original empty-input and arbitrary-integer seed behavior.
+        return native.crc16(data, crc & 0xFFFF) if data else crc
+
+    def native_decode(data: bytes) -> bytes:
+        try:
+            return native.cobs_decode(data)
+        except ValueError as e:
+            raise CobsError(str(e)) from e
+
+    crc16 = native_crc
+    cobs_encode = native.cobs_encode
+    cobs_decode = native_decode
+    BACKEND = native.backend
+
+
+
+_select_backend()
