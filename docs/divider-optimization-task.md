@@ -2,7 +2,7 @@
 
 Created: 2026-11-08.
 
-Status (2026-11-09): done in simulation and routed builds; not run on the board.
+Status (2026-11-10): done in simulation and routed builds; B, E and the split baseline also passed the board suite over Ethernet and the UART.
 The split baseline is `baseline/divsqrt-split` at
 `02c785eaaf13ccd3a644f4fc2830d490bda9a255`, all five experiment branches start
 from it, and each has an implementation that passed the gate. Results and my
@@ -231,7 +231,7 @@ sixth sibling worktree from the same baseline. Neither experiment changes sqrt.
   target, and record LUTs, flip-flops, BRAM and DSPs.
 - [x] I keep software-model predictions, RTL simulation, routed reports and
   physical-board measurements clearly separated.
-- [ ] After simulation and routed timing pass, I identify the exact bitstream
+- [x] After simulation and routed timing pass, I identify the exact bitstream
   and source commit before running the same board correctness and application
   suite over Ethernet and UART. I preserve the old reports rather than overwrite
   the historical evidence.
