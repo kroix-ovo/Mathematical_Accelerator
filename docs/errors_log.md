@@ -214,3 +214,11 @@ Quick list so I don't lose track. The full write-ups are in the dated entries be
 
 **E-49. The Ethernet checksum path failed the SRT divider's full build. (open)** Experiment C routed at WNS -0.101 ns. Its worst path was `u_enc/rd_reg` → `u_eth/u_tx/psum_reg`, nothing to do with the divider: out of context the SRT divider had +1.356 ns. It is also the worst path in B's build (+0.191). Every build has had only 0.05 to 0.3 ns of slack, so placement changes elsewhere can push this path over.
 **Fix so far:** none; I counted C as failing timing, as my rule says. The path needs its own look (a register stage or a narrower adder) before I merge any divider.
+
+## 2026-11-10: divider board runs
+
+**E-50. No Ethernet link at the start of the divider board runs.** Windows showed the `Ethernet` adapter (192.168.10.1) as Disconnected at 0 bps, and ping to 192.168.10.2 failed. The board was on USB and answered PING and STATUS over COM3 with zero CRC and frame errors. Reprogramming the board didn't bring the link up, though it did last time (see the replug trap in verification.md), so I think the cable isn't seated at one end.
+**Fix:** the cable had come loose. After reseating it, Windows showed 100 Mbps and the board answered ping, with no reprogramming needed. The UART runs had gone ahead first, then the Ethernet runs passed.
+
+**E-51. My `--no-eth` option ran the Ethernet suite anyway.** I added `--no-eth` to `board_suite.py` when the link was down (E-50). It skipped the bring-up but left the UDP suite in a block that still ran, so each "UART only" run did UART, UDP, then UART again, and the second UART report overwrote the first. The cable had been reseated by then, so the UDP suite worked and every step passed. I only noticed because the folders had an `evu_udp.md` they shouldn't have had.
+**Fix:** the UDP block now checks `--no-eth` too. A stubbed run shows exactly one step, `evu-uart`. The evidence README says which reports came from which steps.

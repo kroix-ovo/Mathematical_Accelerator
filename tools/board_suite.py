@@ -4,6 +4,7 @@
     python tools/board_suite.py --track worktrees/div-multiplicative --program --uart COM3
     python tools/board_suite.py --track . --program --uart COM3          # split baseline
     python tools/board_suite.py --track worktrees/div-pipeline --port udpsim   # dry run, no board
+    python tools/board_suite.py --track . --program --uart COM3 --no-eth  # no Ethernet link
 
 The board can't tell me which design it's running, since every candidate reports
 the same version word. So this script ties each report to one bitstream: it
@@ -132,6 +133,7 @@ def main() -> int:
     ap.add_argument("--busy", action="store_true", help="also run the resend-during-a-run experiment")
     ap.add_argument("--fptest", type=int, default=5000, help="FPU vectors per op in eth_bringup")
     ap.add_argument("--vivado", help="Vivado install folder, if it isn't on PATH")
+    ap.add_argument("--no-eth", action="store_true", help="UART only: skip the bring-up and the UDP suite")
     ap.add_argument("--allow-dirty", action="store_true", help="run even if the bitstream may not match the commit")
     args = ap.parse_args()
 
@@ -157,12 +159,19 @@ def main() -> int:
                                "-source", str(root / "hw/scripts/program.tcl")], root, out / "program.log", results)
         if not ok:
             print("programming failed; nothing else ran")
-    if ok:
+    if ok and args.no_eth:
+        # Without the Ethernet link I can still run the whole suite over the UART:
+        # results and the board's clock counts don't depend on the link.
+        if not args.uart:
+            sys.exit("--no-eth needs --uart")
+        ok &= step("evu-uart", [py, "tools/evu_board.py", "--port", args.uart, "--out", str(out / "evu_uart.md")],
+                   root, out / "evu_uart.log", results)
+    elif ok:
         bring = [py, "hw/scripts/eth_bringup.py", "--fptest", str(args.fptest)]
         bring += ["--port", "udpsim"] if sim else []
         bring += ["--uart", args.uart] if args.uart and not sim else []
         ok &= step("eth-bringup", bring, root, out / "eth_bringup.log", results)
-    if ok:
+    if ok and not args.no_eth:
         # I keep going after a failed suite: the other link's report still says something.
         ok &= step("evu-udp", [py, "tools/evu_board.py", "--port", args.port, "--out", str(out / "evu_udp.md")],
                    root, out / "evu_udp.log", results)

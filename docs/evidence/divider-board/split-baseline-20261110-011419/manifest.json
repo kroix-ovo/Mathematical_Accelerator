@@ -1,0 +1,61 @@
+{
+ "track": "split-baseline",
+ "root": "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator",
+ "branch": "main",
+ "head": "0554c3ffd2d3978cbca0d919a709a0e55e440e17",
+ "rtl_commit": "56508b68cdf22f70fc5834aeb4caeb3a4867f8c0",
+ "rtl_dirty": false,
+ "bitstream": "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\build\\vivado\\nexys_top.bit",
+ "bitstream_sha256": "2da6f20f54c360368b85790a9efc411db6c5aad5bd61657b86f36c280680d3f8",
+ "bitstream_time": "2026-11-09T00:19:58",
+ "bitstream_newer_than_rtl": true,
+ "routed_wns_whs": [
+  0.052,
+  0.024
+ ],
+ "started": "2026-11-10T01:14:19",
+ "finished": "2026-11-10T01:15:43",
+ "port": "udp:192.168.10.2",
+ "uart": null,
+ "steps": [
+  {
+   "step": "program",
+   "cmd": [
+    "C:\\Xilinx\\Vivado\\2023.2\\bin\\vivado.bat",
+    "-mode",
+    "batch",
+    "-nojournal",
+    "-nolog",
+    "-source",
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\hw\\scripts\\program.tcl"
+   ],
+   "exit": 0,
+   "log": "program.log"
+  },
+  {
+   "step": "eth-bringup",
+   "cmd": [
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\.venv\\Scripts\\python.exe",
+    "hw/scripts/eth_bringup.py",
+    "--fptest",
+    "5000"
+   ],
+   "exit": 0,
+   "log": "eth_bringup.log"
+  },
+  {
+   "step": "evu-udp",
+   "cmd": [
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\.venv\\Scripts\\python.exe",
+    "tools/evu_board.py",
+    "--port",
+    "udp:192.168.10.2",
+    "--out",
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\build\\board\\split-baseline-20261110-011419\\evu_udp.md"
+   ],
+   "exit": 0,
+   "log": "evu_udp.log"
+  }
+ ],
+ "passed": true
+}

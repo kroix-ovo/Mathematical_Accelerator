@@ -1,6 +1,6 @@
 # My divider experiments: results
 
-Written 2026-11-09. This is the result of [divider-optimization-task.md](divider-optimization-task.md). Everything below comes from RTL simulation and routed Vivado builds on this laptop. I haven't programmed the board with any of these designs, so there are no board timings, no wall-clock run times and no power numbers yet.
+Written 2026-11-09. This is the result of [divider-optimization-task.md](divider-optimization-task.md). Everything below comes from RTL simulation and routed Vivado builds on this laptop. On 2026-11-10 I ran the board suite on the split baseline, B and E over both links; that's in "Board runs" at the end. I still have no power numbers, and A, C and D never went to the board.
 
 ## What I built
 
@@ -91,7 +91,7 @@ What E costs that B doesn't:
 Either pipelined divider changes the FPU integration: the urgent rule, and a CORDIC worst-case bound of 128 clocks instead of 96. If I didn't want that change, A is the cheapest option that keeps the baseline integration: +100 LUTs for 33 → 20 clocks per divide.
 
 Before I merge anything:
-- Run the board correctness and application suite over Ethernet and the UART on B and E, which are the two I'm taking to the board, with the split baseline as the reference. `tools/board_suite.py` does it for one candidate at a time (see "Board runs" below). I haven't done that yet, and only that measures first-run and repeat-run wall time.
+- ~~Run the board suite on B and E.~~ Done 2026-11-10: both passed everything over Ethernet and the UART (see "Board runs").
 - Look at the Ethernet checksum path. It failed C's build and is the worst path in B's, so whichever divider I merge, it will cause trouble sooner or later.
 
 The square-root unit is next. plate_potential and loop_bfield can't go below 33 clocks per point until it gets faster.
@@ -132,3 +132,20 @@ Each run writes to a new `build/board/<track>-<time>/` folder, with `manifest.js
 | E reciprocal | `div-multiplicative` | 2026-11-09 01:33 | +0.210 ns |
 
 What a candidate has to show before I merge it: every check passes over both links (bit-exact against the model, every cycle count inside that candidate's own bounds, zero link errors), and the divide runs come in near the simulated 10 clocks per point.
+
+### What the board showed (2026-11-10)
+
+All three designs passed everything over both links: 22 class rules up to 2M points, map mode, root finding, the 65,536-point mixed run, the three divide runs, 100 random programs, a 5,000-vector test of each of the 18 FPU ops and a full scratchpad memtest. Every result matched the model bit for bit, every cycle count was inside that design's own bounds, the class problems took the same clocks over UDP and the UART, and the link counters stayed at zero. The reports are in [evidence/divider-board](evidence/divider-board/README.md).
+
+Kernel clocks per point counted by the board, with the repeat-run wall time over UDP (RUN plus reading the answer, image already loaded):
+
+| run | split | B | E | split repeat | B repeat | E repeat |
+|---|---|---|---|---|---|---|
+| fermi_large, 16,384 points | 33.0 | 10.1 | 10.1 | 5.91 ms | 2.05 ms | 2.06 ms |
+| lorentz_large, 16,384 | 33.0 | 7.2 | 7.2 | 5.87 ms | 1.49 ms | 1.54 ms |
+| two_divides, 16,384 | 66.0 | 10.6 | 10.5 | 11.39 ms | 2.04 ms | 2.08 ms |
+| fermi_half, 64 | 37.9 | 14.4 | 14.2 | | | |
+| long_mixed, 65,536 | 35.4 | 33.6 | 33.7 | | | |
+| plate_potential, 1,048,576 | 34.0 | 34.0 | 34.3 | | | |
+
+These are the simulated profile's numbers to within 0.1 clock per point, so the simulation can be trusted for the rest of the comparison. On divide-only work B and E cut the board's repeat time by 2.9x to 5.6x. plate_potential doesn't move, as expected, because it waits on the square-root unit. B and E are indistinguishable on the board, so the board doesn't change my pick: E, for a third of B's logic.
