@@ -3,8 +3,9 @@
 Created: 2026-11-11.
 
 Status (2026-11-11): all three candidates pass the full gate and the full
-build at 100 MHz. Results and my recommendation (S3, pending the board runs)
-are in [sqrt-comparison.md](sqrt-comparison.md). The board runs are next.
+build at 100 MHz. Results and my recommendation (S3)
+are in [sqrt-comparison.md](sqrt-comparison.md). All four designs passed the board suite
+over Ethernet and the UART on 2026-11-11.
 
 After the divider task, plate_potential and loop_bfield are limited by the square
 root: every divider candidate left plate at about 34 clocks per point, because
@@ -83,7 +84,7 @@ experiment branches start from that commit.
 - [x] The full Nexys build at 100 MHz, with setup, hold and resource numbers.
 - [x] The square-root unit placed and routed alone (`build_sqrt.tcl`).
 - [x] The EVU cycle profile, with the square-root-heavy runs.
-- [ ] The board suite over Ethernet and the UART for the candidates I take to
+- [x] The board suite over Ethernet and the UART for the candidates I take to
   the board, against the same baseline bitstream.
 
 ## 4. How I compare them
@@ -102,7 +103,7 @@ why.
   documented reason it can't.
 - [x] The comparison uses the same suite and numerical contract for all three,
   with the limits stated plainly.
-- [ ] I recommend one, based on full-design and board results, and say what it
+- [x] I recommend one, based on full-design and board results, and say what it
   costs.
 
 ## References

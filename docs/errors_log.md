@@ -236,3 +236,6 @@ Quick list so I don't lose track. The full write-ups are in the dated entries be
 
 **E-55. Two of the square-root unit's out-of-context builds failed in synthesis.** S1's and S2's `build_sqrt.tcl` stopped with `couldn't read file ".../retarget_vhdl.tcl": No error`. That's the intermittent Vivado file-read failure I've hit before, and my re-run script had lost the retry the earlier script had. The full builds for the same branches had passed just before.
 **Fix:** I re-ran those two builds.
+
+**E-56. The first square-root board run stopped at the Ethernet bring-up.** board_suite programmed the baseline bitstream, then `eth_bringup.py` found the laptop's `Ethernet` adapter Disconnected at 0 bps. The cable had been unplugged from the FPGA. Once it was plugged back in, the adapter came up at 100 Mbps in about 6 seconds, and the board answered ping.
+**Fix:** I re-ran the baseline's suite without reprogramming. The board still held the same bitstream, and programming resets the PHY, which could have dropped the link again. The three candidates were each programmed as usual and the link stayed up through all of them. The evidence README says which baseline run has no program step.

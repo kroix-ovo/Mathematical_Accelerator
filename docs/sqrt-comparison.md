@@ -1,6 +1,6 @@
 # My square-root experiments: results
 
-Written 2026-11-11. This is the result of [sqrt-optimization-task.md](sqrt-optimization-task.md). Everything below comes from RTL simulation and routed Vivado builds on this laptop. The board runs are still to come; they'll go in "Board runs" at the end. I have no power numbers.
+Written 2026-11-11. This is the result of [sqrt-optimization-task.md](sqrt-optimization-task.md). It comes from RTL simulation, routed Vivado builds on this laptop, and board runs of all four designs ("Board runs" at the end). I have no power numbers.
 
 ## What I built
 
@@ -75,7 +75,7 @@ What I take from it:
 
 ## Recommendation
 
-**S3, the shared divide and square-root pipeline**, pending the board runs.
+**S3, the shared divide and square-root pipeline.**
 
 - It's the fastest or tied on every run that uses a root or a divide.
 - It has the most timing margin of the four designs: +0.237 ns full design, +0.728 ns for the unit alone.
@@ -88,4 +88,33 @@ I wouldn't take S1. It needs no DSPs, which is its only advantage. But it double
 
 ## Board runs
 
-To come: the baseline, S2 and S3 over Ethernet and the UART with `tools/board_suite.py`, against bitstreams built from each worktree, with the six large runs from the profile.
+On 2026-11-11 I ran `tools/board_suite.py` on all four designs, one after the other on the same board and laptop: the Ethernet bring-up, then the full `evu_board.py` suite over UDP and over the UART. Each design's run was against its own routed bitstream, recorded by SHA-256. The reports and manifests are in [evidence/sqrt-board/](evidence/sqrt-board/).
+
+Every check passed on every design:
+- every result was bit-exact against that design's model;
+- every cycle count was inside its bounds;
+- there were zero CRC and frame errors.
+
+On the six 16,384-point runs, the board's clock count is exactly the simulated profile's count plus the 2 clocks kernel_engine adds, for all four designs over both links. So the profile tables above are what the board does, not an estimate.
+
+Kernel clocks per point on the board (UDP):
+
+| run | baseline | S1 | S2 | S3 |
+|---|---|---|---|---|
+| loop_bfield (64) | 39.4 | 17.6 | 17.4 | 17.2 |
+| plate_potential (1,048,576) | 34.3 | 14.5 | 14.4 | 13.8 |
+| root_large | 33.0 | 7.1 | 7.3 | 7.0 |
+| two_roots | 66.0 | 8.1 | 8.2 | 8.2 |
+| root_divide | 34.0 | 8.5 | 8.6 | 8.0 |
+| lorentz_large | 7.2 | 7.2 | 7.2 | 7.0 |
+
+plate_potential at 1,048,576 points, wall time from the laptop:
+
+| | baseline | S1 | S2 | S3 |
+|---|---|---|---|---|
+| kernel time (ms) | 359.3 | 151.6 | 150.9 | 145.1 |
+| repeat run, laptop to answer (ms) | 359.8 | 152.2 | 151.4 | 145.7 |
+
+The same run in NumPy float64 on the laptop takes about 15 ms when repeated, so the board is still about 10 times slower on this problem. That's down from about 25 times with the original square root. The limit is now the EVU's issue rate, not the square root.
+
+The board doesn't change my recommendation: **S3**.

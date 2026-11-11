@@ -1,0 +1,76 @@
+{
+ "track": "divsqrt-shared",
+ "root": "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\divsqrt-shared",
+ "branch": "experiment/divsqrt-shared",
+ "head": "bd29297a05c8f95b4a8d3dfa7c133962a4fd8904",
+ "rtl_commit": "4817ccea11985bb0ad9739b575f054e9a6978726",
+ "rtl_dirty": false,
+ "bitstream": "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\divsqrt-shared\\build\\vivado\\nexys_top.bit",
+ "bitstream_sha256": "d6df14da5ae3392965c60eff07330073691d04ed9276cccbd28ee2fa9358840c",
+ "bitstream_time": "2026-11-11T11:23:25",
+ "bitstream_newer_than_rtl": true,
+ "routed_wns_whs": [
+  0.237,
+  0.033
+ ],
+ "started": "2026-11-11T14:48:40",
+ "finished": "2026-11-11T14:50:58",
+ "port": "udp:192.168.10.2",
+ "uart": "COM3",
+ "steps": [
+  {
+   "step": "program",
+   "cmd": [
+    "C:\\Xilinx\\Vivado\\2023.2\\bin\\vivado.bat",
+    "-mode",
+    "batch",
+    "-nojournal",
+    "-nolog",
+    "-source",
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\divsqrt-shared\\hw\\scripts\\program.tcl"
+   ],
+   "exit": 0,
+   "log": "program.log"
+  },
+  {
+   "step": "eth-bringup",
+   "cmd": [
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\divsqrt-shared\\.venv\\Scripts\\python.exe",
+    "hw/scripts/eth_bringup.py",
+    "--fptest",
+    "5000",
+    "--uart",
+    "COM3"
+   ],
+   "exit": 0,
+   "log": "eth_bringup.log"
+  },
+  {
+   "step": "evu-udp",
+   "cmd": [
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\divsqrt-shared\\.venv\\Scripts\\python.exe",
+    "tools/evu_board.py",
+    "--port",
+    "udp:192.168.10.2",
+    "--out",
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\build\\board\\divsqrt-shared-20261111-144840\\evu_udp.md"
+   ],
+   "exit": 0,
+   "log": "evu_udp.log"
+  },
+  {
+   "step": "evu-uart",
+   "cmd": [
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\divsqrt-shared\\.venv\\Scripts\\python.exe",
+    "tools/evu_board.py",
+    "--port",
+    "COM3",
+    "--out",
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\build\\board\\divsqrt-shared-20261111-144840\\evu_uart.md"
+   ],
+   "exit": 0,
+   "log": "evu_uart.log"
+  }
+ ],
+ "passed": true
+}
