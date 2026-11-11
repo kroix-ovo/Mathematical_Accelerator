@@ -2,9 +2,9 @@
 
 Created: 2026-11-11.
 
-Status (2026-11-11): the three candidates are implemented, and each passes the
-square-root tests in simulation. Their full gates and Vivado builds are next.
-Results and my recommendation will go in [sqrt-comparison.md](sqrt-comparison.md).
+Status (2026-11-11): all three candidates pass the full gate and the full
+build at 100 MHz. Results and my recommendation (S3, pending the board runs)
+are in [sqrt-comparison.md](sqrt-comparison.md). The board runs are next.
 
 After the divider task, plate_potential and loop_bfield are limited by the square
 root: every divider candidate left plate at about 34 clocks per point, because
@@ -75,14 +75,14 @@ experiment branches start from that commit.
 
 ## 3. One gate for every candidate
 
-- [ ] The full gate (`run_gate.py`): software tests, the udpsim device tests,
+- [x] The full gate (`run_gate.py`): software tests, the udpsim device tests,
   lint and generated-file checks, every pyuvm environment in Verilator and
   Icarus, including `FpuSqrtTest` and `FpuDivTest`, and both xsim UVM tests.
   Every result and flag bit-exact against the oracle; every kernel cycle count
   equal to the model's.
-- [ ] The full Nexys build at 100 MHz, with setup, hold and resource numbers.
-- [ ] The square-root unit placed and routed alone (`build_sqrt.tcl`).
-- [ ] The EVU cycle profile, with the square-root-heavy runs.
+- [x] The full Nexys build at 100 MHz, with setup, hold and resource numbers.
+- [x] The square-root unit placed and routed alone (`build_sqrt.tcl`).
+- [x] The EVU cycle profile, with the square-root-heavy runs.
 - [ ] The board suite over Ethernet and the UART for the candidates I take to
   the board, against the same baseline bitstream.
 
@@ -98,9 +98,9 @@ why.
 
 ## Done means
 
-- [ ] Each candidate has passed the gate and the full build, or has a concrete,
+- [x] Each candidate has passed the gate and the full build, or has a concrete,
   documented reason it can't.
-- [ ] The comparison uses the same suite and numerical contract for all three,
+- [x] The comparison uses the same suite and numerical contract for all three,
   with the limits stated plainly.
 - [ ] I recommend one, based on full-design and board results, and say what it
   costs.
