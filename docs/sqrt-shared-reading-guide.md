@@ -42,13 +42,16 @@ mixed-traffic response. The tag travels with the operation to keep that safe.
 For division I normalize the dividend and divisor into 24-bit integers X and D,
 each with its leading 1 at bit 23. I want the exact integer quotient
 `floor(X * 2^26 / D)` and whether its remainder is nonzero. The floating-point
-exponent is handled alongside that integer problem.
+exponent is handled alongside that integer problem. In the correction formulas
+I call the real normalized divisor d = D / 2^23, which lies in [1,2).
 
 For a root I normalize the input into a 24-bit significand na and an unbiased
 exponent E. I split E into its parity p and an even part. The integer problem
 is `R = isqrt(N)`, where `N = na << (27+p)`. Its exact remainder is `N-R*R`.
 That gets me the same 26 root bits and sticky information the old recurrence
-produced; changing the absolute exponent mostly changes the output exponent.
+produced. In the correction formulas I call a = N / 2^50, which lies in [1,4).
+Changing the absolute exponent changes the output exponent while preserving
+this normalized arithmetic for the same parity.
 
 I don't round a rough reciprocal and hope it is good enough. Both paths use
 an approximate start and then an exact integer correction before final RNE

@@ -1,6 +1,6 @@
 # Standalone timing build of the divider (my divider experiments).
 #   vivado -mode batch -source hw/scripts/build_div.tcl                       (from the repo root)
-#   vivado -mode batch -source hw/scripts/build_div.tcl -tclargs STEPS=1      (with a parameter)
+#   vivado -mode batch -source hw/scripts/build_div.tcl -tclargs DQ=16      (with a parameter)
 #
 # The full Nexys build (build.tcl) is what decides whether a divider fits: it
 # times the divider together with everything else. But a full build's worst
@@ -13,7 +13,9 @@
 # delay budget each, as if a
 # register sits on the other side with some routing.
 #
-# Any -tclargs of the form NAME=VALUE become parameters of fp_divsqrt.
+# I pass NAME=VALUE arguments to fp_divsqrt; DQ changes queue depth, not
+# the arithmetic stages. I keep it a power of two. There is no STEPS knob
+# in this shared multiplicative pipeline.
 # Outputs in build/vivado_div/: timing and utilisation reports.
 
 set root [file normalize [file dirname [info script]]/../..]

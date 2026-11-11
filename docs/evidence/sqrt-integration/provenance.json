@@ -1,0 +1,46 @@
+{
+  "date": "2026-11-11",
+  "branch": "sqrt-shared",
+  "tested_commit": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+  "integration_base": "0a19084",
+  "candidate_branch": "experiment/divsqrt-shared",
+  "candidate_head": "bd29297a05c8f95b4a8d3dfa7c133962a4fd8904",
+  "candidate_rtl_commit": "4817ccea11985bb0ad9739b575f054e9a6978726",
+  "gate_passed": true,
+  "gate_steps": 27,
+  "software_complete": "464 passed, no skips; separate rerun after installing the optional benchmark dependency",
+  "udp_simulator": "30 passed",
+  "profile_rows": 29,
+  "profile_matches_candidate": true,
+  "setup_slack_ns": 0.237,
+  "hold_slack_ns": 0.033,
+  "full_design": {
+    "lut": 20121,
+    "lutram": 1230,
+    "srl": 461,
+    "ff": 13880,
+    "bram": 73.0,
+    "dsp": 32
+  },
+  "shared_unit": {
+    "lut": 982,
+    "lutram": 36,
+    "srl": 147,
+    "ff": 861,
+    "bram": 1.0,
+    "dsp": 12
+  },
+  "integration_bitstream": {
+    "path": "build/vivado/nexys_top.bit",
+    "sha256": "8b7bb6ad4b319985cdc36937395c7a6d13a0901d398c41ffcbc655ddd5e34138",
+    "board_tested": false
+  },
+  "study_bitstream": {
+    "path": "worktrees/divsqrt-shared/build/vivado/nexys_top.bit",
+    "sha256": "d6df14da5ae3392965c60eff07330073691d04ed9276cccbd28ee2fa9358840c",
+    "board_tested": true,
+    "manifest": "../sqrt-board/divsqrt-shared-20261111-144840/manifest.json"
+  },
+  "runtime_sources_still_match_tested_commit": true,
+  "post_gate_changes": "Documentation, standalone timing-script comments, four CI steps repeating already-passing gate commands, and this evidence record only."
+}

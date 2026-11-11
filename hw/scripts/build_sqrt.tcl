@@ -1,6 +1,6 @@
 # Standalone timing build of the square-root unit (my square-root experiments).
 #   vivado -mode batch -source hw/scripts/build_sqrt.tcl                       (from the repo root)
-#   vivado -mode batch -source hw/scripts/build_sqrt.tcl -tclargs STEPS=1      (with a parameter)
+#   vivado -mode batch -source hw/scripts/build_sqrt.tcl -tclargs DQ=16      (with a parameter)
 #
 # The full Nexys build (build.tcl) is what decides whether a design fits: it
 # times the unit together with everything else. But a full build's worst
@@ -13,7 +13,9 @@
 # experiment the square-root unit is the shared divide and square-root unit,
 # fp_divsqrt, so this build and build_div.tcl build the same thing.
 #
-# Any -tclargs of the form NAME=VALUE become parameters of fp_divsqrt.
+# I pass NAME=VALUE arguments to fp_divsqrt; DQ changes queue depth, not
+# the arithmetic stages. I keep it a power of two. There is no STEPS knob
+# in this shared multiplicative pipeline.
 # Outputs in build/vivado_sqrt/: timing and utilisation reports.
 
 set root [file normalize [file dirname [info script]]/../..]

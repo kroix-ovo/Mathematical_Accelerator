@@ -1,0 +1,329 @@
+{
+ "root": "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\sqrt-shared",
+ "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+ "dirty": false,
+ "seconds": 1077.0,
+ "passed": true,
+ "steps": [
+  {
+   "step": "sw-import-check",
+   "ok": true,
+   "seconds": 0.3,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": []
+  },
+  {
+   "step": "sw-gen-spec",
+   "ok": true,
+   "seconds": 0.1,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": []
+  },
+  {
+   "step": "sw-gen-cordic",
+   "ok": true,
+   "seconds": 0.4,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": []
+  },
+  {
+   "step": "sw-ruff",
+   "ok": true,
+   "seconds": 0.2,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "All checks passed!"
+   ]
+  },
+  {
+   "step": "sw-pytest",
+   "ok": true,
+   "seconds": 41.9,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "460 passed, 4 skipped, 1 warning in 40.94s"
+   ]
+  },
+  {
+   "step": "sw-pytest-udpsim",
+   "ok": true,
+   "seconds": 1.7,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "30 passed in 0.90s"
+   ]
+  },
+  {
+   "step": "cocotb-verilator",
+   "ok": true,
+   "seconds": 54.8,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "9797790.00ns INFO     cocotb.regression                  test_accel_core.test_golden_vectors passed"
+   ]
+  },
+  {
+   "step": "pyuvm-fpu",
+   "ok": true,
+   "seconds": 42.7,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "300760.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(616) [uvm_test_top.env.sb]: checked 25141 results, 0 errors; per op {'ADD': 2442, 'SUB': 2034, 'MUL': 2332, 'DIV': 1113, 'SQRT': 1130, 'I2F': 960, 'F2I': 1586, 'MIN': 1912, 'MAX': 960, 'EQ': 951, 'LT': 944, 'LE': 949, 'SIN': 1281, 'COS': 1305, 'ATAN2': 1327, 'HYPOT': 1280, 'EXP': 1308, 'LN': 1327}",
+    "300760.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(617) [uvm_test_top.env.sb]: CORDIC results: 5422 at 54 clocks, 2406 waited in the FIFO, longest latency 91",
+    "300760.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(655) [uvm_test_top.env.probe]: CORDIC FIFO (depth 64): at most 53 reserved, 38 stored; 0 clocks waiting for a slot, 0 clocks stalled by a full FIFO, 1441 clocks stalled by the age rule",
+    "300760.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(704) [uvm_test_top.env.ds_probe]: divide/sqrt units: 2392 clocks both busy, 0 clocks both holding a result",
+    "300760.00ns INFO     cocotb.regression                  test_fpu_uvm.FpuRegressTest passed",
+    "PASS: pyuvm fpu (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-fpu-div",
+   "ok": true,
+   "seconds": 28.2,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "361570.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(616) [uvm_test_top.env.sb]: checked 35953 results, 0 errors; per op {'ADD': 0, 'SUB': 0, 'MUL': 0, 'DIV': 35953, 'SQRT': 0, 'I2F': 0, 'F2I': 0, 'MIN': 0, 'MAX': 0, 'EQ': 0, 'LT': 0, 'LE': 0, 'SIN': 0, 'COS': 0, 'ATAN2': 0, 'HYPOT': 0, 'EXP': 0, 'LN': 0}",
+    "361570.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(617) [uvm_test_top.env.sb]: CORDIC results: 0 at 54 clocks, 0 waited in the FIFO, longest latency 0",
+    "361570.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(655) [uvm_test_top.env.probe]: CORDIC FIFO (depth 64): at most 0 reserved, 0 stored; 0 clocks waiting for a slot, 0 clocks stalled by a full FIFO, 0 clocks stalled by the age rule",
+    "361570.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(704) [uvm_test_top.env.ds_probe]: divide/sqrt units: 0 clocks both busy, 0 clocks both holding a result",
+    "361570.00ns INFO     cocotb.regression                  test_fpu_uvm.FpuDivTest passed",
+    "PASS: pyuvm fpu (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-fpu-sqrt",
+   "ok": true,
+   "seconds": 29.8,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "394670.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(616) [uvm_test_top.env.sb]: checked 39263 results, 0 errors; per op {'ADD': 0, 'SUB': 0, 'MUL': 0, 'DIV': 0, 'SQRT': 39263, 'I2F': 0, 'F2I': 0, 'MIN': 0, 'MAX': 0, 'EQ': 0, 'LT': 0, 'LE': 0, 'SIN': 0, 'COS': 0, 'ATAN2': 0, 'HYPOT': 0, 'EXP': 0, 'LN': 0}",
+    "394670.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(617) [uvm_test_top.env.sb]: CORDIC results: 0 at 54 clocks, 0 waited in the FIFO, longest latency 0",
+    "394670.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(655) [uvm_test_top.env.probe]: CORDIC FIFO (depth 64): at most 0 reserved, 0 stored; 0 clocks waiting for a slot, 0 clocks stalled by a full FIFO, 0 clocks stalled by the age rule",
+    "394670.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(704) [uvm_test_top.env.ds_probe]: divide/sqrt units: 0 clocks both busy, 0 clocks both holding a result",
+    "394670.00ns INFO     cocotb.regression                  test_fpu_uvm.FpuSqrtTest passed",
+    "PASS: pyuvm fpu (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-fpu-icarus-corner",
+   "ok": true,
+   "seconds": 31.0,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "143370.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(616) [uvm_test_top.env.sb]: checked 14112 results, 0 errors; per op {'ADD': 784, 'SUB': 784, 'MUL': 784, 'DIV': 784, 'SQRT': 784, 'I2F': 784, 'F2I': 784, 'MIN': 784, 'MAX': 784, 'EQ': 784, 'LT': 784, 'LE': 784, 'SIN': 784, 'COS': 784, 'ATAN2': 784, 'HYPOT': 784, 'EXP': 784, 'LN': 784}",
+    "143370.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(617) [uvm_test_top.env.sb]: CORDIC results: 4704 at 54 clocks, 0 waited in the FIFO, longest latency 54",
+    "143370.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(655) [uvm_test_top.env.probe]: CORDIC FIFO (depth 64): at most 53 reserved, 1 stored; 0 clocks waiting for a slot, 0 clocks stalled by a full FIFO, 0 clocks stalled by the age rule",
+    "143370.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(704) [uvm_test_top.env.ds_probe]: divide/sqrt units: 17 clocks both busy, 0 clocks both holding a result",
+    "143370.00ns INFO     cocotb.regression                  test_fpu_uvm.FpuCornerTest passed",
+    "PASS: pyuvm fpu (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-fpu-icarus-div",
+   "ok": true,
+   "seconds": 14.0,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "81570.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(616) [uvm_test_top.env.sb]: checked 7953 results, 0 errors; per op {'ADD': 0, 'SUB': 0, 'MUL': 0, 'DIV': 7953, 'SQRT': 0, 'I2F': 0, 'F2I': 0, 'MIN': 0, 'MAX': 0, 'EQ': 0, 'LT': 0, 'LE': 0, 'SIN': 0, 'COS': 0, 'ATAN2': 0, 'HYPOT': 0, 'EXP': 0, 'LN': 0}",
+    "81570.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(617) [uvm_test_top.env.sb]: CORDIC results: 0 at 54 clocks, 0 waited in the FIFO, longest latency 0",
+    "81570.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(655) [uvm_test_top.env.probe]: CORDIC FIFO (depth 64): at most 0 reserved, 0 stored; 0 clocks waiting for a slot, 0 clocks stalled by a full FIFO, 0 clocks stalled by the age rule",
+    "81570.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(704) [uvm_test_top.env.ds_probe]: divide/sqrt units: 0 clocks both busy, 0 clocks both holding a result",
+    "81570.00ns INFO     cocotb.regression                  test_fpu_uvm.FpuDivTest passed",
+    "PASS: pyuvm fpu (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-fpu-icarus-sqrt",
+   "ok": true,
+   "seconds": 25.9,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "114670.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(616) [uvm_test_top.env.sb]: checked 11263 results, 0 errors; per op {'ADD': 0, 'SUB': 0, 'MUL': 0, 'DIV': 0, 'SQRT': 11263, 'I2F': 0, 'F2I': 0, 'MIN': 0, 'MAX': 0, 'EQ': 0, 'LT': 0, 'LE': 0, 'SIN': 0, 'COS': 0, 'ATAN2': 0, 'HYPOT': 0, 'EXP': 0, 'LN': 0}",
+    "114670.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(617) [uvm_test_top.env.sb]: CORDIC results: 0 at 54 clocks, 0 waited in the FIFO, longest latency 0",
+    "114670.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(655) [uvm_test_top.env.probe]: CORDIC FIFO (depth 64): at most 0 reserved, 0 stored; 0 clocks waiting for a slot, 0 clocks stalled by a full FIFO, 0 clocks stalled by the age rule",
+    "114670.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(704) [uvm_test_top.env.ds_probe]: divide/sqrt units: 0 clocks both busy, 0 clocks both holding a result",
+    "114670.00ns INFO     cocotb.regression                  test_fpu_uvm.FpuSqrtTest passed",
+    "PASS: pyuvm fpu (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-fpu16",
+   "ok": true,
+   "seconds": 51.0,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "438550.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(616) [uvm_test_top.env.sb]: checked 25141 results, 0 errors; per op {'ADD': 2442, 'SUB': 2034, 'MUL': 2332, 'DIV': 1113, 'SQRT': 1130, 'I2F': 960, 'F2I': 1586, 'MIN': 1912, 'MAX': 960, 'EQ': 951, 'LT': 944, 'LE': 949, 'SIN': 1281, 'COS': 1305, 'ATAN2': 1327, 'HYPOT': 1280, 'EXP': 1308, 'LN': 1327}",
+    "438550.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(617) [uvm_test_top.env.sb]: CORDIC results: 6554 at 54 clocks, 1274 waited in the FIFO, longest latency 91",
+    "438550.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(655) [uvm_test_top.env.probe]: CORDIC FIFO (depth 16): at most 16 reserved, 16 stored; 14824 clocks waiting for a slot, 21 clocks stalled by a full FIFO, 377 clocks stalled by the age rule",
+    "438550.00ns INFO     ..b/pyuvm/fpu/test_fpu_uvm.py(704) [uvm_test_top.env.ds_probe]: divide/sqrt units: 2371 clocks both busy, 0 clocks both holding a result",
+    "438550.00ns INFO     cocotb.regression                  test_fpu_uvm.FpuRegressTest passed",
+    "PASS: pyuvm fpu16 (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-top",
+   "ok": true,
+   "seconds": 121.4,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "28747570.00ns INFO     cocotb.regression                  test_top_uvm.TopRegressTest passed",
+    "PASS: pyuvm top (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-eth",
+   "ok": true,
+   "seconds": 83.7,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "9640820.00ns INFO     cocotb.regression                  test_eth_uvm.EthRegressTest passed",
+    "PASS: pyuvm eth (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-eth-icarus-multi",
+   "ok": true,
+   "seconds": 84.1,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "720440.00ns INFO     cocotb.regression                  test_eth_uvm.EthMultiTest passed",
+    "PASS: pyuvm eth (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-accum",
+   "ok": true,
+   "seconds": 17.9,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "1216830.00ns INFO     cocotb.regression                  test_accum_uvm.AccumRegressTest passed",
+    "PASS: pyuvm accum (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-evu",
+   "ok": true,
+   "seconds": 98.1,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "7254550.00ns INFO     cocotb.regression                  test_evu_uvm.EvuRegressTest passed",
+    "PASS: pyuvm evu (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-evu-limit",
+   "ok": true,
+   "seconds": 5.4,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "153835.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(803) [uvm_test_top]: limits: 66 grids passed, 140 refused, 0 errors",
+    "154030.00ns INFO     cocotb.regression                  test_evu_uvm.EvuLimitTest passed",
+    "PASS: pyuvm evu (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-evu-profile",
+   "ok": true,
+   "seconds": 461.0,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "3755.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE sin 16 points 261 clocks issue 64 bounds 160..4776 good True",
+    "1317045.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE sin 16384 points 65747 clocks issue 65536 bounds 65632..4587816 good True",
+    "1327725.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE poly_box 64 points 944 clocks issue 704 bounds 807..28463 good True",
+    "1457795.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE gaussian_2d 1024 points 12689 clocks issue 11264 bounds 11368..573744 good True",
+    "9396645.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE gaussian_2d 65536 points 791775 clocks issue 720896 bounds 721000..36700464 good True",
+    "136265195.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE gaussian_2d 1048576 points 12678601 clocks issue 11534336 bounds 11534440..587202864 good True",
+    "136930915.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE charge_sphere 4096 points 66312 clocks issue 61440 bounds 61547..3440947 good True",
+    "179270645.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE charge_sphere 262144 points 4232817 clocks issue 3932160 bounds 3932267..220201267 good True",
+    "179274385.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE circulation 32 points 202 clocks issue 64 bounds 159..2855 good True",
+    "179527705.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE flux_sphere 1024 points 24992 clocks issue 23552 bounds 23667..1433915 good True",
+    "179537265.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE dipole_power 32 points 766 clocks issue 320 bounds 424..27184 good True",
+    "179551455.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE loop_bfield 64 points 1097 clocks issue 704 bounds 810..46386 good True",
+    "179696805.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE plate_potential 1024 points 14213 clocks issue 12288 bounds 12394..655666 good True",
+    "188784535.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE plate_potential 65536 points 906659 clocks issue 786432 bounds 786538..41943346 good True",
+    "334016545.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE plate_potential 1048576 points 14514943 clocks issue 12582912 bounds 12583018..671088946 good True",
+    "334028505.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE fermi_half 64 points 880 clocks issue 576 bounds 679..36143 good True",
+    "334043215.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE decay_wide 128 points 909 clocks issue 640 bounds 738..41258 good True",
+    "339328915.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE decay_wide 65536 points 520260 clocks issue 458752 bounds 458852..26214700 good True",
+    "339385985.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE rf_oscillatory 512 points 3607 clocks issue 3072 bounds 3171..184619 good True",
+    "346004395.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE rf_oscillatory 65536 points 653527 clocks issue 589824 bounds 589926..31457582 good True",
+    "346070155.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE cube_large 512 points 6418 clocks issue 6144 bounds 6248..246064 good True",
+    "597747115.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE cube_large 2097152 points 25166098 clocks issue 25165824 bounds 25165928..1006633264 good True",
+    "611278855.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE long_mixed 65536 points 1351046 clocks issue 1245184 bounds 1245297..83886393 good True",
+    "613591095.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE fermi_large 16384 points 165628 clocks issue 147456 bounds 147559..9175343 good True",
+    "615401675.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE lorentz_large 16384 points 115470 clocks issue 98304 bounds 98403..5243179 good True",
+    "617783465.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE two_divides 16384 points 172583 clocks issue 147456 bounds 147559..8519983 good True",
+    "619594045.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE root_large 16384 points 115470 clocks issue 98304 bounds 98403..5243179 good True",
+    "621597475.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE two_roots 16384 points 134753 clocks issue 114688 bounds 114788..7209260 good True",
+    "623568085.00ns INFO     ..b/pyuvm/evu/test_evu_uvm.py(904) [uvm_test_top]: PROFILE root_divide 16384 points 131471 clocks issue 114688 bounds 114788..7209260 good True",
+    "623568085.00ns INFO     cocotb.regression                  test_evu_uvm.EvuProfileTest passed",
+    "PASS: pyuvm evu (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-evu16",
+   "ok": true,
+   "seconds": 67.1,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "4417240.00ns INFO     cocotb.regression                  test_evu_uvm.EvuRegressTest passed",
+    "PASS: pyuvm evu16 (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-evu-icarus",
+   "ok": true,
+   "seconds": 254.3,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "2483640.00ns INFO     cocotb.regression                  test_evu_uvm.EvuRegressTest passed",
+    "PASS: pyuvm evu (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "pyuvm-cordic",
+   "ok": true,
+   "seconds": 27.3,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "155850.00ns INFO     ..m/cordic/test_cordic_uvm.py(325) [uvm_test_top.env.sb]: checked 5419 results: 0 model mismatches, 0 latency errors, 0 ULP/flag errors",
+    "155850.00ns INFO     cocotb.regression                  test_cordic_uvm.CordicRegressTest passed",
+    "PASS: pyuvm cordic (1 tests, 0 failed)"
+   ]
+  },
+  {
+   "step": "xsim-fpu",
+   "ok": true,
+   "seconds": 94.1,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "UVM_INFO C:/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/sqrt-shared/hw/tb/uvm/fpu/fpu_scoreboard.svh(163) @ 1372795000: uvm_test_top.env.sb [SB] checked 103920 results, 0 mismatches",
+    "UVM_ERROR :    0",
+    "UVM_FATAL :    0",
+    "PASS: fpu/fpu_regress_test sv_seed=1"
+   ]
+  },
+  {
+   "step": "xsim-top",
+   "ok": true,
+   "seconds": 243.3,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "UVM_ERROR :    0",
+    "UVM_FATAL :    0",
+    "PASS: top/top_regress_test sv_seed=1"
+   ]
+  },
+  {
+   "step": "vivado-build",
+   "ok": true,
+   "seconds": 393.8,
+   "head": "eccab0eef6b5758fd2a08bcf598852d65a9d5f36",
+   "lines": [
+    "INFO: [Place 46-56] BUFG insertion identified 0 candidate nets. Inserted BUFG: 0, Replicated BUFG Driver: 0, Skipped due to Placement/Routing Conflicts: 0, Skipped due to Timing Degradation: 0, Skipped due to netlist editing failed: 0.",
+    "# puts \"WNS: $wns ns  WHS: $whs ns\"",
+    "WNS: 0.237 ns  WHS: 0.033 ns"
+   ]
+  }
+ ]
+}

@@ -71,7 +71,7 @@ What I take from it:
 
 - **Any pipelined root removes the square root as the limit.** plate_potential goes from 34.3 to about 14 clocks per point, and two independent roots per point (two_roots) from 66 to about 8. From here the EVU's fetch and issue rate is the limit, the same as for divides after E.
 - **The three candidates are close in these workloads.** The largest gap in this profile is about 0.7 clock per point on plate_potential. Their different latencies (20, 23, 26) mostly disappear behind my 31 contexts; I don't assume that stays true for a short dependent chain or fewer contexts.
-- **S3 is slightly ahead, not behind**, even though both its operations take longer. I think the reason is the shared queue: fpu.sv has one urgent rule to obey instead of two, and the model's bounds are tighter with the CORDIC bound at 128. I haven't traced it clock by clock. root_divide, which feeds a root into a divide like plate_potential does, is where it shows most: 8.0 against 8.5.
+- **S3 is slightly ahead on the mixed root/divide runs**, even though its operations take longer. I think the shared queue changes the arbitration and urgent stalls: fpu.sv has one queue to drain instead of two. I haven't traced that clock by clock. The 128-clock CORDIC bound is a worst-case guarantee, not itself a reason that a workload runs faster. root_divide, which feeds a root into a divide like plate_potential does, shows 8.0 against 8.5 clocks per point.
 
 ## Recommendation
 
@@ -84,7 +84,7 @@ What I take from it:
 
 I keep S2 as the independent-unit fallback. It has the same root arithmetic and +0.863 ns isolated root slack, but 36 total DSPs versus S3's 32, a second queue, and a 160-clock CORDIC bound. It isn't my fallback for scarce DSPs. Its reason to stay around is a future architecture that could issue a divide and a root together, or needs their resource pools to stay independent. My current FPU accepts one request and returns one result per clock; dual issue would need changes outside either arithmetic unit too.
 
-I wouldn't take S1. It needs no DSPs, which is its only advantage. But it doubles the divide-and-root LUTs, its own arithmetic has the least margin, and its full build came closest to failing timing (+0.038 ns).
+I wouldn't take S1 here. Its root needs no additional DSPs, which is its main advantage. But it doubles the divide-and-root LUTs, its own arithmetic has the least margin, and its full build came closest to failing timing (+0.038 ns).
 
 ## Board runs
 
