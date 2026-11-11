@@ -187,6 +187,29 @@ mathaccel --port sim calc --help
 python tools/evu_board.py --port udpsim --random 60
 ```
 
+### which bitstream I'm programming
+
+My main checkout's existing `build/vivado/nexys_top.bit` is still the old
+split-baseline build. Updating the source or merging the divider PR doesn't
+rebuild that file. `program.tcl` only loads the existing bitstream from the
+checkout containing the script, so running main's script before rebuilding
+would put the split baseline back on the board.
+
+Until I rebuild on main, my board-tested E bitstream is
+`worktrees/div-multiplicative/build/vivado/nexys_top.bit`. From the main folder,
+I program that exact worktree's build like this:
+
+```bash
+vivado -mode batch -source worktrees/div-multiplicative/hw/scripts/program.tcl
+```
+
+The recorded E bitstream SHA-256 is
+`398a07521aa69eb84e7b91bee7d380ca6f641db0ae572a340e7bcd31ac7e755a`.
+I keep its [board manifest](docs/evidence/divider-board/div-multiplicative-20261110-011723/manifest.json)
+with the results. That worktree and generated bitstream are local artifacts;
+a fresh clone needs a build. Once I run the build command below on main,
+main's programming command loads that new build instead.
+
 To build and program the Nexys A7-100T with Vivado 2023.2:
 
 ```bash
