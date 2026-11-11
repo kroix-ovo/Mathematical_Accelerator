@@ -13,7 +13,7 @@ Phases 1 and 2 implement the communication and memory system and a hand-written 
 - `FPU` applies one operation to every element of two arrays in the scratchpad and writes the results and the IEEE exception flags for each element. The operations are add, subtract, multiply, divide, square root, integer-to-float and float-to-integer conversion, min, max, three compares, sin, cos, atan2, hypot, exp and ln.
 - `EVU` runs a small bytecode program once per point of a grid, using the same FPU, and either adds every point's result into one exactly rounded sum or writes one result per point. See [Phase 4](#phase-4-expression-unit-and-integrals).
 
-The FPU rounds to nearest even, handles subnormal numbers without flushing them to zero, returns one canonical NaN, and reports the five IEEE flags (invalid, divide by zero, overflow, underflow, inexact). [Numerics](docs/numerics.md) defines every rule. Add, multiply, conversions and compares are pipelined and accept one operation per clock; divide and square root compute one bit per clock and take 33 clocks each.
+The FPU rounds to nearest even, handles subnormal numbers without flushing them to zero, returns one canonical NaN, and reports the five IEEE flags (invalid, divide by zero, overflow, underflow, inexact). [Numerics](docs/numerics.md) defines every rule. Add, multiply, conversions and compares are pipelined and accept one operation per clock; my reciprocal divider accepts one operation per clock with 24-clock FPU output latency, while square root still uses the original 33-clock recurrence.
 
 The design has a 256 KiB scratchpad, a command processor, a UART link configured for 2 Mbaud at a 100 MHz clock, and a second link over the board's Ethernet port (described below). Packets use COBS framing and CRC-16 checks. Commands with invalid lengths or addresses receive an error response; corrupted packets are dropped and counted. Replies include a tag so the host can match them to requests.
 
@@ -71,6 +71,41 @@ On 2026-11-03 I tested the six functions on the Nexys A7-100T over Ethernet: one
 
 The CLI's `fp` and `fptest` cover all eighteen operations; `fptest --op phase3` checks the six functions bit for bit against the CORDIC model and measures their ULP error against mpmath. The [phase 3 plan](docs/phase3-plan.md) records the original design goals. For a guided explanation of the implemented stages, start with [Follow one CORDIC operation](docs/hdl-reading-guide.md#follow-one-cordic-operation).
 
+## My divider update (2026-11-10)
+
+I split divide and square root into separate units, then tried five divider
+architectures. I'm bringing in E, the reciprocal-multiply pipeline. It starts
+with a 512-entry seed table, refines the reciprocal, multiplies out the quotient,
+and checks the exact remainder to correct the last bit. So I get the throughput
+without changing the result bits or IEEE flags. Square root stays on its own
+original datapath for now.
+
+The interesting part is that E and my fully pipelined binary divider B perform
+about the same on the board, but E's divider uses 598 LUTs instead of 2,047.
+I spend 7 DSPs and half a BRAM tile on that trade. The recorded E full-design
+route meets 100 MHz with +0.210 ns setup slack; that is the experiment's measured
+build, rather than a fresh route of this integration branch.
+
+| board run, 16,384 points | split clocks/point | E clocks/point | split Ethernet repeat | E Ethernet repeat |
+| --- | ---: | ---: | ---: | ---: |
+| fermi_large | 33.0 | 10.1 | 5.91 ms | 2.06 ms |
+| lorentz_large | 33.0 | 7.2 | 5.87 ms | 1.54 ms |
+| two_divides | 66.0 | 10.5 | 11.39 ms | 2.08 ms |
+
+Those clocks come from the board. Repeat time includes starting the already
+loaded program and reading the answer over Ethernet. For E that's roughly
+2.9x to 5.5x faster on these divide-heavy runs. My million-point plate_potential
+run stays around 34 clocks per point because square root is still the limit.
+
+I ran the split baseline, B and E through the full suite over Ethernet and UART:
+all 22 class rules, map and root modes, the mixed and large divide runs, random
+programs, all 18 FPU ops and scratchpad memory. Every result matched the model
+bit for bit, cycle counts stayed inside each design's limits, and the link
+error counters stayed at zero. The integration branch keeps E's tested RTL
+unchanged. I keep the [comparison](docs/divider-comparison.md) and the
+[board reports and bitstream manifests](docs/evidence/divider-board/README.md)
+so the measurements can be traced back to the experiment that ran them.
+
 ## Phase 4: expression unit and integrals
 
 I got to the point where one FPU operation per array wasn't enough. For something like `x^2*sin(x)`, I had to start several kernels and keep the intermediate arrays in scratchpad. So in Phase 4 I added a small expression unit, or EVU. I compile the expression with SymPy on the laptop, upload its bytecode and tables once, and let the board work through every grid point. I can ask for one result per point, or one exact sum at the end. The arrays don't have to come back to the laptop between instructions. I wrote a [walk through one Phase 4 calculation](docs/phase4-reading-guide.md) to connect the host setup to the RTL stages.
@@ -101,7 +136,7 @@ I put the lowest clock count in each row in bold.
 
 - **My FPU uses fewer clocks per point than the NumPy FP64 baseline on 8 of 10 large rules,** and fewer than compiled Numba on every program built around a sine or an exponential: 4.4x fewer on `sin`.
 - **Why:** the CORDIC unit is fully pipelined, so a sine costs one issue slot, the same as an add, while the CPU runs a library routine for each one. 31 contexts hide the 52-clock latency, so the FPU issues on 88% to 100% of clocks on divide-free programs. I can feed the exact sum one term per clock, then pay a fixed 29 clocks to finish it. Grid points come from counters and tables sit in block RAM, so nothing ever waits on a cache.
-- **Where the CPU wins clock for clock:** divides and square roots, because my divider takes 33 clocks and handles one at a time, and work the compiler can move out of the inner loop, because the EVU runs every instruction at every point.
+- **Where the CPU won clock for clock in that original Phase 4 comparison:** divides and square roots, because the old shared unit took 33 clocks and handled one at a time, and work the compiler could move out of the inner loop, because the EVU runs every instruction at every point. My divider update above measures the newer pipeline separately; square root still has that limit.
 - **Accuracy:** the board's answer is the same on every run and in any order. A plain fp32 loop on the CPU drifted up to 16,379 ULP on the same rules and changed with the thread count. NumPy's pairwise sum stays within 2 ULP, close to the board.
 - **Real time:** repeat runs on the board were 14x to 495x slower than single-threaded Numba. The clock gap explains most of it: on `sin` a 41x clock gap shrinks to 9.3x in kernel time, because the FPU needs about a quarter of the clocks per point.
 
