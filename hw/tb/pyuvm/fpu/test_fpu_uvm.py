@@ -23,6 +23,11 @@ result FIFO (PARAM_FD=16). FifoProbe watches the FIFO's counters inside the
 DUT. The regression test requires the age rule to have stalled requests, and
 with the small FIFO also the other two stall rules (no free slot for a CORDIC
 request, FIFO full).
+
+Divide and square root are separate units (fp_div, fp_sqrt). DsProbe watches
+both and the regression requires that a divide and a square root were in
+progress together, and that both units once held a finished result at the
+same time, which is the collision the result arbitration has to settle.
 """
 
 # pyuvm calls build_phase to create components and connect_phase to wire
@@ -35,6 +40,7 @@ from __future__ import annotations
 
 import os
 import random
+import struct
 
 import cocotb
 import pyuvm
@@ -65,9 +71,13 @@ N_ITEMS = int(os.environ.get("FPU_N", "2000"))
 FD = int(os.environ.get("PARAM_FD", "64"))  # CORDIC result FIFO depth the DUT was built with
 N_OPS = spec.FPU_OP_COUNT
 LAT_PIPE = 7
-LAT_DS_MIN = 30
+# The fewest clocks from an accepted DIV or SQRT to its result. A divider
+# experiment that shortens fp_div lowers LAT_DIV_MIN; the result must never
+# come back sooner than the unit's own pipeline allows.
+LAT_DIV_MIN = 24
+LAT_SQRT_MIN = 30
 LAT_CORD = 54          # 52 in fp_cordic, one in the FIFO, one output register
-LAT_CORD_MAX = 95      # the FIFO age rule's bound: LAT_CORD + AGE_MAX (32) + 9
+LAT_CORD_MAX = 128     # LAT_CORD + AGE_MAX (32) + 10 + DQ (32): every promised divide may go first
 UNARY = {FpuOp.SQRT, FpuOp.I2F, FpuOp.F2I, FpuOp.SIN, FpuOp.COS, FpuOp.EXP, FpuOp.LN}
 
 
@@ -179,6 +189,115 @@ class FpuMixBurstSeq(FpuBaseSeq):
             await self.send(*g.stimulus(rng.choice([FpuOp.DIV, FpuOp.SQRT])))
             for _ in range(rng.randint(0, 12)):
                 await self.send(*g.stimulus(rng.randrange(3)))
+
+
+class FpuDivSqrtOverlapSeq(FpuBaseSeq):
+    """A DIV, then a SQRT on the next clock, then a long run of 6-clock ops.
+
+    The two iterative units are separate, so the SQRT is accepted while the
+    DIV is still working. Both finish while 6-clock results own the result
+    port, so both have to hold their answers, and the FPU has to send them
+    one at a time without losing either. Some rounds swap the order or leave
+    a gap, so the second unit finishes at different points of the first's
+    wait."""
+
+    async def body(self):
+        g = FpLcg(0x5EED0005)
+        rng = random.Random(9)
+        for _ in range(self.count):
+            first, second = rng.choice([(FpuOp.DIV, FpuOp.SQRT), (FpuOp.SQRT, FpuOp.DIV)])
+            await self.send(*g.stimulus(first))
+            for _ in range(rng.choice([0, 0, 1, 3, 6])):
+                await self.send(*g.stimulus(FpuOp.ADD))
+            await self.send(*g.stimulus(second))
+            for _ in range(rng.randint(30, 45)):
+                await self.send(*g.stimulus(rng.choice([FpuOp.ADD, FpuOp.MUL, FpuOp.MIN])))
+
+
+def div_hard_cases(rng: random.Random) -> list[tuple[int, int]]:
+    """Directed divide operands that every divider version has to get exactly right.
+
+    I picked these for the ways the divider experiments could go wrong:
+    * divisor significands on the boundaries the candidates look at: the eight
+      intervals SRT selects on (1 + i/8) and the 512 reciprocal table intervals
+      (1 + i/512), each exactly and one ulp either side;
+    * dividends with the largest and smallest significands, so the quotient
+      lands just below 2 and just above 1/2;
+    * exact quotients (a = b * small integer), where the remainder is zero and
+      inexact must stay clear;
+    * quotients a few ulps from a rounding tie, from a = q * b with q's low bits
+      set to ...0111 and ...1000;
+    * subnormal inputs and results, the minimum subnormal divided by two (it
+      rounds to zero or to itself depending on the tie), and results that are
+      tiny only before or only after rounding;
+    * overflow edges: the largest normal divided by numbers just below one.
+    """
+    def bits(x: float) -> int:
+        return struct.unpack("<I", struct.pack("<f", x))[0]
+
+    def make(sign: int, exp: int, frac: int) -> int:
+        return (sign << 31) | ((exp & 0xFF) << 23) | (frac & 0x7FFFFF)
+
+    cases: list[tuple[int, int]] = []
+    tops = [0x7FFFFF, 0x7FFFFE, 0x000000, 0x000001, 0x400000, 0x3FFFFF, 0x555555, 0x2AAAAA]
+    # Divisor boundaries: SRT's 8 intervals and the reciprocal table's 512.
+    for step, count in ((1 << 20, 8), (1 << 14, 512)):
+        for i in range(count):
+            for off in (-1, 0, 1):
+                frac = i * step + off
+                if not 0 <= frac < (1 << 23):
+                    continue
+                b = make(rng.getrandbits(1), rng.randint(100, 150), frac)
+                for top in rng.sample(tops, 3):
+                    cases.append((make(rng.getrandbits(1), rng.randint(100, 150), top), b))
+    # Extreme significands against each other.
+    for ta in tops:
+        for tb in tops:
+            cases.append((make(0, 127, ta), make(0, 127, tb)))
+            cases.append((make(1, 200, ta), make(0, 60, tb)))
+    # Exact quotients.
+    for _ in range(300):
+        b = rng.randrange(1 << 23, 1 << 24)
+        m = rng.choice([1, 3, 5, 7, 9, 15, 17, 255, 257])
+        a = b * m
+        while a >= 1 << 24:
+            if a & 1:
+                break
+            a >>= 1
+        if a < 1 << 24:
+            cases.append((bits(float(a)), bits(float(b))))
+    # Near ties: a = q * b rounded, with q's low bits close to a half ulp.
+    for _ in range(600):
+        qsig = (rng.randrange(1 << 23, 1 << 24) & ~0xF) | rng.choice([0x7, 0x8, 0x9, 0xF, 0x0, 0x1])
+        b = rng.randrange(1 << 23, 1 << 24)
+        a = float(qsig) * float(b) / float(1 << 23)
+        cases.append((bits(a), bits(float(b))))
+    # Subnormals and underflow.
+    one, two, half = bits(1.0), bits(2.0), bits(0.5)
+    for a in (0x00000001, 0x00000002, 0x00000003, 0x007FFFFF, 0x00400000, 0x00800000, 0x00800001, 0x80000001):
+        for b in (one, two, bits(3.0), bits(1.5), bits(1.0000001), bits(0.99999994), half, bits(4.0)):
+            cases.append((a, b))
+    for _ in range(200):
+        a = make(rng.getrandbits(1), rng.randint(0, 3), rng.getrandbits(23))
+        b = make(0, rng.randint(124, 160), rng.getrandbits(23))
+        cases.append((a, b))
+        cases.append((b, make(0, rng.randint(250, 254), rng.getrandbits(23))))
+    # Overflow edges.
+    big = 0x7F7FFFFF
+    for b in (one, bits(0.99999994), bits(0.5), bits(0.50000006), bits(2.0 ** -126), 0x00000001, 0x00400000):
+        cases.append((big, b))
+        cases.append((0xFF7FFFFF, b))
+        cases.append((bits(1.0), b))
+    return cases
+
+
+class FpuDivHardSeq(FpuBaseSeq):
+    """The directed divide cases above, sent back to back."""
+
+    async def body(self):
+        rng = random.Random(0xD17)
+        for a, b in div_hard_cases(rng):
+            await self.send(FpuOp.DIV, a, b)
 
 
 class FpuCordicMixSeq(FpuBaseSeq):
@@ -389,9 +508,10 @@ class FpuScoreboard(uvm_component):
                                   f"{rsp.result:08x}/{rsp.flags:05b}")
         lat = rsp.cycle - req.cycle
         if req.op in (FpuOp.DIV, FpuOp.SQRT):
-            if lat < LAT_DS_MIN:
+            least = LAT_DIV_MIN if req.op == FpuOp.DIV else LAT_SQRT_MIN
+            if lat < least:
                 self.errors += 1
-                self.logger.error(f"{req}: latency {lat} < {LAT_DS_MIN}")
+                self.logger.error(f"{req}: latency {lat} < {least}")
         elif req.op in CORDIC_OPS:
             # Exactly LAT_CORD when the result port is free, later when the
             # result has to wait in the FIFO.
@@ -454,6 +574,74 @@ class FifoProbe(uvm_component):
                          f"{self.old} clocks stalled by the age rule")
 
 
+class DsProbe(uvm_component):
+    """Watches the divide and square-root units inside the DUT (white box).
+
+    It counts clocks where both units are busy at once, which shows the split
+    really lets a divide and a square root overlap, and clocks where both hold
+    a finished result together. It also checks the hold rule: while fpu.sv's
+    ds_block is high (in the baseline, while either unit holds a result), the
+    FPU must refuse every request."""
+
+    def build_phase(self):
+        self.dut = ConfigDB().get(self, "", "DUT")
+        self.overlap = 0        # clocks with both units busy
+        self.both_hold = 0      # clocks with both units holding a result
+        self.errors = 0
+
+    async def run_phase(self):
+        dut = self.dut
+        while True:
+            await FallingEdge(dut.clk)
+            await ReadOnly()
+            if int(dut.rst.value):
+                continue
+            # This divider is pipelined and nearly always ready, so "busy" means
+            # it has divides in progress: in its pipeline or waiting in its queue.
+            div_busy = int(dut.u_div.cnt.value) != 0
+            sqrt_busy = not int(dut.sqrt_in_ready.value)
+            div_hold, sqrt_hold = int(dut.div_hold.value), int(dut.sqrt_hold.value)
+            self.overlap += div_busy and sqrt_busy
+            self.both_hold += div_hold and sqrt_hold
+            if int(dut.ds_block.value) and int(dut.req_ready.value):
+                self.errors += 1
+                self.logger.error("the FPU is ready while ds_block says a held result must go first")
+
+    def report_phase(self):
+        self.logger.info(f"divide/sqrt units: {self.overlap} clocks both busy, "
+                         f"{self.both_hold} clocks both holding a result")
+
+
+class DivQueueProbe(uvm_component):
+    """Watches the pipelined divider's result queue (white box, u_div.cnt and q_cnt).
+
+    Checks that the promised places never exceed DQ and that stored results never
+    exceed promised ones, and counts the clocks where out_urgent stopped requests,
+    so the regression can require that the urgent rule was really exercised."""
+
+    def build_phase(self):
+        self.dut = ConfigDB().get(self, "", "DUT")
+        self.max_cnt = self.max_q = self.urgent = self.errors = 0
+
+    async def run_phase(self):
+        dut = self.dut
+        while True:
+            await FallingEdge(dut.clk)
+            await ReadOnly()
+            if int(dut.rst.value):
+                continue
+            c, q = int(dut.u_div.cnt.value), int(dut.u_div.q_cnt.value)
+            self.max_cnt, self.max_q = max(self.max_cnt, c), max(self.max_q, q)
+            self.urgent += int(dut.div_urgent.value)
+            if c > 32 or q > c:
+                self.errors += 1
+                self.logger.error(f"divide queue counters out of range: cnt={c} q_cnt={q}")
+
+    def report_phase(self):
+        self.logger.info(f"divide queue: at most {self.max_cnt} promised, {self.max_q} stored; "
+                         f"{self.urgent} clocks with out_urgent")
+
+
 def kind_of(x: int) -> str:
     """Classify raw operand bits for coverage without changing the bits sent to the DUT."""
     e, f = (x >> 23) & 0xFF, x & 0x7FFFFF
@@ -489,6 +677,8 @@ class FpuEnv(uvm_env):
         self.sb = FpuScoreboard("sb", self)
         self.cov = FpuCoverage("cov", self)
         self.probe = FifoProbe("probe", self)
+        self.ds_probe = DsProbe("ds_probe", self)
+        self.q_probe = DivQueueProbe("q_probe", self)
 
     def connect_phase(self):
         self.agent.req_mon.ap.connect(self.sb.req_fifo.analysis_export)
@@ -531,6 +721,8 @@ class FpuBaseTest(uvm_test):
     def final_phase(self):
         sb = self.env.sb
         assert sb.errors == 0 and sb.checked > 0, f"{sb.errors} errors, {sb.checked} checked"
+        assert self.env.ds_probe.errors == 0, f"{self.env.ds_probe.errors} hold-rule errors"
+        assert self.env.q_probe.errors == 0, f"{self.env.q_probe.errors} divide queue errors"
 
 
 @pyuvm.test()
@@ -553,6 +745,19 @@ class FpuLcgTest(FpuBaseTest):
 
 
 @pyuvm.test()
+class FpuDivTest(FpuBaseTest):
+    """Divide only: the directed hard cases, then FPU_N random LCG divides."""
+
+    async def run_seqs(self):
+        await FpuDivHardSeq("hard").start(self.env.agent.sqr)
+        s = FpuLcgSeq("lcg")
+        s.count = N_ITEMS
+        s.seed = int(os.environ.get("LCG_SEED", "D1D1"), 16)
+        s.force_op = int(FpuOp.DIV)
+        await s.start(self.env.agent.sqr)
+
+
+@pyuvm.test()
 class FpuRegressTest(FpuBaseTest):
     """Corner matrix, then random and mixed-burst sequences running in parallel
     on one sequencer (the sequencer interleaves their items)."""
@@ -570,11 +775,19 @@ class FpuRegressTest(FpuBaseTest):
         cmix = FpuCordicMixSeq("cmix")
         cmix.count = max(1, N_ITEMS // 40)
         await cmix.start(self.env.agent.sqr)
+        # Also on its own: the timing between the DIV and the SQRT matters.
+        overlap = FpuDivSqrtOverlapSeq("overlap")
+        overlap.count = max(4, N_ITEMS // 100)
+        await overlap.start(self.env.agent.sqr)
 
     def final_phase(self):
         super().final_phase()
         pr = self.env.probe
         assert pr.old > 0, "the FIFO age rule never stalled a request"
+        ds = self.env.ds_probe
+        assert ds.overlap > 0, "a divide and a square root were never in progress together"
+        assert ds.both_hold > 0, "the two units never held a result at the same time"
+        assert self.env.q_probe.urgent > 0, "the divide queue's urgent rule never stopped requests"
         if FD < 64:
             # The small FIFO exists to reach the stall rules; make sure it did.
             assert pr.noroom > 0 and pr.full > 0, f"stall rules not reached: {pr.noroom} / {pr.full}"

@@ -1,0 +1,76 @@
+{
+ "track": "div-multiplicative",
+ "root": "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\div-multiplicative",
+ "branch": "experiment/div-multiplicative",
+ "head": "ee16989ba836dcb0967212ce3892f04d418f284d",
+ "rtl_commit": "0cc557793a75741307ca7551ba393c8607fd521b",
+ "rtl_dirty": false,
+ "bitstream": "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\div-multiplicative\\build\\vivado\\nexys_top.bit",
+ "bitstream_sha256": "398a07521aa69eb84e7b91bee7d380ca6f641db0ae572a340e7bcd31ac7e755a",
+ "bitstream_time": "2026-11-09T01:33:24",
+ "bitstream_newer_than_rtl": true,
+ "routed_wns_whs": [
+  0.21,
+  0.018
+ ],
+ "started": "2026-11-10T01:10:36",
+ "finished": "2026-11-10T01:14:06",
+ "port": "udp:192.168.10.2",
+ "uart": "COM3",
+ "steps": [
+  {
+   "step": "program",
+   "cmd": [
+    "C:\\Xilinx\\Vivado\\2023.2\\bin\\vivado.bat",
+    "-mode",
+    "batch",
+    "-nojournal",
+    "-nolog",
+    "-source",
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\div-multiplicative\\hw\\scripts\\program.tcl"
+   ],
+   "exit": 0,
+   "log": "program.log"
+  },
+  {
+   "step": "evu-uart",
+   "cmd": [
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\div-multiplicative\\.venv\\Scripts\\python.exe",
+    "tools/evu_board.py",
+    "--port",
+    "COM3",
+    "--out",
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\build\\board\\div-multiplicative-20261110-011036\\evu_uart.md"
+   ],
+   "exit": 0,
+   "log": "evu_uart.log"
+  },
+  {
+   "step": "evu-udp",
+   "cmd": [
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\div-multiplicative\\.venv\\Scripts\\python.exe",
+    "tools/evu_board.py",
+    "--port",
+    "udp:192.168.10.2",
+    "--out",
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\build\\board\\div-multiplicative-20261110-011036\\evu_udp.md"
+   ],
+   "exit": 0,
+   "log": "evu_udp.log"
+  },
+  {
+   "step": "evu-uart",
+   "cmd": [
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\div-multiplicative\\.venv\\Scripts\\python.exe",
+    "tools/evu_board.py",
+    "--port",
+    "COM3",
+    "--out",
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\build\\board\\div-multiplicative-20261110-011036\\evu_uart.md"
+   ],
+   "exit": 0,
+   "log": "evu_uart.log"
+  }
+ ],
+ "passed": true
+}

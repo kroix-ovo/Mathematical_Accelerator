@@ -51,8 +51,12 @@ enum {
 #define POS_INF   0x7F800000u
 #define NEG_INF   0xFF800000u
 
-/* The cost of a run, for the clock count bounds. See cycle_bounds in evu_model.py. */
-enum { CYCLES_START = DESC_WORDS + 47, CYCLES_SUM = 29, DS_PERIOD = 33,
+/* The cost of a run, for the clock count bounds. See cycle_bounds in evu_model.py.
+   A divider lane accepts a request at most every DIV_INTERVAL clocks and fp_div
+   has DIV_LANES lanes; the same for square root. They match
+   sw/mathaccel/driver/model.py. */
+enum { CYCLES_START = DESC_WORDS + 47, CYCLES_SUM = 29,
+       DIV_LANES = 1, DIV_INTERVAL = 1, SQRT_LANES = 1, SQRT_INTERVAL = 33,
        SLOW_FAST = 40, SLOW_DIVIDE = 120, SLOW_CORDIC = 160 };
 
 static uint32_t mem[WORDS];
@@ -242,7 +246,7 @@ EXPORT int evu_ref_run(unsigned desc, unsigned *aux, unsigned *low, unsigned *hi
     uint32_t tbase[TABLES], tdim[TABLES], n[3];
     uint32_t i0, i1, i2, r_addr, f_addr;
     uint64_t point = 0, points, each = 0, copy, floor_ops;
-    int len, k, reduce, st, divides = 0;
+    int len, k, reduce, st, divides = 0, roots = 0;
     uint32_t flags_or = 0;
 
     out_count = 0;
@@ -274,12 +278,22 @@ EXPORT int evu_ref_run(unsigned desc, unsigned *aux, unsigned *low, unsigned *hi
     copy = CYCLES_START + (uint64_t)len + d[D_CONST_LEN] + (reduce ? CYCLES_SUM : 0);
     for (k = 0; k < len; k++) {
         int op = field_op(program[k]);
-        if (is_divide(op)) { divides++; each += SLOW_DIVIDE; }
+        if (is_divide(op)) {
+            each += SLOW_DIVIDE;
+            if (op == OP_DIV) divides++; else roots++;
+        }
         else if (op != OP_LOAD && op >= OP_FIRST_CORDIC) each += SLOW_CORDIC;
         else each += SLOW_FAST;
     }
-    floor_ops = (uint64_t)(divides * DS_PERIOD > len ? divides * DS_PERIOD : len);
-    *low = (unsigned)(copy + floor_ops * points);
+    /* Division and square root are separate units that work at the same time,
+       so the floor is the slowest of the three limits, not the sum of the two
+       units' times. The units' share is rounded down, as in the Python model. */
+    floor_ops = (uint64_t)len * points;
+    if ((uint64_t)divides * DIV_INTERVAL * points / DIV_LANES > floor_ops)
+        floor_ops = (uint64_t)divides * DIV_INTERVAL * points / DIV_LANES;
+    if ((uint64_t)roots * SQRT_INTERVAL * points / SQRT_LANES > floor_ops)
+        floor_ops = (uint64_t)roots * SQRT_INTERVAL * points / SQRT_LANES;
+    *low = (unsigned)(copy + floor_ops);
     *high = (unsigned)(copy + 200 + each * points);
 
     for (i0 = 0; i0 < n[0]; i0++)

@@ -23,7 +23,8 @@
 //
 // It also checks timing that the RTL promises:
 //   - pipelined ops return exactly LAT_PIPE clocks after acceptance
-//   - divide/sqrt return no sooner than LAT_DS_MIN clocks
+//   - divide returns no sooner than LAT_DIV_MIN clocks and square root no
+//     sooner than LAT_SQRT_MIN (separate units since the split)
 //   - CORDIC ops return between LAT_CORD clocks (when the result port is
 //     free) and LAT_CORD_MAX (the bound the FIFO's age rule guarantees)
 //   - no response without a request, no request left without a response
@@ -40,9 +41,11 @@ class fpu_scoreboard extends uvm_scoreboard;
   // monitors see them (the response monitor samples one clock after the DUT
   // registers its output, which the constants include).
   localparam int LAT_PIPE   = 7;
-  localparam int LAT_DS_MIN = 30;
+  localparam int LAT_DIV_MIN  = 24;
+  localparam int LAT_SQRT_MIN = 30;
   localparam int LAT_CORD   = 54;
-  localparam int LAT_CORD_MAX = 95;
+  // AGE_MAX (32) + 10 + DQ (32): every promised divide result may go first
+  localparam int LAT_CORD_MAX = 128;
 
   uvm_analysis_imp_req #(fpu_req_item, fpu_scoreboard) req_imp;
   uvm_analysis_imp_rsp #(fpu_rsp_item, fpu_scoreboard) rsp_imp;
@@ -122,8 +125,9 @@ class fpu_scoreboard extends uvm_scoreboard;
     if (is_cordic(q.op)) check_ulp(q, r);
 
     if (q.op inside {FDIV, FSQRT}) begin
-      if (lat < LAT_DS_MIN)
-        `uvm_error("SB_LAT", $sformatf("%s returned after %0d clocks (< %0d)", q.op.name(), lat, LAT_DS_MIN))
+      int least = (q.op == FDIV) ? LAT_DIV_MIN : LAT_SQRT_MIN;
+      if (lat < least)
+        `uvm_error("SB_LAT", $sformatf("%s returned after %0d clocks (< %0d)", q.op.name(), lat, least))
     end else if (is_cordic(q.op)) begin
       if (lat < LAT_CORD || lat > LAT_CORD_MAX)
         `uvm_error("SB_LAT", $sformatf("%s returned after %0d clocks (expected %0d..%0d)",

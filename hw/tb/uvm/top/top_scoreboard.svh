@@ -22,7 +22,14 @@ class top_ref_model extends uvm_object;
   localparam int unsigned WORDS = 1 << accel_pkg::SCRATCH_AW;
   // Cycle counts of the FPU kernel (same numbers as sw/mathaccel/driver/model.py).
   // CORDIC ops issue like the 6-clock ops; their results arrive 47 clocks later.
-  localparam int unsigned FPU_FETCH = 4, FPU_PIPE_TAIL = 9, DS_PERIOD = 33, DS_TAIL = 6;
+  // Divide and square root have their own units, each described by its lanes,
+  // the interval between two requests one lane accepts, and the clocks from the
+  // last accepted element to the end (see unit_kernel_cycles in model.py, which
+  // unit_cycles below copies). Every divider experiment changes the DIV_
+  // numbers here together with model.py and evu_ref.c.
+  localparam int unsigned FPU_FETCH = 4, FPU_PIPE_TAIL = 9;
+  localparam int unsigned DIV_LANES = 1, DIV_INTERVAL = 1, DIV_LAST = 30;
+  localparam int unsigned SQRT_LANES = 1, SQRT_INTERVAL = 33, SQRT_LAST = 39;
   localparam int unsigned CORDIC_TAIL = FPU_PIPE_TAIL + 47;
 
   // Scratchpad words. An associative array only stores words that were
@@ -36,6 +43,21 @@ class top_ref_model extends uvm_object;
   int unsigned evu_low, evu_high;
 
   function new(string name = "top_ref_model"); super.new(name); endfunction
+
+  // FPU kernel clocks for count elements of a divide or square root: element k
+  // is accepted at max(previous + FPU_FETCH, the same lane's previous +
+  // interval), and the run ends last clocks after the final acceptance.
+  function int unsigned unit_cycles(int unsigned count, int unsigned lanes, int unsigned interval,
+                                    int unsigned last);
+    int unsigned at[$];
+    at.push_back(0);
+    for (int unsigned k = 1; k < count; k++) begin
+      int unsigned next = at[k - 1] + FPU_FETCH;
+      if (k >= lanes && at[k - lanes] + interval > next) next = at[k - lanes] + interval;
+      at.push_back(next);
+    end
+    return at[count - 1] + last;
+  endfunction
 
   function bit [31:0] rd(int unsigned a);
     return mem.exists(a) ? mem[a] : 0;
@@ -172,7 +194,8 @@ class top_ref_model extends uvm_object;
           aux |= fl;
         end
         if (count == 0)             cycles = 1;
-        else if (fop inside {3, 4}) cycles = DS_PERIOD * count + DS_TAIL;
+        else if (fop == 3)          cycles = unit_cycles(count, DIV_LANES, DIV_INTERVAL, DIV_LAST);
+        else if (fop == 4)          cycles = unit_cycles(count, SQRT_LANES, SQRT_INTERVAL, SQRT_LAST);
         else if (fop >= 12)         cycles = FPU_FETCH * count + CORDIC_TAIL;
         else                        cycles = FPU_FETCH * count + FPU_PIPE_TAIL;
       end

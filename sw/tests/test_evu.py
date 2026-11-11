@@ -459,10 +459,38 @@ def test_request_checks():
     assert _run(model, spec.SCRATCH_WORDS - spec.EVU_DESC_WORDS)[0] == Status.BAD_ARG
 
 
+def _copy_clocks(run: Run) -> int:
+    """The part of cycle_bounds' low bound that doesn't depend on the points."""
+    return (M.CYCLES_START + len(run.program.words) + len(run.program.constants)
+            + (M.CYCLES_SUM if run.reduce else 0))
+
+
 def test_cycle_bounds_follow_the_divider():
+    """A program whose one divide takes longer than its two instructions is
+    bounded by the divider's rate. I read that rate from the model, because each
+    divider experiment changes it (it was a fixed 33 before the split)."""
     run = _small_run()
     low, high = M.cycle_bounds(run)
     assert low < high
     divide = Program([Instr(OP_LOAD, 0, 0).encode(), Instr(FpuOp.DIV, 1, reg(0), reg(0), last=True).encode()])
     slow = Run(divide, run.tables, run.grid)
-    assert M.cycle_bounds(slow)[0] - M.cycle_bounds(run)[0] > 30 * run.points
+    p = run.points
+    assert M.cycle_bounds(slow)[0] == _copy_clocks(slow) + max(2 * p, M.DIV_INTERVAL * p // M.DIV_LANES)
+    if M.DIV_INTERVAL // M.DIV_LANES > 2:
+        assert M.cycle_bounds(slow)[0] - M.cycle_bounds(run)[0] >= (M.DIV_INTERVAL // M.DIV_LANES - 3) * p
+
+
+def test_cycle_bounds_let_divide_and_sqrt_overlap():
+    """fp_div and fp_sqrt are separate units, so a point with one of each is
+    bounded by the slower unit, not by the two units' times added. Two divides
+    per point both use fp_div, so those do add."""
+    run = _small_run()
+    both = Run(Program([Instr(OP_LOAD, 0, 0).encode(), Instr(FpuOp.SQRT, 1, reg(0)).encode(),
+                        Instr(FpuOp.DIV, 2, reg(0), reg(1), last=True).encode()]), run.tables, run.grid)
+    two_div = Run(Program([Instr(OP_LOAD, 0, 0).encode(), Instr(FpuOp.DIV, 1, reg(0), reg(0)).encode(),
+                           Instr(FpuOp.DIV, 2, reg(0), reg(1), last=True).encode()]), run.tables, run.grid)
+    p = run.points
+    div_share = M.DIV_INTERVAL * p // M.DIV_LANES
+    sqrt_share = M.SQRT_INTERVAL * p // M.SQRT_LANES
+    assert M.cycle_bounds(both)[0] == _copy_clocks(both) + max(3 * p, div_share, sqrt_share)
+    assert M.cycle_bounds(two_div)[0] == _copy_clocks(two_div) + max(3 * p, 2 * M.DIV_INTERVAL * p // M.DIV_LANES)

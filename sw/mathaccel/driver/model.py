@@ -221,22 +221,55 @@ def fpu_evaluate(fop: int, a: int, b: int = 0) -> tuple[int, int]:
 # Clock counts of the FPU kernel, measured from the RTL (kernel_engine.sv)
 # and checked against it by the xsim/cocotb vector tests. Each element costs
 # FETCH clocks (RA, RB, RC, ISSUE) when the FPU is ready at once; divide and
-# square root are limited by the iterative unit's DS_PERIOD instead. The
-# CORDIC ops issue at the same rate as the 6-clock ops and only have a
-# longer tail: the FPU returns them 54 clocks after issue instead of 7.
+# square root are limited by their own unit's period instead. The CORDIC ops
+# issue at the same rate as the 6-clock ops and only have a longer tail: the
+# FPU returns them 54 clocks after issue instead of 7.
 FPU_FETCH = 4          # RA, RB, RC, ISSUE
 FPU_PIPE_TAIL = 9      # last issue -> 7-clock FPU latency -> flag write -> FIN
 CORDIC_TAIL = FPU_PIPE_TAIL + (54 - 7)
-DS_PERIOD = 33         # fp_divsqrt: capture, prep, 27 iterate, pack, 2 round, output, +1 kernel clock
-DS_TAIL = 6
+# Division and square root are separate units (fp_div, fp_sqrt), so each has
+# its own three numbers:
+#   LANES     how many divides (or roots) the unit can hold at once in
+#             independent copies; 1 for an ordinary unit
+#   INTERVAL  the fewest clocks from one request a lane accepts to the next
+#             one it can accept: 33 for the baseline (capture, prep, 27
+#             iterate, pack, 2 round, output), 1 for a fully pipelined unit
+#   LAST      FPU kernel clocks from accepting the last element to the end of
+#             the run (its result, the flag write and FIN)
+# The FPU kernel offers an element at most every FPU_FETCH clocks and waits in
+# ISSUE when no lane is free, so element k is accepted at
+#   a[k] = max(a[k-1] + FPU_FETCH, a[k-LANES] + INTERVAL),   a[0] = 0,
+# and the run lasts a[count-1] + LAST. For the baseline that is 33 * count + 6.
+# INTERVAL / LANES also bounds an EVU run from below (evu_model.cycle_bounds).
+# Every divider experiment changes the DIV_ numbers here, in
+# hw/tb/uvm/dpi/evu_ref.c and in hw/tb/uvm/top/top_scoreboard.svh together.
+DIV_LANES = 1
+DIV_INTERVAL = 1
+DIV_LAST = 30
+SQRT_LANES = 1
+SQRT_INTERVAL = 33
+SQRT_LAST = 39
+
+
+def unit_kernel_cycles(count: int, lanes: int, interval: int, last: int) -> int:
+    """FPU kernel clocks for count elements on a unit with the given lanes and interval."""
+    if lanes == 1:
+        return max(FPU_FETCH, interval) * (count - 1) + last
+    accepted = [0]
+    for k in range(1, count):
+        free = accepted[k - lanes] + interval if k >= lanes else 0
+        accepted.append(max(accepted[k - 1] + FPU_FETCH, free))
+    return accepted[-1] + last
 
 
 def fpu_kernel_cycles(fop: int, count: int) -> int:
     """Predict reported clocks from the fetch cadence, unit latency and final write-back."""
     if count == 0:
         return 1
-    if fop in (FpuOp.DIV, FpuOp.SQRT):
-        return DS_PERIOD * count + DS_TAIL
+    if fop == FpuOp.DIV:
+        return unit_kernel_cycles(count, DIV_LANES, DIV_INTERVAL, DIV_LAST)
+    if fop == FpuOp.SQRT:
+        return unit_kernel_cycles(count, SQRT_LANES, SQRT_INTERVAL, SQRT_LAST)
     if fop in CORDIC_OPS:
         return FPU_FETCH * count + CORDIC_TAIL
     return FPU_FETCH * count + FPU_PIPE_TAIL
