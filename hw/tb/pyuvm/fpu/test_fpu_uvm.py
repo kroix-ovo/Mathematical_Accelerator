@@ -646,11 +646,11 @@ def unit_busy(dut, unit: str, ready: str) -> bool:
     """True while a divide or square-root unit has work in progress.
 
     A pipelined unit with a result queue is nearly always ready, so for one of
-    those (it has a promise counter, cnt) "busy" means it holds a queue place: an
+    those (it has a result queue, q_cnt) "busy" means it holds a queue place: an
     operation in its pipeline or a result waiting in its queue. A one-at-a-time
     unit is busy exactly while it refuses new requests."""
     u = getattr(dut, unit)
-    return int(u.cnt.value) != 0 if hasattr(u, "cnt") else not int(getattr(dut, ready).value)
+    return int(u.cnt.value) != 0 if hasattr(u, "q_cnt") else not int(getattr(dut, ready).value)
 
 
 class DsProbe(uvm_component):
@@ -693,7 +693,7 @@ class QueueProbe(uvm_component):
     """Watches the result queue of every pipelined divide or square-root unit
     (white box: the unit's cnt and q_cnt, and fpu.sv's div_urgent or sqrt_urgent).
 
-    A unit without a queue (no cnt) is skipped, so the same probe works for every
+    A unit without a queue (no q_cnt) is skipped, so the same probe works for every
     version. For each queue it checks that the promised places never exceed DQ
     and that stored results never exceed promised ones, and counts the clocks
     where out_urgent stopped requests, so the regression can require that the
@@ -704,7 +704,7 @@ class QueueProbe(uvm_component):
 
     def build_phase(self):
         self.dut = ConfigDB().get(self, "", "DUT")
-        self.units = [(u, g) for u, g in self.UNITS if hasattr(getattr(self.dut, u), "cnt")]
+        self.units = [(u, g) for u, g in self.UNITS if hasattr(getattr(self.dut, u), "q_cnt")]
         self.max_cnt = {u: 0 for u, _ in self.units}
         self.max_q = {u: 0 for u, _ in self.units}
         self.urgent = {u: 0 for u, _ in self.units}

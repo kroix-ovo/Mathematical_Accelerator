@@ -222,3 +222,8 @@ Quick list so I don't lose track. The full write-ups are in the dated entries be
 
 **E-51. My `--no-eth` option ran the Ethernet suite anyway.** I added `--no-eth` to `board_suite.py` when the link was down (E-50). It skipped the bring-up but left the UDP suite in a block that still ran, so each "UART only" run did UART, UDP, then UART again, and the second UART report overwrote the first. The cable had been reseated by then, so the UDP suite worked and every step passed. I only noticed because the folders had an `evu_udp.md` they shouldn't have had.
 **Fix:** the UDP block now checks `--no-eth` too. A stubbed run shows exactly one step, `evu-uart`. The evidence README says which reports came from which steps.
+
+## 2026-11-11: square-root experiments
+
+**E-52. My probes took the old square root's step counter for a queue.** To let one testbench serve every square-root candidate, I made the overlap and queue probes treat any divide or square-root unit with a `cnt` register as pipelined. The original one-at-a-time `fp_sqrt` also has a `cnt`: it counts its iteration clocks. On main the queue probe then looked for a `q_cnt` that doesn't exist, and all seven pyuvm FPU steps failed at time 45 ns. The experiment branches weren't affected, since every unit there that has `cnt` also has a queue.
+**Fix:** the probes now look for `q_cnt`, which only a unit with a result queue has. I cherry-picked the same commit into all three branches.
