@@ -21,11 +21,14 @@ def main():
     ap.add_argument("--rounds", type=int, default=4)
     ap.add_argument("--seconds", type=float, default=6)
     ap.add_argument("--port", default="udp:192.168.10.2")
+    ap.add_argument("--resume", action="store_true", help="validate/reuse complete JSONs; preserve failed logs")
     args = ap.parse_args()
     root = Path(__file__).resolve().parents[1]
     trees = {name: root.parent / name for name in VARIANTS}
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
+    if any(output.glob("round-*.json")) and not args.resume:
+        raise FileExistsError("Choose a fresh evidence directory; existing board samples must be preserved")
     manifest = json.loads((output / "board-manifest.json").read_text())
     bit = root.parents[1] / "build/vivado/nexys_top.bit"
     bit_hash = hashlib.sha256(bit.read_bytes()).hexdigest()
@@ -48,8 +51,17 @@ def main():
             command = [sys.executable, str(root / "tools/board_language_bench.py"),
                        "--root", str(trees[name]), "--output", str(target), "--port", args.port,
                        "--seconds", str(args.seconds)]
-            with target.with_suffix(".txt").open("w") as log:
-                subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
+            if not target.exists():
+                log_path = target.with_suffix(".txt")
+                if log_path.exists():
+                    attempt = 1
+                    while log_path.with_suffix(f".failed-{attempt}.txt").exists():
+                        attempt += 1
+                    log_path.rename(log_path.with_suffix(f".failed-{attempt}.txt"))
+                with log_path.open("w") as log:
+                    subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
+            else:
+                print(f"Reusing completed, validated measurement {target.name}", flush=True)
             data = json.loads(target.read_text())
             assert data["backend"] == EXPECTED[name] and data["physical_board"]
             if reference is None:
