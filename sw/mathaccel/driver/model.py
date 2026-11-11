@@ -245,10 +245,10 @@ CORDIC_TAIL = FPU_PIPE_TAIL + (54 - 7)
 # hw/tb/uvm/dpi/evu_ref.c and in hw/tb/uvm/top/top_scoreboard.svh together.
 DIV_LANES = 1
 DIV_INTERVAL = 1
-DIV_LAST = 30
+DIV_LAST = 32
 SQRT_LANES = 1
-SQRT_INTERVAL = 33
-SQRT_LAST = 39
+SQRT_INTERVAL = 1
+SQRT_LAST = 32
 
 
 def unit_kernel_cycles(count: int, lanes: int, interval: int, last: int) -> int:

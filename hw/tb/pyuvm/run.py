@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
 
 FP_RTL = ["hw/rtl/pkg/accel_pkg.sv", "hw/rtl/fp/fp_pkg.sv", "hw/rtl/fp/fp_addsub.sv",
-          "hw/rtl/fp/fp_mul.sv", "hw/rtl/fp/fp_misc.sv", "hw/rtl/fp/fp_div.sv", "hw/rtl/fp/fp_sqrt.sv",
+          "hw/rtl/fp/fp_mul.sv", "hw/rtl/fp/fp_misc.sv", "hw/rtl/fp/fp_divsqrt.sv",
           "hw/rtl/fp/cordic_pkg.sv", "hw/rtl/fp/fp_cordic.sv", "hw/rtl/fp/fpu.sv"]
 CORDIC_RTL = ["hw/rtl/pkg/accel_pkg.sv", "hw/rtl/fp/fp_pkg.sv", "hw/rtl/fp/cordic_pkg.sv", "hw/rtl/fp/fp_cordic.sv"]
 

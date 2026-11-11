@@ -74,10 +74,10 @@ LAT_PIPE = 7
 # The fewest clocks from an accepted DIV or SQRT to its result. A divider
 # experiment that shortens fp_div lowers LAT_DIV_MIN; the result must never
 # come back sooner than the unit's own pipeline allows.
-LAT_DIV_MIN = 24
-LAT_SQRT_MIN = 30
+LAT_DIV_MIN = 26
+LAT_SQRT_MIN = 26
 LAT_CORD = 54          # 52 in fp_cordic, one in the FIFO, one output register
-LAT_CORD_MAX = 128     # LAT_CORD + AGE_MAX (32) + 10 + DQ (32): every promised divide may go first
+LAT_CORD_MAX = 128     # LAT_CORD + AGE_MAX (32) + 10 + DQ (32): promised divides and roots go first
 UNARY = {FpuOp.SQRT, FpuOp.I2F, FpuOp.F2I, FpuOp.SIN, FpuOp.COS, FpuOp.EXP, FpuOp.LN}
 
 
@@ -688,8 +688,9 @@ class DsProbe(uvm_component):
             await ReadOnly()
             if int(dut.rst.value):
                 continue
-            div_busy = unit_busy(dut, "u_div", "div_in_ready")
-            sqrt_busy = unit_busy(dut, "u_sqrt", "sqrt_in_ready")
+            # One shared unit: it reports which kinds of operation its stages hold.
+            div_busy = int(dut.u_ds.busy_div.value)
+            sqrt_busy = int(dut.u_ds.busy_sqrt.value)
             div_hold, sqrt_hold = int(dut.div_hold.value), int(dut.sqrt_hold.value)
             self.overlap += div_busy and sqrt_busy
             self.both_hold += div_hold and sqrt_hold
@@ -712,7 +713,7 @@ class QueueProbe(uvm_component):
     where out_urgent stopped requests, so the regression can require that the
     urgent rule was really exercised."""
 
-    UNITS = (("u_div", "div_urgent"), ("u_sqrt", "sqrt_urgent"))
+    UNITS = (("u_ds", "div_urgent"),)
     DQ = 32
 
     def build_phase(self):
@@ -902,7 +903,8 @@ class FpuRegressTest(FpuBaseTest):
         assert pr.old > 0, "the FIFO age rule never stalled a request"
         ds = self.env.ds_probe
         assert ds.overlap > 0, "a divide and a square root were never in progress together"
-        assert ds.both_hold > 0, "the two units never held a result at the same time"
+        # There is one queue, so two results are never held by two units at
+        # once (sqrt_hold is always 0); overlap above is what still matters.
         for unit, clocks in self.env.q_probe.urgent.items():
             assert clocks > 0, f"the {unit} queue's urgent rule never stopped requests"
         if FD < 64:

@@ -13,18 +13,16 @@
 //   ADD, SUB         fp_addsub    pipelined, 1 per clock, 6 clocks
 //   MUL              fp_mul       pipelined, 1 per clock, 6 clocks
 //   I2F ... LE       fp_misc      pipelined, 1 per clock, 6 clocks
-//   DIV              fp_div       pipelined reciprocal multiply, 1 per
-//                                 clock, then a result queue (DQ = 32)
-//   SQRT             fp_sqrt      one at a time, fixed 33 clocks; separate
-//                                 from fp_div, so a divide and a square
-//                                 root can be in progress together
+//   DIV, SQRT        fp_divsqrt   one shared pipeline: reciprocal and
+//                                 reciprocal-root multiplies, 1 operation
+//                                 per clock, then one result queue (DQ = 32)
 //   SIN ... LN       fp_cordic    pipelined, 1 per clock, 52 clocks, then
 //                                 a result FIFO
 // plus one output register, so pipelined results appear 7 clocks after
 // acceptance, and CORDIC results 54 clocks after acceptance when nothing else
 // is using the result port (one more clock for the FIFO), and never later than
 // 54 + AGE_MAX + 10 + DQ = 128 clocks (see the age rule below; DQ = 32 is
-// the divider's result queue depth).
+// the shared divide and square-root queue's depth).
 // Op codes 18-30 go to fp_misc, which returns NaN with the invalid flag, and op
 // code 31 is the expression unit's internal move (cmd_proc never sends any of
 // these; it rejects them with BAD_ARG).
@@ -33,15 +31,12 @@
 // only one request enters per clock, so at most one of them finishes in any
 // clock. These results always win the result port, since those units can't
 // wait. The two slower units have to find a free clock:
-//   - fp_sqrt holds its one result until a clock where the 6-clock units
-//     have nothing to return; to guarantee that clock arrives, no new
-//     requests are accepted while it waits. fp_div is pipelined and keeps up
-//     to DQ finished divides in its own queue, with a place promised to every
-//     divide it accepts. Stopping requests whenever a divide result waits
-//     would stop the FPU nearly all the time, so instead fp_div raises
-//     out_urgent when its oldest result has waited its AGE (8) clocks, and
-//     only then are new requests refused. The divide queue goes before the
-//     square root, which goes before the CORDIC FIFO.
+//   - fp_divsqrt is pipelined and keeps up to DQ finished divides and square
+//     roots in its queue, with a place promised to every operation it
+//     accepts. Stopping requests whenever one of its results waits would stop
+//     the FPU nearly all the time, so instead it raises out_urgent when its
+//     oldest result has waited its AGE (8) clocks, and only then are new
+//     requests refused. Its queue goes before the CORDIC FIFO.
 //   - fp_cordic results go into a FIFO (FD = 64 entries), which hands one
 //     result to the port in each clock that neither of the above uses.
 //     fp_cordic itself can't stall either, so every CORDIC request reserves a
@@ -56,9 +51,9 @@
 //     the 6-clock units leave free; the testbench saw a result wait 263
 //     clocks, longer than it takes an 8-bit tag to come round again. With the
 //     rule, once the requests stop, the 6-clock units are empty within 7
-//     clocks, at most the DQ divides already promised a queue place and one
-//     square-root result go first, and then the FIFO gets the port. So no
-//     result waits in the FIFO more than AGE_MAX + 10 + DQ clocks.
+//     clocks, at most the DQ divides and square roots already promised a
+//     queue place go first, and then the FIFO gets the port. So no result
+//     waits in the FIFO more than AGE_MAX + 10 + DQ clocks.
 //   - A full FIFO also stops all new requests. With the age rule and FD = 64
 //     this can't happen; it is the backstop for smaller FIFOs.
 // One FPU kernel run uses a single op, so inside the kernel engine none of
@@ -115,29 +110,30 @@ module fpu
   logic op_sub;
   assign op_sub  = (req_op == FOP_SUB);
 
-  // Handshake wires of the two iterative units. div_in_ready and
-  // sqrt_in_ready mean "this unit can take a request now"; div_hold and
-  // sqrt_hold mean "this unit has a finished result waiting for the port".
-  // ds_hold is either of those. ds_block is the rule that stops every new
-  // request so a held result is sure to reach the port. Here fp_div can hold
-  // many results, so ds_block uses its out_urgent (the oldest divide result
-  // has waited too long) instead of div_hold. The testbenches read these
-  // names, so every divider version keeps them.
-  logic          div_in_ready, div_hold, div_ack, div_urgent;
+  // Handshake wires of the divide and square-root unit. Earlier versions had
+  // two units, and the testbenches read these names, so I keep them: here
+  // div_in_ready and sqrt_in_ready are the same shared in_ready, div_hold is
+  // "the shared queue has a result waiting", and sqrt_hold is always 0, since
+  // every result leaves through the one queue. ds_block is the rule that stops
+  // every new request so a held result is sure to reach the port; it uses the
+  // unit's out_urgent (the oldest result has waited too long).
+  logic          ds_in_ready, div_in_ready, div_hold, div_ack, div_urgent;
   logic          sqrt_in_ready, sqrt_hold, sqrt_ack;
   logic          ds_hold, ds_block;
+  assign div_in_ready  = ds_in_ready;
+  assign sqrt_in_ready = ds_in_ready;
+  assign sqrt_hold     = 1'b0;
   assign ds_hold  = div_hold || sqrt_hold;
-  assign ds_block = div_urgent || sqrt_hold;
+  assign ds_block = div_urgent;
   logic [FA:0]   c_cnt;                // CORDIC results in flight or in the FIFO, 0..FD
   logic [FA:0]   f_cnt;                // results stored in the FIFO, 0..FD
   logic          f_full, c_room, f_old;
   assign f_full = (f_cnt == (FA+1)'(FD));
   assign c_room = (c_cnt != (FA+1)'(FD));
-  // Not ready while a sqrt result or an urgent divide result waits for an output slot, while
+  // Not ready while an urgent divide or square-root result waits for an output slot, while
   // the CORDIC FIFO is full or its oldest result is too old (see header),
-  // when a DIV or SQRT arrives while its own unit is still busy, or when a
-  // CORDIC op arrives with no free FIFO slot. A busy fp_div refuses only DIV,
-  // and a busy fp_sqrt refuses only SQRT.
+  // when a DIV or SQRT arrives with no queue place left for it, or when a
+  // CORDIC op arrives with no free FIFO slot.
   assign req_ready = !ds_block && !f_full && !f_old && (!is_div || div_in_ready) &&
                      (!is_sqrt || sqrt_in_ready) && (!is_cord || c_room);
   assign fire      = req_valid && req_ready;
@@ -162,21 +158,21 @@ module fpu
       .in_a(req_a), .in_b(req_b), .in_tag(req_tag),
       .out_valid(misc_v), .out_result(misc_r), .out_flags(misc_f), .out_tag(misc_t));
 
-  // The two iterative units sit side by side. Each sees only its own
-  // requests, so one can work while the other is idle or busy too.
-  fp_div #(.TW(TW)) u_div (
-      .clk, .rst, .in_valid(fire && is_div), .in_ready(div_in_ready),
+  // One shared unit takes both DIV and SQRT; is_sqrt tells it which. Its
+  // results leave through the div_* wires, and the sqrt_* ones stay idle.
+  logic is_ds;
+  assign is_ds = is_div || is_sqrt;
+  fp_divsqrt #(.TW(TW)) u_ds (
+      .clk, .rst, .in_valid(fire && is_ds), .in_sqrt(is_sqrt), .in_ready(ds_in_ready),
       .in_a(req_a), .in_b(req_b), .in_tag(req_tag),
       .out_valid(div_hold), .out_urgent(div_urgent), .out_ack(div_ack),
-      .out_result(div_r), .out_flags(div_f), .out_tag(div_t));
-  assign div_v = div_hold;
-
-  fp_sqrt #(.TW(TW)) u_sqrt (
-      .clk, .rst, .in_valid(fire && is_sqrt), .in_ready(sqrt_in_ready),
-      .in_a(req_a), .in_tag(req_tag),
-      .out_valid(sqrt_hold), .out_ack(sqrt_ack),
-      .out_result(sqrt_r), .out_flags(sqrt_f), .out_tag(sqrt_t));
-  assign sqrt_v = sqrt_hold;
+      .out_result(div_r), .out_flags(div_f), .out_tag(div_t),
+      .busy_div(), .busy_sqrt());
+  assign div_v  = div_hold;
+  assign sqrt_v = 1'b0;
+  assign sqrt_r = '0;
+  assign sqrt_f = '0;
+  assign sqrt_t = '0;
 
   fp_cordic #(.TW(TW)) u_cord (
       .clk, .rst, .in_valid(fire && is_cord), .in_op(req_op),
@@ -228,8 +224,8 @@ module fpu
   end
 
   // ---- result merge -------------------------------------------------------
-  // 6-clock results have priority, then divide, then square root, then the
-  // CORDIC FIFO. An ack tells a holding unit that its result is the one
+  // 6-clock results have priority, then the divide and square-root queue,
+  // then the CORDIC FIFO. (sqrt_v is always 0 here.) An ack tells a holding unit that its result is the one
   // registered on this clock edge, so it can let go of it.
   logic pipe_v;
   assign pipe_v   = add_v || mul_v || misc_v;

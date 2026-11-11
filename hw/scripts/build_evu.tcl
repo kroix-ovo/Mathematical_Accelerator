@@ -19,7 +19,7 @@ file mkdir $out
 set part xc7a100tcsg324-1
 
 foreach f {hw/rtl/pkg/accel_pkg.sv hw/rtl/fp/fp_pkg.sv hw/rtl/fp/cordic_pkg.sv hw/rtl/fp/fp_addsub.sv
-           hw/rtl/fp/fp_mul.sv hw/rtl/fp/fp_misc.sv hw/rtl/fp/fp_div.sv hw/rtl/fp/fp_sqrt.sv hw/rtl/fp/fp_cordic.sv
+           hw/rtl/fp/fp_mul.sv hw/rtl/fp/fp_misc.sv hw/rtl/fp/fp_divsqrt.sv hw/rtl/fp/fp_cordic.sv
            hw/rtl/fp/fpu.sv hw/rtl/fp/fp_accum.sv hw/rtl/core/scratch_mem.sv hw/rtl/evu/evu_core.sv
            hw/tb/pyuvm/evu/evu_dut.sv} {
     read_verilog -sv $root/$f
