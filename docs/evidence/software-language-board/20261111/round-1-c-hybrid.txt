@@ -1,0 +1,23 @@
+link/ping: 201 samples, 133.7 us
+link/status: 201 samples, 128.7 us
+link/nop: 201 samples, 129.1 us
+memory/roundtrip/1: 51 samples, 313.1 us
+memory/roundtrip/255: 51 samples, 597.3 us
+memory/roundtrip/256: 51 samples, 840.0 us
+memory/roundtrip/4096: 51 samples, 10870.8 us
+sustained/write/4096: 1125 samples, 4673.3 us
+sustained/read/4096: 1114 samples, 4706.6 us
+sustained/roundtrip/4096: 564 samples, 10007.9 us
+sustained/write/32768: 151 samples, 37874.9 us
+sustained/read/32768: 149 samples, 38299.4 us
+sustained/roundtrip/32768: 72 samples, 79343.6 us
+fpu/ADD: 31 samples, 1051.6 us
+fpu/DIV: 31 samples, 1058.6 us
+fpu/SIN: 31 samples, 1012.0 us
+evu/full/basic: 31 samples, 1002.9 us
+evu/loaded/basic: 31 samples, 642.0 us
+evu/full/map: 31 samples, 15987.5 us
+evu/loaded/map: 31 samples, 10867.7 us
+evu/full/reduce: 31 samples, 21686.6 us
+evu/loaded/reduce: 31 samples, 1339.9 us
+PHYSICAL BOARD PASS: c -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language-board/20261111/round-1-c-hybrid.json

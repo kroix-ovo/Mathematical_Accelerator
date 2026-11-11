@@ -229,11 +229,12 @@ def main():
                         frame = super().recv_frame(timeout)
                         assert frame is not None
                     return None
-                return super().recv_frame(min(timeout, 0.005) if self.mode == "running" else timeout)
+                shortened = self.mode == "running" and self.injected
+                return super().recv_frame(min(timeout, 0.005) if shortened else timeout)
 
         for mode in ("not started", "finished", "running"):
             transport = Loss(mode)
-            with Device(transport, timeout=0.005 if mode == "running" else 1, retries=0) as dev:
+            with Device(transport, timeout=1, retries=0) as dev:
                 values = np.linspace(0.1, 1, 1024, dtype=np.float32).view(np.uint32)
                 program = compile_expr(x*x+2, {x: 0})
                 grid = (1024,)

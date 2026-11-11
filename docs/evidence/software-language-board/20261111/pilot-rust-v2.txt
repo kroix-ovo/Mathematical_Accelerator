@@ -1,0 +1,20 @@
+link/ping: 201 samples, 510.4 us
+link/status: 201 samples, 403.7 us
+link/nop: 201 samples, 149.1 us
+memory/roundtrip/1: 51 samples, 315.1 us
+memory/roundtrip/255: 51 samples, 606.1 us
+memory/roundtrip/256: 51 samples, 1024.1 us
+memory/roundtrip/4096: 51 samples, 11037.6 us
+sustained/write/4096: 21 samples, 4762.3 us
+sustained/read/4096: 15 samples, 5557.6 us
+sustained/roundtrip/4096: 11 samples, 10572.9 us
+sustained/write/32768: 11 samples, 43997.4 us
+sustained/read/32768: 11 samples, 45316.1 us
+sustained/roundtrip/32768: 11 samples, 86933.7 us
+evu/full/basic: 31 samples, 1138.3 us
+evu/loaded/basic: 31 samples, 789.4 us
+evu/full/map: 31 samples, 17516.2 us
+evu/loaded/map: 31 samples, 10944.5 us
+evu/full/reduce: 31 samples, 25195.8 us
+evu/loaded/reduce: 31 samples, 1493.4 us
+PHYSICAL BOARD PASS: rust -> docs/evidence/software-language-board/20261111/pilot-rust-v2.json

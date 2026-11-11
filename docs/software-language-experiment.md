@@ -1,6 +1,6 @@
 # Software language experiment
 
-Measured 2026-11-09. The optimized Python baseline is the default recommendation for occasional use. Native framing is an optional measured optimization for sustained packet work; physical-board performance remains unmeasured. See the tables below before selecting a backend.
+Measured 2026-11-09. The optimized Python baseline is the default recommendation for occasional use. Native framing is an optional measured optimization for sustained packet work. This first study did not measure physical-board performance. The subsequent [physical FPGA comparison](software-language-board-experiment.md) measures sustained transfers and gives the recommendation for that workload.
 
 ## Pinned implementations
 

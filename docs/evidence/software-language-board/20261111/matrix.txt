@@ -1,0 +1,73 @@
+ROUND 0: software-control physical FPGA
+PASS software-control: results/flags/cycles/images equal; RUN recovery passed
+ROUND 0: python-optimized physical FPGA
+PASS python-optimized: results/flags/cycles/images equal; RUN recovery passed
+ROUND 0: rust-hybrid physical FPGA
+PASS rust-hybrid: results/flags/cycles/images equal; RUN recovery passed
+ROUND 0: c-hybrid physical FPGA
+PASS c-hybrid: results/flags/cycles/images equal; RUN recovery passed
+ROUND 1: python-optimized physical FPGA
+PASS python-optimized: results/flags/cycles/images equal; RUN recovery passed
+ROUND 1: rust-hybrid physical FPGA
+PASS rust-hybrid: results/flags/cycles/images equal; RUN recovery passed
+ROUND 1: c-hybrid physical FPGA
+PASS c-hybrid: results/flags/cycles/images equal; RUN recovery passed
+ROUND 1: software-control physical FPGA
+PASS software-control: results/flags/cycles/images equal; RUN recovery passed
+ROUND 2: rust-hybrid physical FPGA
+PASS rust-hybrid: results/flags/cycles/images equal; RUN recovery passed
+ROUND 2: c-hybrid physical FPGA
+PASS c-hybrid: results/flags/cycles/images equal; RUN recovery passed
+ROUND 2: software-control physical FPGA
+Traceback (most recent call last):
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/tools/run_board_language_experiment.py", line 84, in <module>
+    
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/tools/run_board_language_experiment.py", line 52, in main
+    "--seconds", str(args.seconds)]
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kroix/.local/share/uv/python/cpython-3.11.18-linux-x86_64-gnu/lib/python3.11/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/kroix/.venvs/mathaccel-board/bin/python', '/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/tools/board_language_bench.py', '--root', '/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/software-control', '--output', '/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language-board/20261111/round-2-software-control.json', '--port', 'udp:192.168.10.2', '--seconds', '6.0']' returned non-zero exit status 1.
+ROUND 0: software-control physical FPGA
+Reusing completed, validated measurement round-0-software-control.json
+PASS software-control: results/flags/cycles/images equal; RUN recovery passed
+ROUND 0: python-optimized physical FPGA
+Reusing completed, validated measurement round-0-python-optimized.json
+PASS python-optimized: results/flags/cycles/images equal; RUN recovery passed
+ROUND 0: rust-hybrid physical FPGA
+Reusing completed, validated measurement round-0-rust-hybrid.json
+PASS rust-hybrid: results/flags/cycles/images equal; RUN recovery passed
+ROUND 0: c-hybrid physical FPGA
+Reusing completed, validated measurement round-0-c-hybrid.json
+PASS c-hybrid: results/flags/cycles/images equal; RUN recovery passed
+ROUND 1: python-optimized physical FPGA
+Reusing completed, validated measurement round-1-python-optimized.json
+PASS python-optimized: results/flags/cycles/images equal; RUN recovery passed
+ROUND 1: rust-hybrid physical FPGA
+Reusing completed, validated measurement round-1-rust-hybrid.json
+PASS rust-hybrid: results/flags/cycles/images equal; RUN recovery passed
+ROUND 1: c-hybrid physical FPGA
+Reusing completed, validated measurement round-1-c-hybrid.json
+PASS c-hybrid: results/flags/cycles/images equal; RUN recovery passed
+ROUND 1: software-control physical FPGA
+Reusing completed, validated measurement round-1-software-control.json
+PASS software-control: results/flags/cycles/images equal; RUN recovery passed
+ROUND 2: rust-hybrid physical FPGA
+Reusing completed, validated measurement round-2-rust-hybrid.json
+PASS rust-hybrid: results/flags/cycles/images equal; RUN recovery passed
+ROUND 2: c-hybrid physical FPGA
+Reusing completed, validated measurement round-2-c-hybrid.json
+PASS c-hybrid: results/flags/cycles/images equal; RUN recovery passed
+ROUND 2: software-control physical FPGA
+PASS software-control: results/flags/cycles/images equal; RUN recovery passed
+ROUND 2: python-optimized physical FPGA
+PASS python-optimized: results/flags/cycles/images equal; RUN recovery passed
+ROUND 3: c-hybrid physical FPGA
+PASS c-hybrid: results/flags/cycles/images equal; RUN recovery passed
+ROUND 3: software-control physical FPGA
+PASS software-control: results/flags/cycles/images equal; RUN recovery passed
+ROUND 3: python-optimized physical FPGA
+PASS python-optimized: results/flags/cycles/images equal; RUN recovery passed
+ROUND 3: rust-hybrid physical FPGA
+PASS rust-hybrid: results/flags/cycles/images equal; RUN recovery passed
+COMPLETE: all four implementations passed on the same physical FPGA.
