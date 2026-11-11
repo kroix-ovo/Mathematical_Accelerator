@@ -395,6 +395,19 @@ class FpuCordicMixSeq(FpuBaseSeq):
                 else:
                     op = rng.choice([FpuOp.ADD, FpuOp.SUB, FpuOp.MUL, FpuOp.MIN, FpuOp.F2I])
                 await self.send(*g.stimulus(op))
+        # The random rounds above only fill a 16-entry FIFO on a round with exactly
+        # 16 CORDIC ops and a long enough 6-clock run, and whether one lines up
+        # depends on how the earlier traffic was timed (it did on the original
+        # square root and not on the pipelined ones). So I finish with rounds
+        # that fill it on purpose: 16 CORDIC ops back to back, then 6-clock ops
+        # until well after the last CORDIC result is due (54 clocks each), so
+        # every CORDIC result arrives while the result port is taken. With a
+        # deeper FIFO these rounds are just more traffic.
+        for _ in range(3):
+            for _ in range(16):
+                await self.send(*g.stimulus(rng.choice(CORDIC_OPS)))
+            for _ in range(90):
+                await self.send(*g.stimulus(rng.choice([FpuOp.ADD, FpuOp.SUB, FpuOp.MUL, FpuOp.MIN])))
 
 
 # ---------------------------------------------------------------------------
