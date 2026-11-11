@@ -291,6 +291,74 @@ def div_hard_cases(rng: random.Random) -> list[tuple[int, int]]:
     return cases
 
 
+def sqrt_hard_cases(rng: random.Random) -> list[int]:
+    """Directed square-root operands that every square-root version has to get exactly right.
+
+    I picked these for the ways the square-root experiments could go wrong:
+    * significands on the boundaries a seed table looks at (1 + i/512, exactly and
+      one ulp either side), with both odd and even exponents, because the
+      exponent's parity decides whether the root works on [1, 2) or [2, 4);
+    * exact roots: perfect squares k^2 scaled by powers of 4, where the remainder
+      is zero and inexact must stay clear;
+    * roots just either side of a rounding boundary: for an odd 26-bit root R I
+      take the radicands closest to R^2, so the remainder is tiny or the root's
+      guard bit is set with almost nothing below it;
+    * the smallest and largest significands, every subnormal leading-zero count,
+      the largest normal, and the special values (zeros, infinities, NaNs and
+      negative numbers, which give NaN).
+    """
+    def bits(x: float) -> int:
+        return struct.unpack("<I", struct.pack("<f", x))[0]
+
+    def make(sign: int, exp: int, frac: int) -> int:
+        return (sign << 31) | ((exp & 0xFF) << 23) | (frac & 0x7FFFFF)
+
+    cases: list[int] = []
+    # Seed-table boundaries, with an even and an odd exponent each.
+    for i in range(512):
+        for off in (-1, 0, 1):
+            frac = (i << 14) + off
+            if 0 <= frac < 1 << 23:
+                even = rng.randrange(2, 252, 2)
+                cases += [make(0, even, frac), make(0, even + 1, frac)]
+    # Exact roots.
+    for k in list(range(1, 300)) + [rng.randrange(300, 4096) for _ in range(300)]:
+        for j in (-40, -2, 0, 1, 30):
+            cases.append(bits(float(k * k) * 4.0 ** j))
+    # Near rounding boundaries. The radicand's significand na makes N = na << (27 + p)
+    # (p = 1 for an odd unbiased exponent); the root R = isqrt(N) has 26 bits and
+    # rounding looks at R's lowest bit. I aim N at R^2 for an odd R.
+    for _ in range(1500):
+        p = rng.getrandbits(1)
+        r = rng.randrange(1 << 25, 1 << 26) | 1
+        na = (r * r) >> (27 + p)
+        for d in (-1, 0, 1, 2):
+            m = na + d
+            if 1 << 23 <= m < 1 << 24:
+                e = 127 + 2 * rng.randint(-50, 50) + p
+                cases.append(make(0, e, m - (1 << 23)))
+    # Extremes and subnormals: every leading-zero count, both parities of exponent.
+    for e in (1, 2, 126, 127, 128, 253, 254):
+        for frac in (0, 1, 0x400000, 0x7FFFFE, 0x7FFFFF, 0x2AAAAA, 0x555555):
+            cases.append(make(0, e, frac))
+    for k in range(23):
+        cases += [1 << k, (1 << k) | 1, (2 << k) - 1]
+    cases += [make(0, 0, rng.getrandbits(23)) for _ in range(200)]
+    # Special values: +-0, +-inf, quiet and signalling NaNs, negative numbers.
+    cases += [0x00000000, 0x80000000, 0x7F800000, 0xFF800000, 0x7FC00000, 0x7FA00000, 0xFFC00001,
+              0x7F800001, bits(-1.0), bits(-2.0 ** -140), 0x80000001, bits(-3.4e38)]
+    return cases
+
+
+class FpuSqrtHardSeq(FpuBaseSeq):
+    """The directed square-root cases above, sent back to back."""
+
+    async def body(self):
+        rng = random.Random(0x5C27)
+        for a in sqrt_hard_cases(rng):
+            await self.send(FpuOp.SQRT, a, 0)
+
+
 class FpuDivHardSeq(FpuBaseSeq):
     """The directed divide cases above, sent back to back."""
 
@@ -574,6 +642,17 @@ class FifoProbe(uvm_component):
                          f"{self.old} clocks stalled by the age rule")
 
 
+def unit_busy(dut, unit: str, ready: str) -> bool:
+    """True while a divide or square-root unit has work in progress.
+
+    A pipelined unit with a result queue is nearly always ready, so for one of
+    those (it has a promise counter, cnt) "busy" means it holds a queue place: an
+    operation in its pipeline or a result waiting in its queue. A one-at-a-time
+    unit is busy exactly while it refuses new requests."""
+    u = getattr(dut, unit)
+    return int(u.cnt.value) != 0 if hasattr(u, "cnt") else not int(getattr(dut, ready).value)
+
+
 class DsProbe(uvm_component):
     """Watches the divide and square-root units inside the DUT (white box).
 
@@ -596,10 +675,8 @@ class DsProbe(uvm_component):
             await ReadOnly()
             if int(dut.rst.value):
                 continue
-            # This divider is pipelined and nearly always ready, so "busy" means
-            # it has divides in progress: in its pipeline or waiting in its queue.
-            div_busy = int(dut.u_div.cnt.value) != 0
-            sqrt_busy = not int(dut.sqrt_in_ready.value)
+            div_busy = unit_busy(dut, "u_div", "div_in_ready")
+            sqrt_busy = unit_busy(dut, "u_sqrt", "sqrt_in_ready")
             div_hold, sqrt_hold = int(dut.div_hold.value), int(dut.sqrt_hold.value)
             self.overlap += div_busy and sqrt_busy
             self.both_hold += div_hold and sqrt_hold
@@ -612,16 +689,26 @@ class DsProbe(uvm_component):
                          f"{self.both_hold} clocks both holding a result")
 
 
-class DivQueueProbe(uvm_component):
-    """Watches the pipelined divider's result queue (white box, u_div.cnt and q_cnt).
+class QueueProbe(uvm_component):
+    """Watches the result queue of every pipelined divide or square-root unit
+    (white box: the unit's cnt and q_cnt, and fpu.sv's div_urgent or sqrt_urgent).
 
-    Checks that the promised places never exceed DQ and that stored results never
-    exceed promised ones, and counts the clocks where out_urgent stopped requests,
-    so the regression can require that the urgent rule was really exercised."""
+    A unit without a queue (no cnt) is skipped, so the same probe works for every
+    version. For each queue it checks that the promised places never exceed DQ
+    and that stored results never exceed promised ones, and counts the clocks
+    where out_urgent stopped requests, so the regression can require that the
+    urgent rule was really exercised."""
+
+    UNITS = (("u_div", "div_urgent"), ("u_sqrt", "sqrt_urgent"))
+    DQ = 32
 
     def build_phase(self):
         self.dut = ConfigDB().get(self, "", "DUT")
-        self.max_cnt = self.max_q = self.urgent = self.errors = 0
+        self.units = [(u, g) for u, g in self.UNITS if hasattr(getattr(self.dut, u), "cnt")]
+        self.max_cnt = {u: 0 for u, _ in self.units}
+        self.max_q = {u: 0 for u, _ in self.units}
+        self.urgent = {u: 0 for u, _ in self.units}
+        self.errors = 0
 
     async def run_phase(self):
         dut = self.dut
@@ -630,16 +717,19 @@ class DivQueueProbe(uvm_component):
             await ReadOnly()
             if int(dut.rst.value):
                 continue
-            c, q = int(dut.u_div.cnt.value), int(dut.u_div.q_cnt.value)
-            self.max_cnt, self.max_q = max(self.max_cnt, c), max(self.max_q, q)
-            self.urgent += int(dut.div_urgent.value)
-            if c > 32 or q > c:
-                self.errors += 1
-                self.logger.error(f"divide queue counters out of range: cnt={c} q_cnt={q}")
+            for u, g in self.units:
+                unit = getattr(dut, u)
+                c, q = int(unit.cnt.value), int(unit.q_cnt.value)
+                self.max_cnt[u], self.max_q[u] = max(self.max_cnt[u], c), max(self.max_q[u], q)
+                self.urgent[u] += int(getattr(dut, g).value)
+                if c > self.DQ or q > c:
+                    self.errors += 1
+                    self.logger.error(f"{u} queue counters out of range: cnt={c} q_cnt={q}")
 
     def report_phase(self):
-        self.logger.info(f"divide queue: at most {self.max_cnt} promised, {self.max_q} stored; "
-                         f"{self.urgent} clocks with out_urgent")
+        for u, _ in self.units:
+            self.logger.info(f"{u} queue: at most {self.max_cnt[u]} promised, {self.max_q[u]} stored; "
+                             f"{self.urgent[u]} clocks with out_urgent")
 
 
 def kind_of(x: int) -> str:
@@ -678,7 +768,7 @@ class FpuEnv(uvm_env):
         self.cov = FpuCoverage("cov", self)
         self.probe = FifoProbe("probe", self)
         self.ds_probe = DsProbe("ds_probe", self)
-        self.q_probe = DivQueueProbe("q_probe", self)
+        self.q_probe = QueueProbe("q_probe", self)
 
     def connect_phase(self):
         self.agent.req_mon.ap.connect(self.sb.req_fifo.analysis_export)
@@ -722,7 +812,7 @@ class FpuBaseTest(uvm_test):
         sb = self.env.sb
         assert sb.errors == 0 and sb.checked > 0, f"{sb.errors} errors, {sb.checked} checked"
         assert self.env.ds_probe.errors == 0, f"{self.env.ds_probe.errors} hold-rule errors"
-        assert self.env.q_probe.errors == 0, f"{self.env.q_probe.errors} divide queue errors"
+        assert self.env.q_probe.errors == 0, f"{self.env.q_probe.errors} result queue errors"
 
 
 @pyuvm.test()
@@ -758,6 +848,19 @@ class FpuDivTest(FpuBaseTest):
 
 
 @pyuvm.test()
+class FpuSqrtTest(FpuBaseTest):
+    """Square root only: the directed hard cases, then FPU_N random LCG square roots."""
+
+    async def run_seqs(self):
+        await FpuSqrtHardSeq("hard").start(self.env.agent.sqr)
+        s = FpuLcgSeq("lcg")
+        s.count = N_ITEMS
+        s.seed = int(os.environ.get("LCG_SEED", "5C5C"), 16)
+        s.force_op = int(FpuOp.SQRT)
+        await s.start(self.env.agent.sqr)
+
+
+@pyuvm.test()
 class FpuRegressTest(FpuBaseTest):
     """Corner matrix, then random and mixed-burst sequences running in parallel
     on one sequencer (the sequencer interleaves their items)."""
@@ -787,7 +890,8 @@ class FpuRegressTest(FpuBaseTest):
         ds = self.env.ds_probe
         assert ds.overlap > 0, "a divide and a square root were never in progress together"
         assert ds.both_hold > 0, "the two units never held a result at the same time"
-        assert self.env.q_probe.urgent > 0, "the divide queue's urgent rule never stopped requests"
+        for unit, clocks in self.env.q_probe.urgent.items():
+            assert clocks > 0, f"the {unit} queue's urgent rule never stopped requests"
         if FD < 64:
             # The small FIFO exists to reach the stall rules; make sure it did.
             assert pr.noroom > 0 and pr.full > 0, f"stall rules not reached: {pr.noroom} / {pr.full}"
