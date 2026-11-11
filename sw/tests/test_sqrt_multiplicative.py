@@ -5,10 +5,14 @@ and random operands. These tests go further and check the design's arithmetic fo
 every input that can change its answer. A square root's significand bits depend
 only on the radicand's 23 fraction bits and whether its exponent is odd or even:
 the rest of the exponent just moves the result's exponent. So 2 x 2^23 cases
-cover every fp32 square root, and I run all of them through an integer copy of
-the RTL datapath, with the RTL's exact widths and floors:
-* the root estimate R0 is never more than 1.1 units from the true root, so the
-  remainder correction (R0 - 1, R0 or R0 + 1) is enough;
+cover the normalized finite-positive arithmetic classes. I run all of them
+through an integer copy of the RTL datapath, with the RTL's widths and floors.
+I still need the RTL tests for classification, rounding, flags, tags, pipeline
+alignment and queue behavior; this Python model doesn't clock any hardware.
+
+I keep these checks separate so I can see what broke:
+* I measure how far R0 is from the true root (less than 1.1 units), then
+  independently check that choosing R0 - 1, R0 or R0 + 1 really works;
 * after the correction, the root and sticky bit equal the baseline's exact
   isqrt(N) and (N != R^2) for every case;
 * every intermediate fits the register width I gave it in the RTL.
@@ -42,9 +46,13 @@ SEED = np.array([seed(p, i) for p in (0, 1) for i in range(1 << IB)], dtype=np.i
 def datapath(na: np.ndarray, p: np.ndarray) -> dict[str, np.ndarray]:
     """The RTL's arithmetic on arrays of significands na (leading 1 at bit 23) and
     exponent parities p. numpy's >> on int64 is a floor, like SV's >>> on signed."""
+    # I use parity plus nine fraction bits as the ROM address, just like RTL.
+    # These stage numbers are S3's schedule; S2 reaches correction earlier.
     y0 = SEED[(p << IB) | ((na >> 14) & 511)]
     s0 = na * y0                                  # s2/s3: about sqrt(a), 40 bits
     t = s0 * y0                                   # s4/s5: about 1, 56 bits
+    # I retain the mathematical E here. RTL recovers the same signed value
+    # from its low 48 bits; test_register_widths checks that equivalence's range.
     e = (np.int64(1) << 55) - (t << p)            # s6: e = 1 - a*y0^2 at scale 2^-55, exact
     eh = e >> 30                                  # e at scale 2^-25, 18 bits signed
     ehalf = e >> 16                               # e/2 at scale 2^-40
@@ -60,7 +68,9 @@ def datapath(na: np.ndarray, p: np.ndarray) -> dict[str, np.ndarray]:
     rem = (nlow - sq) & ((1 << 29) - 1)           # s15: N - R0^2 modulo 2^29, read as signed
     rem = np.where(rem >= 1 << 28, rem - (1 << 29), rem)
     tw = 2 * r0 + 1
-    dn, up = rem < 0, rem >= tw                   # s16: the correction
+    # I correct at s19 in S3 (s16 in standalone S2). Squaring R0+1 adds
+    # 2*R0+1; stepping down restores 2*R0-1 to the remainder.
+    dn, up = rem < 0, rem >= tw
     r = np.where(dn, r0 - 1, np.where(up, r0 + 1, r0))
     rest = np.where(dn, rem + 2 * r0 - 1, np.where(up, rem - tw, rem))
     return dict(y0=y0, s0=s0, t=t, e=e, eh=eh, ehalf=ehalf, e2=e2, c=c, sh=sh, pc=pc, g=g, r0=r0,
@@ -69,6 +79,8 @@ def datapath(na: np.ndarray, p: np.ndarray) -> dict[str, np.ndarray]:
 
 def exact_root(n: np.ndarray) -> np.ndarray:
     """isqrt for n < 2^52: float64 holds n exactly, and I fix the last unit."""
+    # I use float64 only to start the independent integer-root answer.
+    # The following integer comparisons repair either neighboring estimate.
     r = np.floor(np.sqrt(n.astype(np.float64))).astype(np.int64)
     r = np.where(r * r > n, r - 1, r)
     return np.where((r + 1) * (r + 1) <= n, r + 1, r)
@@ -85,12 +97,16 @@ def test_table_matches_its_definition():
 
 
 def test_every_square_root_is_exact():
+    # I enumerate every normalized significand, then both exponent parities.
+    # Different absolute exponents reuse this arithmetic and shift the result.
     na = np.arange(1 << 23, 1 << 24, dtype=np.int64)
     for parity in (0, 1):
         p = np.full_like(na, parity)
         d = datapath(na, p)
         truth = exact_root(d["n"])
-        # The estimate is close enough for a one-step correction.
+        # I record the approximation error, then compare the corrected root
+        # and exact remainder separately. The error bound alone isn't the
+        # test of correctness, particularly near an integer-root boundary.
         err = np.abs(d["r0"].astype(np.float64) - np.sqrt(d["n"].astype(np.float64)))
         assert float(err.max()) < 1.1, float(err.max())
         assert np.array_equal(d["r"], truth)

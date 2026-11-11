@@ -24,10 +24,12 @@ DUT. The regression test requires the age rule to have stalled requests, and
 with the small FIFO also the other two stall rules (no free slot for a CORDIC
 request, FIFO full).
 
-Divide and square root are separate units (fp_div, fp_sqrt). DsProbe watches
-both and the regression requires that a divide and a square root were in
-progress together, and that both units once held a finished result at the
-same time, which is the collision the result arbitration has to settle.
+I now send divide and square root through one shared fp_divsqrt pipeline.
+DsProbe supports this shared implementation and the older separate units so
+I can compare the study fairly. With S3 I check that both operation kinds are
+in flight together; there aren't two independent result queues to collide.
+I also fill the small CORDIC FIFO deliberately. I don't rely on random
+traffic accidentally hitting that coverage point after changing root timing.
 """
 
 # pyuvm calls build_phase to create components and connect_phase to wire

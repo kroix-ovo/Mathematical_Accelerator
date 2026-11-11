@@ -6,17 +6,31 @@
 // a remainder check. Here they share one pipeline and one result queue. Every
 // clock, the operation in a stage is either a divide or a square root, and a
 // bit beside it (sq) picks which numbers that stage's multiplier and adder
-// see. The FPU takes at most one request per clock, so a shared unit that
-// accepts one operation every clock can never be the bottleneck; what it saves
-// is a second set of DSPs, a second result queue, and 32 clocks off the CORDIC
-// worst case.
+// see. I can mix roots and divides on consecutive clocks; sharing doesn't
+// mean I finish one whole operation before starting the other. My FPU only
+// accepts one request per clock, so one combined issue lane matches it today.
+// Queue pressure and result-port collisions can still stall that lane.
+// I save a second queue and some multipliers versus independent E plus S2,
+// and keep the mixed CORDIC bound at 128 instead of their 160 clocks.
 //
 // The arithmetic of each operation is exactly the one in its own experiment,
 // with the same widths and floors, so the results are bit-identical to fp_div
 // (experiment E) and to S2's fp_sqrt. I only re-timed the two schedules so the
 // shared steps line up. (sw/tests/test_div_multiplicative.py and
 // sw/tests/test_sqrt_multiplicative.py check the two datapaths for every
-// divisor and every square-root input class.)
+// divisor and every normalized square-root significand/exponent-parity class.)
+// Those are exhaustive integer-model checks. My RTL regressions separately
+// check rounding, flags, subnormals, special values, tags, and mixed traffic.
+// I don't treat passing the integer model alone as proof of the whole FPU.
+//
+// My path through the module is:
+//   request -> C classify -> P normalize -> s1..s19 estimate/correct
+//           -> K pack -> R1/R2 round -> result queue -> FPU result register
+// I keep the operation bit and tag beside the math so a root and a divide
+// can sit in different stages without borrowing each other's metadata.
+// The free-port latency is 26 clocks at the FPU output for either operation.
+// That's a latency, not the acceptance interval: I can accept one combined
+// DIV-or-SQRT request per clock while the queue has an unreserved slot.
 //
 // The shared schedule, s<n> being n clocks after P:
 //   s1        seed table: 1/d (14 bits) or 1/sqrt(a) (16 bits)
@@ -34,27 +48,49 @@
 //   s19       correct by -1, 0 or +1: against D | against 2R0 + 1
 // M2 and M6 each serve one operation only; M1, M3, M4 and M5 serve both, with
 // their inputs picked by sq. A divide takes two clocks longer than in fp_div,
-// and a square root three longer than in S2. The 31 contexts of the expression
-// unit hide that.
+// and a square root three longer than in S2. My 31 EVU contexts hide most of
+// that latency in the measured workloads, though dipole_power does pick up
+// about 0.1 clock per point from the two extra divide clocks.
+//
+// I use X and D for normalized 24-bit dividend/divisor significands, with
+// their leading 1 at bit 23. For a root I call that significand na, and p
+// is the normalized unbiased exponent's parity. My exact integer targets are
+//   divide: Q = floor(X * 2^26 / D), sticky = (remainder != 0)
+//   root:   R = isqrt(N), N = na << (27+p), sticky = (N - R*R != 0).
+// The estimate only gets me close. The final remainder comparison is what
+// makes these targets exact before I use the common rounding functions.
+//
+// My scale notes (an integer at scale 2^-n represents integer * 2^-n):
+//                 divide                         square root
+// Y0              14 bits, 2^-14                  16 bits, 2^-16
+// M1              D*Y0, 2^-37                     na*Y0, 2^-(39-p)
+// E before cuts   signed, 2^-37                   signed, 2^-55
+// Eh              E>>>11, 2^-26                   E>>>30, 2^-25
+// linear          E>>>4 gives e at 2^-33           E>>>16 gives e/2 at 2^-40
+// factor          e + e^2 at 2^-33                 e/2 + 3e^2/8 at 2^-40
+// s12 value       Y1t at 2^-32                     integer estimate R0
+// I floor signed shifts with >>>; I don't silently round those intermediates.
+// Register widths are part of the arithmetic, not just implementation detail.
+// The model tests keep the same cuts and check that the required values fit.
 module fp_divsqrt_core
   import accel_pkg::*;
   import fp_pkg::*;
 #(
     parameter int TW = 8
 ) (
-    input  logic          clk,                   // Clock: rising edge updates this module's registers; 100 MHz in the board design.
-    input  logic          rst,                   // Reset: active high; clears the valid bit of every stage.
-    input  logic          in_valid,              // Input valid: an operation enters the pipeline on this clock edge.
-    input  logic          in_sqrt,               // Input operation: 1 for a square root of in_a, 0 for in_a / in_b.
-    input  logic [31:0]   in_a,                  // Input operand A: dividend, or the radicand.
-    input  logic [31:0]   in_b,                  // Input operand B: divisor (ignored for a square root).
-    input  logic [TW-1:0] in_tag,                // Input request tag: carried through unchanged.
-    output logic          out_valid,             // Output valid: a finished operation is on the outputs for this one clock.
-    output logic [31:0]   out_result,            // Output result: 32-bit encoded quotient or root.
-    output logic [4:0]    out_flags,             // Output exception flags: bits 4..0 mean invalid, divide by zero, overflow, underflow and inexact.
-    output logic [TW-1:0] out_tag,               // Output request tag of the finished operation.
-    output logic          busy_div,              // Busy divide: some stage holds a divide (for the testbench's overlap count).
-    output logic          busy_sqrt              // Busy square root: some stage holds a square root.
+    input  logic          clk,                   // I update registers on this rising edge; the board runs at 100 MHz.
+    input  logic          rst,                   // I clear stage validity on reset; old payload bits are then ignored.
+    input  logic          in_valid,              // I take this operation on the edge; the wrapper has reserved its result slot.
+    input  logic          in_sqrt,               // I select sqrt(A) with 1 and A/B with 0, and delay that choice beside the math.
+    input  logic [31:0]   in_a,                  // I read A as the dividend or radicand.
+    input  logic [31:0]   in_b,                  // I read B as the divisor; I ignore it for roots.
+    input  logic [TW-1:0] in_tag,                // I carry this request identifier through unchanged.
+    output logic          out_valid,             // I present a core result for this clock; the reserved queue slot must take it.
+    output logic [31:0]   out_result,            // I return the binary32 quotient or root.
+    output logic [4:0]    out_flags,             // I return flags [4:0] as invalid, divide-by-zero, overflow, underflow, inexact.
+    output logic [TW-1:0] out_tag,               // I return the tag belonging to this operation.
+    output logic          busy_div,              // I report divides in the arithmetic stages for the overlap probe.
+    output logic          busy_sqrt              // I report roots in the arithmetic stages for the overlap probe.
 );
   // Clocks from P's output to the stage before the correction; the side-band
   // delay line below must be exactly this long.
@@ -62,7 +98,10 @@ module fp_divsqrt_core
 
   // ---- C: capture and classify ------------------------------------------------
   // The divide classification is fp_div's, and the square-root one is fp_sqrt's;
-  // sq picks which one counts.
+  // sq picks which one counts. I keep special answers on the normal timing
+  // path too: invalid arithmetic in an unused estimate stage never becomes
+  // the answer, because the delayed special bit selects sp_res and sp_fl.
+  // I test zero before the negative-root case so sqrt(-0) keeps its sign.
   logic                 c_v, c_sq, c_sign, c_special;
   logic [TW-1:0]        c_tag;
   logic [31:0]          c_sp_res;
@@ -138,14 +177,20 @@ module fp_divsqrt_core
     p_opa <= c_sq ? (c_ma << c_lza) : (c_mb << c_lzb);
     sb_line[0] <= {c_sign, c_special, c_sp_res, c_sp_fl, c_tag, ex};
     // The side band only waits; a delay line with no reset or enable becomes
-    // shift-register LUTs.
+    // shift-register LUTs. I only reset validity, so old payload bits after
+    // reset are harmless bubbles. I must keep this delay aligned with s19;
+    // changing a math stage without its metadata would mix unrelated requests.
     for (int k = 1; k <= ARITH; k++) sb_line[k] <= sb_line[k-1];
   end
 
   // ---- the two seed tables (fp_div's and S2's, unchanged) ---------------------
   // DSEED[i] = round(2^24 / (1025 + 2i)) ~ 2^14 / d at the middle of interval i.
   // SSEED[p, i] = round(sqrt(2^42 / ((p + 1)(1025 + 2i)))) ~ 2^16 / sqrt(a).
-  // The loops run when the design is built; they only fill in the ROMs.
+  // I still have two sets of table contents: 512 divide seeds and 1,024 root
+  // seeds. I share their scheduled read/selection, not one universal formula.
+  // Root parity selects [1,2) or [2,4), then the next nine bits pick an interval.
+  // These loops run during elaboration to fill constant ROM contents. I am
+  // not building a runtime integer divider or a slow root loop for the seed.
   function automatic logic [15:0] sseed_entry(int p, int i);
     longint unsigned x, r, b;
     x = (64'd1 << 44) / (64'(p + 1) * 64'(1025 + 2 * i));
@@ -166,7 +211,12 @@ module fp_divsqrt_core
   end
 
   // ---- the arithmetic pipeline ------------------------------------------------
-  // Index k of each delay line is stage s<k>.
+  // I read index k as stage s<k>, not as a separate operation's array index.
+  // Nonblocking assignments read the old register values on this clock edge,
+  // so the right-hand side's index must match the multiplier's input stage.
+  // The extra product register lets Vivado use the DSP pipeline registers.
+  // M2 and M6 still calculate on unused operation slots; sq decides whether
+  // I consume their results. I haven't added clock gating or measured power.
   logic                v    [ARITH+1];          // valid bit per stage
   logic                sq_l [ARITH+1];          // 1: this stage holds a square root
   logic                p_l  [ARITH+1];          // square root: exponent parity
@@ -216,7 +266,11 @@ module fp_divsqrt_core
     s5_t <= s4_t;
     // s6: the error term.
     if (sq_l[5]) begin
-      // Root: e = 1 - a*y0^2 = -(T << p) modulo 2^48 (see fp_sqrt in S2).
+      // I want E = 2^55 - (T << p), but the true small error fits signed
+      // 48 bits. Since 2^55 is zero modulo 2^48, I can subtract the low
+      // 48 product bits from zero and recover that same signed error.
+      // The exhaustive width check matters here; arbitrary wraparound would
+      // not preserve a value outside that signed range.
       logic signed [47:0] e;
       logic [47:0]        tl;
       tl = 48'(s5_t << p_l[5]);
@@ -246,7 +300,10 @@ module fp_divsqrt_core
       s10_pc <= $signed({1'b0, ma}) * s9_sc;
     end
     s11_pc <= s10_pc;
-    // s12: divide: y1 = y0 + y0*S, kept at scale 2^-32. Root: R0 (see S2).
+    // s12: I turn the correction into an estimate of the final quantity.
+    // For divide I keep y0 + y0*S at scale 2^-32. For a root I align S0
+    // and its correction using parity, keep four extra fractional bits in
+    // g, then floor those away to get integer R0. Exact correction is later.
     if (sq_l[11]) begin
       logic signed [32:0] g;
       g = $signed({1'b0, 32'(m1_l[11] >> (5'd10 - p_l[11]))}) + 33'(s11_pc >>> (6'd34 - p_l[11]));
@@ -265,7 +322,9 @@ module fp_divsqrt_core
     end
     s14_m5 <= s13_m5;
     // s15: divide: Q0 = (X * Y1t) >> 29. Root: rem = N - R0^2 modulo 2^29, where
-    // N's low 29 bits are na's lowest one or two bits.
+    // N's low 29 bits are na's lowest one or two bits. I only need the low
+    // product bits because the actual small signed remainder fits 29 bits.
+    // This isn't a claim that the entire square or radicand fits that width.
     if (sq_l[14]) begin
       s15_a <= (p_l[14] ? {a_l[14][0], 28'b0} : {a_l[14][1:0], 27'b0}) - s14_m5[28:0];
       s15_b <= s14_r0;
@@ -297,6 +356,12 @@ module fp_divsqrt_core
   // s19: pick the estimate - 1, the estimate or the estimate + 1. A divide wants
   // 0 <= R < D; a square root wants 0 <= rem < 2R0 + 1, and when it steps down
   // the remainder grows by 2R0 - 1.
+  // I get those root thresholds from (R0+1)^2 - R0^2 = 2R0+1 and
+  // R0^2 - (R0-1)^2 = 2R0-1. For divide the corresponding step is just D.
+  // A negative remainder means I guessed too high; reaching lim means too
+  // low. After adjusting once, I test the corrected remainder for sticky.
+  // The exhaustive model verifies that this single correction succeeds on
+  // every normalized input class; the estimate is not my rounded answer.
   always_ff @(posedge clk) begin
     logic signed [28:0] lim, add_lo;
     if (sq_l[ARITH]) begin
@@ -318,7 +383,10 @@ module fp_divsqrt_core
     end
   end
 
-  // Busy flags for the testbench: any valid stage holding each kind.
+  // I expose these observations for the overlap probe, not for admission.
+  // They scan the arithmetic delay line, so they aren't a complete busy flag
+  // for classification, rounding or queued results. The wrapper's cnt is the
+  // reservation count that decides whether I may accept another request.
   always_comb begin
     busy_div = 1'b0;
     busy_sqrt = 1'b0;
@@ -329,6 +397,11 @@ module fp_divsqrt_core
   end
 
   // ---- K, R1, R2: pack and round --------------------------------------------------
+  // I keep the corrected high bits plus guard/sticky information, then let
+  // round_pre/round_post apply the shared ties-to-even and exception rules.
+  // A divide can have a significand below 1, so I shift it and reduce its
+  // exponent in that case. The root was already normalized by parity.
+  // I select a saved special answer at the end, with its own flags and tag.
   logic                 s19_v, s19_sq;
   logic [SBW-1:0]       s19_sb;
   logic                 k_v, r1_v;
@@ -377,6 +450,15 @@ endmodule
 // queue fp_div and S2's fp_sqrt each had. cnt counts operations in the core
 // plus results stored, and out_urgent rises when the oldest stored result has
 // waited AGE clocks; fpu.sv then stops new requests until it leaves.
+//
+// I reserve a queue slot at acceptance, not when the result arrives. The core
+// can't pause halfway through a multiply, so checking only finished entries
+// would let too much work in and eventually overwrite a result.
+//   cnt   = accepted operations whose results haven't left yet
+//   q_cnt = finished results physically stored in the queue
+// An operation moving from core to queue changes q_cnt but not cnt. A pop
+// frees both. DIV and SQRT share these credits and preserve their relative
+// order here; other FPU units can still finish out of order using their tags.
 module fp_divsqrt
   import accel_pkg::*;
   import fp_pkg::*;
@@ -385,22 +467,22 @@ module fp_divsqrt
     parameter int DQ  = 32,                      // result queue depth, a power of 2
     parameter int AGE = 8                        // clocks a result may wait before out_urgent rises
 ) (
-    input  logic          clk,                   // Clock: rising edge updates this module's registers; 100 MHz in the board design.
-    input  logic          rst,                   // Reset: active high; empties the pipeline and the queue.
-    input  logic          in_valid,              // Input valid: an operation is accepted only when input ready is also high on the rising edge.
-    input  logic          in_sqrt,               // Input operation: 1 for a square root of in_a, 0 for in_a / in_b.
-    output logic          in_ready,              // Input ready: high while a queue place can still be promised to a new operation.
-    input  logic [31:0]   in_a,                  // Input operand A: dividend, or the radicand.
-    input  logic [31:0]   in_b,                  // Input operand B: divisor (ignored for a square root).
-    input  logic [TW-1:0] in_tag,                // Input request tag: identifier carried beside the operands so the caller can match the result.
-    output logic          out_valid,             // Output valid: the oldest finished operation is shown on the result outputs.
-    output logic          out_urgent,            // Output urgent: the shown result has waited AGE clocks; the FPU must stop new requests until it leaves.
-    input  logic          out_ack,               // Output acknowledgement: high takes the shown result on the rising edge.
-    output logic [31:0]   out_result,            // Output result: 32-bit encoded quotient or root; meaningful only while output valid is high.
-    output logic [4:0]    out_flags,             // Output exception flags: bits 4..0 mean invalid, divide by zero, overflow, underflow and inexact.
-    output logic [TW-1:0] out_tag,               // Output request tag: unchanged identifier of the operation that produced this result.
-    output logic          busy_div,              // Busy divide: a divide is in the pipeline (testbench overlap count).
-    output logic          busy_sqrt              // Busy square root: a square root is in the pipeline.
+    input  logic          clk,                   // I update registers on this rising edge; the board runs at 100 MHz.
+    input  logic          rst,                   // I discard pipeline and queue validity when reset is high.
+    input  logic          in_valid,              // I accept this offer only when in_ready is also high on the edge.
+    input  logic          in_sqrt,               // I select sqrt(A) with 1 and A/B with 0, and delay that choice beside the math.
+    output logic          in_ready,              // I can promise a result slot while this is high.
+    input  logic [31:0]   in_a,                  // I read A as the dividend or radicand.
+    input  logic [31:0]   in_b,                  // I read B as the divisor; I ignore it for roots.
+    input  logic [TW-1:0] in_tag,                // I keep this identifier beside the operands so the caller can match the answer.
+    output logic          out_valid,             // I show the oldest queued result while this is high.
+    output logic          out_urgent,            // I ask the FPU to stop issuing so this waiting answer can reach the result port.
+    input  logic          out_ack,               // I remove the shown answer when valid and this ack are high on the edge.
+    output logic [31:0]   out_result,            // I expose the binary32 answer here; it counts only with out_valid.
+    output logic [4:0]    out_flags,             // I return flags [4:0] as invalid, divide-by-zero, overflow, underflow, inexact.
+    output logic [TW-1:0] out_tag,               // I return the original tag for the queued answer.
+    output logic          busy_div,              // I expose the core's divide observation for the testbench.
+    output logic          busy_sqrt              // I expose the core's root observation for the testbench.
 );
   localparam int QA = $clog2(DQ);
 
@@ -418,6 +500,11 @@ module fp_divsqrt
   // A circular buffer in LUT RAM, read without a clock like fpu.sv's CORDIC
   // FIFO. Each entry stores the low 8 bits of a clock counter from when it
   // arrived, so the oldest entry's age is now - stamp, modulo 256.
+  // I only interpret the exposed word while out_valid is high. Empty queue
+  // memory can contain old bits; resetting pointers and counts makes them
+  // invalid without resetting the whole RAM. DQ must stay a power of two.
+  // At full capacity I don't accept a replacement on the same edge as a pop;
+  // that conservative ready rule can cost one clock, but never overbooks.
   logic [32+5+TW+8-1:0] q_mem [DQ];
   logic [QA-1:0]        q_wp, q_rp;
   logic [QA:0]          q_cnt;               // results stored, 0..DQ
@@ -442,7 +529,10 @@ module fp_divsqrt
       q_cnt <= q_cnt + (QA+1)'(core_v) - (QA+1)'(pop);
       cnt   <= cnt + (QA+1)'(fire) - (QA+1)'(pop);
       // Registered so the compare stays off req_ready's path; one clock early
-      // so it rises on the clock the oldest result turns AGE.
+      // so it rises on the clock the oldest result turns AGE. I age from
+      // queue arrival, not initial request acceptance. The FPU stops issuing
+      // new work on urgency, lets the short pipeline drain, then grants this
+      // queue the port. I don't drop a result just because it waited too long.
       out_urgent <= out_valid && !pop && (q_age >= 8'(AGE - 1));
     end
   end

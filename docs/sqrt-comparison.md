@@ -22,7 +22,7 @@ All three passed the same gate as the baseline (`hw/scripts/run_gate.py`): softw
 - **`FpuDivTest`.** 35,953 divides, which matters for S3 since its divide is new arithmetic timing.
 - **Every kernel cycle count equal to the model's**, with the new timing constants for each design.
 
-S2's arithmetic also has its own exhaustive test, `sw/tests/test_sqrt_multiplicative.py`. A root's significand depends only on the 23 fraction bits and the exponent parity, so 2 x 2²³ cases cover every input. The test runs the RTL's integer datapath on all of them: the estimate R0 is never more than 1.08 units off, and the corrected root and remainder are right every time. S3 runs the same square-root arithmetic, and S1 is the baseline's recurrence step for step.
+S2's arithmetic also has its own exhaustive test, `sw/tests/test_sqrt_multiplicative.py`. A root's significand depends only on the 23 fraction bits and the exponent parity, so 2 x 2²³ cases cover every normalized finite-positive significand/parity class. I run an integer model of the RTL datapath on all of them; classification, subnormal normalization, rounding, flags and pipeline behavior still need the separate RTL regressions: the estimate R0 is never more than 1.08 units off, and the corrected root and remainder are right every time. S3 runs the same square-root arithmetic, and S1 is the baseline's recurrence step for step.
 
 Two problems turned up on the way, both in the testbench (E-52 and E-54 in [errors_log.md](errors_log.md)). The second one is worth knowing about: with a 16-entry CORDIC FIFO, the random traffic stopped filling the FIFO once square roots were pipelined, so a coverage check failed while every result was right. The test now ends with rounds that fill it on purpose.
 
@@ -70,19 +70,19 @@ Every other profiled run (sin, poly_box, gaussian_2d, charge_sphere, circulation
 What I take from it:
 
 - **Any pipelined root removes the square root as the limit.** plate_potential goes from 34.3 to about 14 clocks per point, and two independent roots per point (two_roots) from 66 to about 8. From here the EVU's fetch and issue rate is the limit, the same as for divides after E.
-- **The three candidates are within half a clock of each other everywhere.** Their latencies (20, 23, 26) hardly matter, because 31 contexts hide them.
+- **The three candidates are close in these workloads.** The largest gap in this profile is about 0.7 clock per point on plate_potential. Their different latencies (20, 23, 26) mostly disappear behind my 31 contexts; I don't assume that stays true for a short dependent chain or fewer contexts.
 - **S3 is slightly ahead, not behind**, even though both its operations take longer. I think the reason is the shared queue: fpu.sv has one urgent rule to obey instead of two, and the model's bounds are tighter with the CORDIC bound at 128. I haven't traced it clock by clock. root_divide, which feeds a root into a divide like plate_potential does, is where it shows most: 8.0 against 8.5.
 
 ## Recommendation
 
 **S3, the shared divide and square-root pipeline.**
 
-- It's the fastest or tied on every run that uses a root or a divide.
-- It has the most timing margin of the four designs: +0.237 ns full design, +0.728 ns for the unit alone.
+- I get the fastest or essentially tied square-root workloads, with root_divide at 8.0 clocks per point. Divide-only work is mostly unchanged; dipole_power is the small exception below.
+- I measured the best full-design setup slack in this set: +0.237 ns. Its isolated shared unit has +0.728 ns, while S2's isolated root has more margin at +0.863 ns. Those aren't the same measurement boundary, and a different placement can move the full-design critical path.
 - The divide and square root together are smaller than today's in LUTs (982 vs 1,056), with one queue instead of two. The CORDIC worst case stays at 128 clocks.
-- What it costs: 5 more DSPs than the baseline (32 of 240) and half a BRAM tile. A divide takes 26 clocks instead of E's 24, which no profiled run notices.
+- What it costs: 5 more DSPs than the baseline (32 of 240) and half a BRAM tile. A divide takes 26 clocks instead of E's 24. I do see about 0.1 extra clock per point on dipole_power (23.8 to 23.9); it's a small measured cost, not literally free.
 
-S2 is the fallback: the same arithmetic in a separate unit, the most margin in its own logic (+0.863 ns), at 9 extra DSPs. The cost is a second queue and a CORDIC bound of 160 clocks. I'd keep it if I ever want divides and roots to complete in the same clock, which the FPU can't ask for today since it accepts one request per clock.
+I keep S2 as the independent-unit fallback. It has the same root arithmetic and +0.863 ns isolated root slack, but 36 total DSPs versus S3's 32, a second queue, and a 160-clock CORDIC bound. It isn't my fallback for scarce DSPs. Its reason to stay around is a future architecture that could issue a divide and a root together, or needs their resource pools to stay independent. My current FPU accepts one request and returns one result per clock; dual issue would need changes outside either arithmetic unit too.
 
 I wouldn't take S1. It needs no DSPs, which is its only advantage. But it doubles the divide-and-root LUTs, its own arithmetic has the least margin, and its full build came closest to failing timing (+0.038 ns).
 
@@ -118,3 +118,25 @@ plate_potential at 1,048,576 points, wall time from the laptop:
 The same run in NumPy float64 on the laptop takes about 15 ms when repeated, so the board is still about 10 times slower on this problem. That's down from about 25 times with the original square root. The limit is now the EVU's issue rate, not the square root.
 
 The board doesn't change my recommendation: **S3**.
+
+## How I'm bringing S3 into the main source
+
+I keep the tested `experiment/divsqrt-shared` checkout intact and integrate its
+arithmetic into `sqrt-shared`, on top of main's current test and documentation
+commits. I rewrote the explanatory comments without changing the RTL tokens
+or the executable Python test logic. My new reading notes are in
+[sqrt-shared-reading-guide.md](sqrt-shared-reading-guide.md).
+
+I run `python hw/scripts/run_gate.py --vivado` in the integration checkout's
+own environment before publishing the PR. I keep that result separately in
+[evidence/sqrt-integration/](evidence/sqrt-integration/), so an old candidate
+pass isn't presented as a new integration pass. The experiment's measured
+route and board results above remain tied to their original manifests. A
+fresh integrated bitstream needs its own board run before I call it board-tested.
+
+I haven't measured power, and these board runs cover one board on one day.
+The shared-queue explanation for the small speed advantage is still a hypothesis.
+The approximately 14 clocks per point suggest issue rate as the next bottleneck,
+but I need stall counts by category before choosing multi-issue or instruction
+fusion. MDIO link recovery, an explicit bitstream design ID, and power measurements
+are still open work, not features included in this integration.

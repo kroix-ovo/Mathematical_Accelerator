@@ -1,4 +1,4 @@
-// FPU top level: one request port, one result port, six execution units.
+// FPU top level: one request port, one result port, five execution units.
 //
 // Request handshake: the caller holds req_valid with op/a/b/tag stable; the
 // request is taken on a rising clock edge where req_valid and req_ready are
@@ -160,6 +160,11 @@ module fpu
 
   // One shared unit takes both DIV and SQRT; is_sqrt tells it which. Its
   // results leave through the div_* wires, and the sqrt_* ones stay idle.
+  // I keep those old wire names so the scoreboards and probes still have a
+  // stable interface. div_hold can now mean a root too; the request's tag,
+  // not the wire name, identifies the operation at the result port.
+  // Both operation types spend credits from the same 32-entry queue. This
+  // doesn't give me two issue lanes: my one request port picks one per clock.
   logic is_ds;
   assign is_ds = is_div || is_sqrt;
   fp_divsqrt #(.TW(TW)) u_ds (
