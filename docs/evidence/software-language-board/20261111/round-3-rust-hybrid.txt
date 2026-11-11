@@ -1,0 +1,23 @@
+link/ping: 201 samples, 123.0 us
+link/status: 201 samples, 119.8 us
+link/nop: 201 samples, 135.7 us
+memory/roundtrip/1: 51 samples, 285.5 us
+memory/roundtrip/255: 51 samples, 581.1 us
+memory/roundtrip/256: 51 samples, 822.3 us
+memory/roundtrip/4096: 51 samples, 9993.3 us
+sustained/write/4096: 1047 samples, 4695.3 us
+sustained/read/4096: 1074 samples, 4918.1 us
+sustained/roundtrip/4096: 568 samples, 9939.1 us
+sustained/write/32768: 159 samples, 37235.4 us
+sustained/read/32768: 138 samples, 40945.6 us
+sustained/roundtrip/32768: 77 samples, 74996.2 us
+fpu/ADD: 31 samples, 1145.8 us
+fpu/DIV: 31 samples, 1006.0 us
+fpu/SIN: 31 samples, 1016.4 us
+evu/full/basic: 31 samples, 1049.4 us
+evu/loaded/basic: 31 samples, 696.8 us
+evu/full/map: 31 samples, 15187.9 us
+evu/loaded/map: 31 samples, 10268.8 us
+evu/full/reduce: 31 samples, 21631.4 us
+evu/loaded/reduce: 31 samples, 1499.5 us
+PHYSICAL BOARD PASS: rust -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language-board/20261111/round-3-rust-hybrid.json

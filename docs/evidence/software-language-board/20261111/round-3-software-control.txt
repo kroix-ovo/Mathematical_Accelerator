@@ -1,0 +1,23 @@
+link/ping: 201 samples, 181.9 us
+link/status: 201 samples, 170.1 us
+link/nop: 201 samples, 175.3 us
+memory/roundtrip/1: 51 samples, 403.7 us
+memory/roundtrip/255: 51 samples, 2142.7 us
+memory/roundtrip/256: 51 samples, 2670.9 us
+memory/roundtrip/4096: 51 samples, 34456.9 us
+sustained/write/4096: 321 samples, 17437.3 us
+sustained/read/4096: 330 samples, 16839.9 us
+sustained/roundtrip/4096: 183 samples, 32013.8 us
+sustained/write/32768: 40 samples, 135313.3 us
+sustained/read/32768: 42 samples, 144040.1 us
+sustained/roundtrip/32768: 20 samples, 298560.8 us
+fpu/ADD: 31 samples, 2828.9 us
+fpu/DIV: 31 samples, 2820.8 us
+fpu/SIN: 31 samples, 2739.8 us
+evu/full/basic: 31 samples, 1794.4 us
+evu/loaded/basic: 31 samples, 1200.7 us
+evu/full/map: 31 samples, 53367.3 us
+evu/loaded/map: 31 samples, 36207.5 us
+evu/full/reduce: 31 samples, 76847.8 us
+evu/loaded/reduce: 31 samples, 1498.8 us
+PHYSICAL BOARD PASS: original-python -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language-board/20261111/round-3-software-control.json

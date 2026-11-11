@@ -26,8 +26,10 @@ def row(label, case, divisor=1000, unit="us"):
 
 lines = ["# Software language experiment\n\n",
          "Measured 2026-11-09. The optimized Python baseline is the default recommendation for occasional use. "
-         "Native framing is an optional measured optimization for sustained packet work; physical-board performance "
-         "remains unmeasured. See the tables below before selecting a backend.\n\n",
+         "Native framing is an optional measured optimization for sustained packet work. This first study did "
+         "not measure physical-board performance. The subsequent "
+         "[physical FPGA comparison](software-language-board-experiment.md) measures sustained transfers "
+         "and gives the recommendation for that workload.\n\n",
          "## Pinned implementations\n\n",
          f"Control: `{summary['baseline']}`. This was main at task start. Other divider work advanced main "
          "during the experiment; it was deliberately kept outside this comparison. The detached control's tracked "

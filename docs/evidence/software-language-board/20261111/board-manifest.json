@@ -1,0 +1,20 @@
+{
+  "track": "split-baseline",
+  "root": "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator",
+  "branch": "main",
+  "head": "0a19084e5bebeaffdbe08c43e588467c77101189",
+  "rtl_commit": "3b2aa73d7bedc081cc658c514e33f603f05c0a33",
+  "rtl_dirty": false,
+  "bitstream": "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\build\\vivado\\nexys_top.bit",
+  "bitstream_sha256": "4fd517e3d5cd29f11f5fe4af778f43312bf70b0c445efbe6329a0f7c13dad58a",
+  "bitstream_time": "2026-11-10T22:10:02",
+  "bitstream_newer_than_rtl": true,
+  "routed_wns_whs": [
+    0.21,
+    0.018
+  ],
+  "started": "2026-11-11T15:35:15",
+  "purpose": "Four host implementations on one fixed physical FPGA; current divider hardware, original pinned host branches",
+  "host_control": "98be2be8e8b0fd9e1f600631fb54dae9638ce726",
+  "baseline_hardware_difference": " hw/rtl/fp/fp_div.sv | 490 ++++++++++++++++++++++++++++++++++------------------\n hw/rtl/fp/fpu.sv    |  44 ++---\n 2 files changed, 348 insertions(+), 186 deletions(-)\n"
+}

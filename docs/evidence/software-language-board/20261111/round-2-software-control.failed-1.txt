@@ -1,0 +1,35 @@
+link/ping: 201 samples, 161.2 us
+link/status: 201 samples, 125.3 us
+link/nop: 201 samples, 133.8 us
+memory/roundtrip/1: 51 samples, 306.9 us
+memory/roundtrip/255: 51 samples, 2136.7 us
+memory/roundtrip/256: 51 samples, 2577.3 us
+memory/roundtrip/4096: 51 samples, 36577.9 us
+sustained/write/4096: 323 samples, 17788.8 us
+sustained/read/4096: 322 samples, 17287.0 us
+sustained/roundtrip/4096: 160 samples, 35643.6 us
+sustained/write/32768: 40 samples, 146074.9 us
+sustained/read/32768: 41 samples, 141522.4 us
+sustained/roundtrip/32768: 20 samples, 298445.7 us
+fpu/ADD: 31 samples, 2925.9 us
+fpu/DIV: 31 samples, 2898.5 us
+fpu/SIN: 31 samples, 2800.9 us
+evu/full/basic: 31 samples, 1847.3 us
+evu/loaded/basic: 31 samples, 1227.9 us
+evu/full/map: 31 samples, 58437.5 us
+evu/loaded/map: 31 samples, 37959.8 us
+evu/full/reduce: 31 samples, 77528.3 us
+evu/loaded/reduce: 31 samples, 1516.2 us
+Traceback (most recent call last):
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/tools/board_language_bench.py", line 288, in <module>
+    main()
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/tools/board_language_bench.py", line 246, in main
+    image = dev.evu_load(run)
+            ^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/software-control/sw/mathaccel/driver/device.py", line 292, in evu_load
+    self.write_words(image.base, image.words)
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/software-control/sw/mathaccel/driver/device.py", line 201, in write_words
+    self.request(*P.write_mem(addr + i, chunk))
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/software-control/sw/mathaccel/driver/device.py", line 178, in request
+    raise DeviceTimeout(f"no response to op 0x{op:02X} after {attempts} attempt(s)")
+mathaccel.driver.device.DeviceTimeout: no response to op 0x02 after 1 attempt(s)

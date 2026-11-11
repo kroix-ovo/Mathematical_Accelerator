@@ -1,0 +1,18 @@
+🐍 Found CPython 3.11 at /home/kroix/.venvs/mathaccel-board/bin/python
+🔗 Found pyo3 bindings
+   Compiling target-lexicon v0.13.5
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling libc v0.2.191
+   Compiling memoffset v0.9.1
+   Compiling pyo3-build-config v0.27.2
+   Compiling syn v2.0.119
+   Compiling pyo3-ffi v0.27.2
+   Compiling pyo3-macros-backend v0.27.2
+   Compiling pyo3 v0.27.2
+   Compiling pyo3-macros v0.27.2
+   Compiling mathaccel-framing v0.1.0 (/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/rust-hybrid/native/rust)
+    Finished `release` profile [optimized] target(s) in 11.06s
+📦 Built wheel for CPython 3.11 to /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/rust-hybrid/build/framing-wheels/mathaccel_framing-0.1.0-cp311-cp311-manylinux_2_34_x86_64.whl
+/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/rust-hybrid/sw/mathaccel/_framing_native.cpython-311-x86_64-linux-gnu.so
+release build wall seconds: 12.165
