@@ -70,3 +70,8 @@ I choose the checkout and build explicitly before programming.
 I leave the full simulator and Vivado console logs under this checkout's
 `build/gate/` and `build/vivado/`. I don't commit the executable bitstream,
 virtual environment or generated simulator objects.
+
+I preserve Vivado's generated report bytes, including their formatting spaces
+and native line endings. The scoped `.gitattributes` rule applies only to these
+report files; my source-code whitespace checks stay enabled. I record the
+report SHA-256 values in the provenance file too.

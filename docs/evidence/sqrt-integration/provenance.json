@@ -42,5 +42,11 @@
     "manifest": "../sqrt-board/divsqrt-shared-20261111-144840/manifest.json"
   },
   "runtime_sources_still_match_tested_commit": true,
-  "post_gate_changes": "Documentation, standalone timing-script comments, four CI steps repeating already-passing gate commands, and this evidence record only."
+  "post_gate_changes": "Documentation, standalone timing-script comments, four CI steps repeating already-passing gate commands, and this evidence record only.",
+  "report_sha256": {
+    "timing.rpt": "118648988bbce037699b42eee07a5e0af057937807739f059ab38f5ad28fe37c",
+    "rmii_timing.rpt": "3a4bc9f603cbd1acce3d5c6a9b819acb7472ec522a8d3017e688fae3fc8fec02",
+    "util.rpt": "b966115f4207edb83cde55a537f4e2e4a57e88a46ca30426338fee895e1f7577",
+    "util_hier.rpt": "29e065fac1e142a2bb3f73fcf9a56881050a856cdb0e2076b77298441c538075"
+  }
 }
