@@ -6,12 +6,14 @@
 # times the unit together with everything else. But a full build's worst
 # path can be anywhere, and a different unit moves the placement of
 # unrelated logic too, so its WNS doesn't say how much margin the unit
-# itself has. This build places and routes fp_sqrt alone, "out of context",
-# on the same part with a 100 MHz clock, the way build_cordic.tcl measures the
-# CORDIC unit. Inputs and outputs get 2 ns of delay budget each, as if a
-# register sits on the other side with some routing.
+# itself has. This build places and routes the square-root unit alone, "out
+# of context", on the same part with a 100 MHz clock, the way build_cordic.tcl
+# measures the CORDIC unit. Inputs and outputs get 2 ns of delay budget each,
+# as if a register sits on the other side with some routing. In this
+# experiment the square-root unit is the shared divide and square-root unit,
+# fp_divsqrt, so this build and build_div.tcl build the same thing.
 #
-# Any -tclargs of the form NAME=VALUE become parameters of fp_sqrt.
+# Any -tclargs of the form NAME=VALUE become parameters of fp_divsqrt.
 # Outputs in build/vivado_sqrt/: timing and utilisation reports.
 
 set root [file normalize [file dirname [info script]]/../..]
@@ -20,7 +22,7 @@ file mkdir $out
 
 set part xc7a100tcsg324-1
 
-foreach f {hw/rtl/pkg/accel_pkg.sv hw/rtl/fp/fp_pkg.sv hw/rtl/fp/fp_sqrt.sv} {
+foreach f {hw/rtl/pkg/accel_pkg.sv hw/rtl/fp/fp_pkg.sv hw/rtl/fp/fp_divsqrt.sv} {
     read_verilog -sv $root/$f
 }
 
@@ -28,7 +30,7 @@ set generics {}
 # cmd.exe splits an unquoted argument at "=", so a quoted one may arrive with its
 # quotes; I strip them.
 foreach arg $argv { lappend generics -generic [string trim $arg {"}] }
-synth_design -top fp_sqrt -part $part -mode out_of_context {*}$generics
+synth_design -top fp_divsqrt -part $part -mode out_of_context {*}$generics
 
 create_clock -name clk -period 10.000 [get_ports clk]
 set ins [get_ports -filter {DIRECTION == IN && NAME != clk}]
