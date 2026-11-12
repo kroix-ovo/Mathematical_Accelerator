@@ -1,0 +1,23 @@
+link/ping: 201 samples, 149.4 us
+link/status: 201 samples, 124.7 us
+link/nop: 201 samples, 131.2 us
+memory/roundtrip/1: 51 samples, 289.0 us
+memory/roundtrip/255: 51 samples, 601.9 us
+memory/roundtrip/256: 51 samples, 881.4 us
+memory/roundtrip/4096: 51 samples, 11253.5 us
+sustained/write/4096: 974 samples, 5670.0 us
+sustained/read/4096: 1068 samples, 5152.8 us
+sustained/roundtrip/4096: 502 samples, 11015.5 us
+sustained/write/32768: 132 samples, 44015.1 us
+sustained/read/32768: 141 samples, 40744.7 us
+sustained/roundtrip/32768: 66 samples, 87019.4 us
+fpu/ADD: 31 samples, 1149.0 us
+fpu/DIV: 31 samples, 1158.6 us
+fpu/SIN: 31 samples, 1098.8 us
+evu/full/basic: 31 samples, 1004.6 us
+evu/loaded/basic: 31 samples, 699.0 us
+evu/full/map: 31 samples, 17685.2 us
+evu/loaded/map: 31 samples, 12693.6 us
+evu/full/reduce: 31 samples, 25388.2 us
+evu/loaded/reduce: 31 samples, 1586.8 us
+PHYSICAL BOARD PASS: python -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language-board/20261111/round-0-python-optimized.json

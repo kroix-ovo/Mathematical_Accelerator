@@ -1,0 +1,73 @@
+         1115893 function calls (1095217 primitive calls) in 2.968 seconds
+
+   Ordered by: cumulative time
+   List reduced from 474 to 65 due to restriction <65>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      396    0.011    0.000    2.007    0.005 device.py:149(request)
+       24    0.000    0.000    1.899    0.079 language_bench.py:115(transfer)
+     1224    1.199    0.001    1.199    0.001 framing.py:12(crc16)
+       78    0.003    0.000    1.010    0.013 device.py:193(write_words)
+       60    0.004    0.000    0.951    0.016 device.py:203(read_words)
+      606    0.004    0.000    0.892    0.001 protocol.py:59(encode)
+       66    0.003    0.000    0.790    0.012 sympy_to_evu.py:286(compile_expr)
+      606    0.003    0.000    0.746    0.001 protocol.py:78(decode)
+       27    0.001    0.000    0.714    0.026 language_bench.py:71(compile_record)
+       24    0.000    0.000    0.656    0.027 language_bench.py:80(<lambda>)
+      606    0.005    0.000    0.608    0.001 protocol.py:52(to_raw)
+      606    0.013    0.000    0.603    0.001 protocol.py:63(from_raw)
+      198    0.003    0.000    0.589    0.003 transport.py:54(send)
+      198    0.004    0.000    0.586    0.003 model.py:44(handle_wire)
+ 3204/129    0.011    0.000    0.487    0.004 sympy_to_evu.py:106(lower)
+ 2388/129    0.011    0.000    0.486    0.004 sympy_to_evu.py:112(_lower)
+   720/93    0.014    0.000    0.468    0.005 sympy_to_evu.py:128(_add)
+  738/735    0.004    0.000    0.408    0.001 sympy_to_evu.py:195(_function)
+      720    0.003    0.000    0.305    0.000 sympy_to_evu.py:94(number)
+      720    0.011    0.000    0.293    0.000 sympy_to_evu.py:49(fp32_of)
+      198    0.006    0.000    0.292    0.001 transport.py:133(recv_frame)
+      618    0.199    0.000    0.283    0.000 framing.py:32(cobs_encode)
+       66    0.002    0.000    0.216    0.003 cse_main.py:728(cse)
+      198    0.197    0.001    0.197    0.001 {method 'settimeout' of '_socket.socket' objects}
+       39    0.000    0.000    0.183    0.005 language_bench.py:93(build)
+       39    0.002    0.000    0.182    0.005 quadrature.py:99(integral_run)
+      729    0.015    0.000    0.163    0.000 fp32ref.py:110(round_fraction)
+      618    0.124    0.000    0.139    0.000 framing.py:61(cobs_decode)
+       66    0.003    0.000    0.132    0.002 cse_main.py:459(opt_cse)
+       18    0.000    0.000    0.095    0.005 language_bench.py:126(<lambda>)
+       18    0.001    0.000    0.095    0.005 device.py:329(evu_run)
+      198    0.088    0.000    0.088    0.000 {method 'recv' of '_socket.socket' objects}
+       63    0.000    0.000    0.084    0.001 quadrature.py:67(nodes)
+       66    0.001    0.000    0.082    0.001 cse_main.py:583(tree_cse)
+       63    0.003    0.000    0.079    0.001 quadrature.py:49(gauss_legendre)
+      132    0.006    0.000    0.077    0.001 cse_main.py:365(match_common_args)
+     1458    0.014    0.000    0.076    0.000 fp32ref.py:100(_round_to_quantum)
+       63    0.004    0.000    0.073    0.001 legendre.py:1470(leggauss)
+       36    0.000    0.000    0.070    0.002 device.py:295(evu_start)
+     8382    0.016    0.000    0.070    0.000 cache.py:69(wrapper)
+     2661    0.006    0.000    0.065    0.000 {built-in method builtins.sorted}
+     8328    0.010    0.000    0.064    0.000 sympify.py:514(_sympify)
+      744    0.014    0.000    0.060    0.000 evalf.py:1565(evalf)
+      720    0.003    0.000    0.060    0.000 evalf.py:1733(N)
+     9888    0.038    0.000    0.059    0.000 sympify.py:124(sympify)
+       60    0.026    0.000    0.058    0.001 sympy_to_evu.py:243(_allocate)
+       42    0.000    0.000    0.058    0.001 device.py:222(run)
+        3    0.000    0.000    0.058    0.019 language_bench.py:91(<lambda>)
+     2103    0.006    0.000    0.056    0.000 sympy_to_evu.py:131(<lambda>)
+  3270/66    0.023    0.000    0.052    0.001 cse_main.py:661(_rebuild)
+     2808    0.005    0.000    0.052    0.000 numbers.py:1984(__lt__)
+      198    0.001    0.000    0.052    0.000 transport.py:129(send)
+   258779    0.052    0.000    0.052    0.000 {method 'append' of 'bytearray' objects}
+      198    0.051    0.000    0.051    0.000 {method 'send' of '_socket.socket' objects}
+  3261/66    0.019    0.000    0.048    0.001 cse_main.py:496(_find_opts)
+      189    0.042    0.000    0.043    0.000 legendre.py:828(legval)
+    14685    0.034    0.000    0.042    0.000 fractions.py:62(__new__)
+    76104    0.028    0.000    0.041    0.000 {built-in method builtins.isinstance}
+207006/207003    0.041    0.000    0.041    0.000 {built-in method builtins.len}
+     2916    0.007    0.000    0.037    0.000 fractions.py:357(forward)
+      189    0.003    0.000    0.035    0.000 evu_isa.py:103(check)
+      198    0.002    0.000    0.034    0.000 model.py:63(execute)
+       18    0.000    0.000    0.033    0.002 language_bench.py:130(<lambda>)
+     3645    0.016    0.000    0.033    0.000 fractions.py:541(__pow__)
+       18    0.000    0.000    0.031    0.002 device.py:286(evu_load)
+
+

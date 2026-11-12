@@ -239,3 +239,17 @@ Quick list so I don't lose track. The full write-ups are in the dated entries be
 
 **E-56. The first square-root board run stopped at the Ethernet bring-up.** board_suite programmed the baseline bitstream, then `eth_bringup.py` found the laptop's `Ethernet` adapter Disconnected at 0 bps. The cable had been unplugged from the FPGA. Once it was plugged back in, the adapter came up at 100 Mbps in about 6 seconds, and the board answered ping.
 **Fix:** I re-ran the baseline's suite without reprogramming. The board still held the same bitstream, and programming resets the PHY, which could have dropped the link again. The three candidates were each programmed as usual and the link stayed up through all of them. The evidence README says which baseline run has no program step.
+
+## 2026-11-11: host-language experiment (Python, Rust, C)
+
+**E-57. The first Linux software matrix had five test failures from missing cocotb.** 453 tests passed and five failed because the WSL environment had only the runtime dependencies, not the development ones the cocotb tests need. Nothing in the framing code was wrong.
+**Fix:** I installed the declared development dependencies and re-ran the whole matrix, which passed. The failed attempt is kept as `linux-control-before-dev-deps.txt`.
+
+**E-58. My first board pilot checked EVU results against a field that doesn't exist.** `board_language_bench.py` compared the board's results with `expected.values`, but the reference model's `EvuResult` has no `values` field, so the pilot stopped with `AttributeError` right after the sustained runs. That was a bug in the benchmark, not in the driver or the board.
+**Fix:** the check now uses the reference result's real field. The failed pilot log (`pilot-control.txt`) is kept.
+
+**E-59. A cleanup STATUS query in the pilot got stuck behind a query that was already waiting.** After the timeout fault test, the harness sent a STATUS to check that the long RUN had finished. The device was set to `retries=0` for the fault test, and the receive slot was still taken by the earlier query, so the single STATUS attempt was dropped and the run stopped. Again a harness bug; the production driver wasn't changed.
+**Fix:** for that cleanup, the harness now sets a 2 s timeout and `retries=3`. Retrying STATUS is safe because it only reads state, and RUN itself is still never retried. Cleanup sits outside every timed case, so this doesn't touch any measurement.
+
+**E-60. The 5 ms fake timeout broke an image upload in round 3.** To test recovery from a receive timeout during a long RUN, the harness shortened the receive timeout to 5 ms. That short timeout also applied while the round-3 control process was uploading the fault test's image, so the upload timed out and the process stopped (`round-2-software-control.failed-1.txt`; rounds are numbered from 0).
+**Fix:** the 5 ms timeout now applies only to the recovery query after RUN. I re-ran that whole control process and kept the other finished rounds, since the timed code, drivers, inputs and bitstream hadn't changed.

@@ -1,0 +1,36 @@
+{
+  "udp:192.168.10.2": {
+    "ping": {
+      "magic": 1296122691,
+      "version": [
+        0,
+        4
+      ],
+      "scratch_addr_bits": 16,
+      "clk_hz": 100000000
+    },
+    "status": {
+      "crc_errors": 0,
+      "frame_errors": 0,
+      "last_cycles": 67618314
+    }
+  },
+  "COM3": {
+    "ping": {
+      "magic": 1296122691,
+      "version": [
+        0,
+        4
+      ],
+      "scratch_addr_bits": 16,
+      "clk_hz": 100000000
+    },
+    "status": {
+      "crc_errors": 0,
+      "frame_errors": 0,
+      "last_cycles": 67618314
+    }
+  },
+  "completed_local": "2026-11-11T15:58:43.442668",
+  "bitstream_sha256": "4fd517e3d5cd29f11f5fe4af778f43312bf70b0c445efbe6329a0f7c13dad58a"
+}

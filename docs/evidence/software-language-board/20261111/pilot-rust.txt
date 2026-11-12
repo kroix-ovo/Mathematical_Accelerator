@@ -1,0 +1,31 @@
+link/ping: 201 samples, 519.0 us
+link/status: 201 samples, 163.0 us
+link/nop: 201 samples, 143.6 us
+memory/roundtrip/1: 51 samples, 292.0 us
+memory/roundtrip/255: 51 samples, 548.6 us
+memory/roundtrip/256: 51 samples, 968.8 us
+memory/roundtrip/4096: 51 samples, 10923.7 us
+sustained/write/4096: 38 samples, 5073.9 us
+sustained/read/4096: 37 samples, 4827.0 us
+sustained/roundtrip/4096: 18 samples, 10189.2 us
+sustained/write/32768: 11 samples, 41126.3 us
+sustained/read/32768: 11 samples, 41877.7 us
+sustained/roundtrip/32768: 11 samples, 80202.6 us
+evu/full/basic: 31 samples, 997.9 us
+evu/loaded/basic: 31 samples, 656.4 us
+evu/full/map: 31 samples, 17269.8 us
+evu/loaded/map: 31 samples, 11454.9 us
+evu/full/reduce: 31 samples, 22614.0 us
+evu/loaded/reduce: 31 samples, 1477.9 us
+Traceback (most recent call last):
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/tools/board_language_bench.py", line 269, in <module>
+    main()
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/tools/board_language_bench.py", line 240, in main
+    status = dev.status()
+             ^^^^^^^^^^^^
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/rust-hybrid/sw/mathaccel/driver/device.py", line 191, in status
+    return P.parse_status(self.request(*P.status()))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/rust-hybrid/sw/mathaccel/driver/device.py", line 178, in request
+    raise DeviceTimeout(f"no response to op 0x{op:02X} after {attempts} attempt(s)")
+mathaccel.driver.device.DeviceTimeout: no response to op 0x05 after 1 attempt(s)

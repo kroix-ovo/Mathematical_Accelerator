@@ -1,0 +1,41 @@
+testing software-control/software
+testing software-control/udp
+testing python-optimized/software
+testing python-optimized/udp
+testing rust-hybrid/software
+testing rust-hybrid/udp
+testing c-hybrid/software
+testing c-hybrid/udp
+round 0: software-control
+original-python: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-0-software-control.json
+round 0: python-optimized
+python: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-0-python-optimized.json
+round 0: rust-hybrid
+rust: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-0-rust-hybrid.json
+round 0: c-hybrid
+c: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-0-c-hybrid.json
+round 1: python-optimized
+python: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-1-python-optimized.json
+round 1: rust-hybrid
+rust: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-1-rust-hybrid.json
+round 1: c-hybrid
+c: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-1-c-hybrid.json
+round 1: software-control
+original-python: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-1-software-control.json
+round 2: rust-hybrid
+rust: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-2-rust-hybrid.json
+round 2: c-hybrid
+c: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-2-c-hybrid.json
+round 2: software-control
+original-python: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-2-software-control.json
+round 2: python-optimized
+python: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-2-python-optimized.json
+round 3: c-hybrid
+c: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-3-c-hybrid.json
+round 3: software-control
+original-python: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-3-software-control.json
+round 3: python-optimized
+python: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-3-python-optimized.json
+round 3: rust-hybrid
+rust: 110 cases -> /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/docs/evidence/software-language/linux/round-3-rust-hybrid.json
+All compiler, image, wire, result, flag and model-cycle fingerprints match.

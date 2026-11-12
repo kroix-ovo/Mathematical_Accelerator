@@ -1,0 +1,12 @@
+{
+  "description": "Exploratory candidate check; do not combine with Linux final timings",
+  "python": "3.11.9",
+  "platform": "Windows",
+  "input": "bytes(range(256))*4",
+  "operations_per_repeat": 1000,
+  "repeat_seconds": {
+    "python_table": [0.16253980016335845, 0.1766062001697719, 0.15391780016943812, 0.1594107998535037, 0.15733740013092756],
+    "binascii_crc_hqx": [0.0025285999290645123, 0.0030628000386059284, 0.003091299906373024, 0.0025101001374423504, 0.0028775003738701344]
+  },
+  "decision": "Use binascii in optimized Python; same shared change in both native branches"
+}

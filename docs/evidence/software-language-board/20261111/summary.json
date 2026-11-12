@@ -1,0 +1,1664 @@
+{
+  "board_manifest": {
+    "track": "split-baseline",
+    "root": "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator",
+    "branch": "main",
+    "head": "0a19084e5bebeaffdbe08c43e588467c77101189",
+    "rtl_commit": "3b2aa73d7bedc081cc658c514e33f603f05c0a33",
+    "rtl_dirty": false,
+    "bitstream": "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\build\\vivado\\nexys_top.bit",
+    "bitstream_sha256": "4fd517e3d5cd29f11f5fe4af778f43312bf70b0c445efbe6329a0f7c13dad58a",
+    "bitstream_time": "2026-11-10T22:10:02",
+    "bitstream_newer_than_rtl": true,
+    "routed_wns_whs": [
+      0.21,
+      0.018
+    ],
+    "started": "2026-11-11T15:35:15",
+    "purpose": "Four host implementations on one fixed physical FPGA; current divider hardware, original pinned host branches",
+    "host_control": "98be2be8e8b0fd9e1f600631fb54dae9638ce726",
+    "baseline_hardware_difference": " hw/rtl/fp/fp_div.sv | 490 ++++++++++++++++++++++++++++++++++------------------\n hw/rtl/fp/fpu.sv    |  44 ++---\n 2 files changed, 348 insertions(+), 186 deletions(-)\n"
+  },
+  "port": "udp:192.168.10.2",
+  "rounds": 4,
+  "seconds_per_sustained_window": 6.0,
+  "physical_board": true,
+  "all_fingerprints_equal": true,
+  "shared_python_hashes": {
+    "python-optimized": "2949d082581b2f94122bfe3a7eb4f4812fc88a51c84da9d8c99a9b203689a933",
+    "rust-hybrid": "2949d082581b2f94122bfe3a7eb4f4812fc88a51c84da9d8c99a9b203689a933",
+    "c-hybrid": "2949d082581b2f94122bfe3a7eb4f4812fc88a51c84da9d8c99a9b203689a933"
+  },
+  "raw_files": [
+    "round-0-software-control.json",
+    "round-0-python-optimized.json",
+    "round-0-rust-hybrid.json",
+    "round-0-c-hybrid.json",
+    "round-1-python-optimized.json",
+    "round-1-rust-hybrid.json",
+    "round-1-c-hybrid.json",
+    "round-1-software-control.json",
+    "round-2-rust-hybrid.json",
+    "round-2-c-hybrid.json",
+    "round-2-software-control.json",
+    "round-2-python-optimized.json",
+    "round-3-c-hybrid.json",
+    "round-3-software-control.json",
+    "round-3-python-optimized.json",
+    "round-3-rust-hybrid.json"
+  ],
+  "variants": {
+    "software-control": {
+      "head": "98be2be8e8b0fd9e1f600631fb54dae9638ce726",
+      "backend": "original-python",
+      "rss_kib_median": 191264.0,
+      "cases": {
+        "link/ping": {
+          "median_ns": 180802.5,
+          "round_medians_ns": [
+            866224.0,
+            160025.0,
+            179726.0,
+            181879.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 20.385859555045947,
+          "sample_count": 804
+        },
+        "link/status": {
+          "median_ns": 196942.5,
+          "round_medians_ns": [
+            837643.0,
+            156816.0,
+            223768.0,
+            170117.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 24.8265034096861,
+          "sample_count": 804
+        },
+        "link/nop": {
+          "median_ns": 176626.5,
+          "round_medians_ns": [
+            540346.0,
+            162327.0,
+            177986.0,
+            175267.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 18.71954442620589,
+          "sample_count": 804
+        },
+        "memory/roundtrip/1": {
+          "median_ns": 360248.0,
+          "round_medians_ns": [
+            370787.0,
+            349709.0,
+            336546.0,
+            403747.0
+          ],
+          "MBps": 0.01760825474122923,
+          "round_MBps": [
+            0.016415134899216505,
+            0.018801374583241957,
+            0.020098021202033092,
+            0.01522587870953065
+          ],
+          "cpu_percent": 34.90452454990643,
+          "sample_count": 204
+        },
+        "memory/roundtrip/255": {
+          "median_ns": 2138675.5,
+          "round_medians_ns": [
+            2130164.0,
+            2341691.0,
+            2134636.0,
+            2142715.0
+          ],
+          "MBps": 0.8796573655851798,
+          "round_MBps": [
+            0.8930299936020119,
+            0.7844217578540248,
+            0.8662847375683477,
+            0.899263304209038
+          ],
+          "cpu_percent": 71.70282369873712,
+          "sample_count": 204
+        },
+        "memory/roundtrip/256": {
+          "median_ns": 2633952.5,
+          "round_medians_ns": [
+            2618239.0,
+            2649666.0,
+            2529804.0,
+            2670937.0
+          ],
+          "MBps": 0.67011026714371,
+          "round_MBps": [
+            0.6324234776099243,
+            0.7220413163201427,
+            0.7077970566774958,
+            0.5959099823793832
+          ],
+          "cpu_percent": 58.85127552304663,
+          "sample_count": 204
+        },
+        "memory/roundtrip/4096": {
+          "median_ns": 35639358.5,
+          "round_medians_ns": [
+            36062715.0,
+            36344658.0,
+            35216002.0,
+            34456918.0
+          ],
+          "MBps": 0.8621955738496295,
+          "round_MBps": [
+            0.8667755343130477,
+            0.851736831275674,
+            0.8576156133862114,
+            0.8684629512846895
+          ],
+          "cpu_percent": 66.21619967325069,
+          "sample_count": 204
+        },
+        "sustained/write/4096": {
+          "median_ns": 17535538.0,
+          "round_medians_ns": [
+            17529004.0,
+            17593039.0,
+            17542072.0,
+            17437270.0
+          ],
+          "MBps": 0.8721833825316887,
+          "round_MBps": [
+            0.8688355957174034,
+            0.8860921062444778,
+            0.8527762974037968,
+            0.8755311693459739
+          ],
+          "cpu_percent": 68.65174346870776,
+          "sample_count": 1278
+        },
+        "sustained/read/4096": {
+          "median_ns": 16851977.25,
+          "round_medians_ns": [
+            16727671.0,
+            17417506.5,
+            16864020.0,
+            16839934.5
+          ],
+          "MBps": 0.8947839703233493,
+          "round_MBps": [
+            0.9279611973089312,
+            0.8823497792862883,
+            0.8895984300201557,
+            0.8999695106265428
+          ],
+          "cpu_percent": 66.5882902098007,
+          "sample_count": 1320
+        },
+        "sustained/roundtrip/4096": {
+          "median_ns": 34514593.25,
+          "round_medians_ns": [
+            36157983.0,
+            34913606.0,
+            34115580.5,
+            32013794.0
+          ],
+          "MBps": 0.9177078592812072,
+          "round_MBps": [
+            0.8675373087264346,
+            0.9077499511881212,
+            0.9276657673742933,
+            0.9973621467511673
+          ],
+          "cpu_percent": 68.78007261956904,
+          "sample_count": 679
+        },
+        "sustained/write/32768": {
+          "median_ns": 142930716.75,
+          "round_medians_ns": [
+            145493111.0,
+            143353163.0,
+            142508270.5,
+            135313261.0
+          ],
+          "MBps": 0.8763359348566422,
+          "round_MBps": [
+            0.8775179736497405,
+            0.8751538960635438,
+            0.9105643342506621,
+            0.8655487605828946
+          ],
+          "cpu_percent": 68.3497809428561,
+          "sample_count": 164
+        },
+        "sustained/read/32768": {
+          "median_ns": 140784940.5,
+          "round_medians_ns": [
+            143428439.0,
+            137180764.0,
+            138141442.0,
+            144040121.0
+          ],
+          "MBps": 0.9076334961051861,
+          "round_MBps": [
+            0.8894780132079956,
+            0.9202270770934026,
+            0.9103501255117316,
+            0.9049168666986406
+          ],
+          "cpu_percent": 65.47265242968729,
+          "sample_count": 168
+        },
+        "sustained/roundtrip/32768": {
+          "median_ns": 296630342.75,
+          "round_medians_ns": [
+            294699929.0,
+            280574115.0,
+            310284484.0,
+            298560756.5
+          ],
+          "MBps": 0.8744701632631939,
+          "round_MBps": [
+            0.877804308800817,
+            0.9061266367971825,
+            0.8149578443067954,
+            0.8711360177255709
+          ],
+          "cpu_percent": 66.73066345603138,
+          "sample_count": 81
+        },
+        "fpu/ADD": {
+          "median_ns": 2732502.5,
+          "round_medians_ns": [
+            2978458.0,
+            2636076.0,
+            2602106.0,
+            2828929.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 61.41625023791659,
+          "sample_count": 124
+        },
+        "fpu/DIV": {
+          "median_ns": 2886839.5,
+          "round_medians_ns": [
+            2979531.0,
+            2952900.0,
+            2652578.0,
+            2820779.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 59.236744133383475,
+          "sample_count": 124
+        },
+        "fpu/SIN": {
+          "median_ns": 2811592.0,
+          "round_medians_ns": [
+            3102666.0,
+            2883412.0,
+            2698426.0,
+            2739772.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 59.052527504509065,
+          "sample_count": 124
+        },
+        "evu/full/basic": {
+          "median_ns": 1914847.5,
+          "round_medians_ns": [
+            2035310.0,
+            2058638.0,
+            1766059.0,
+            1794385.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 46.09484380108194,
+          "sample_count": 124
+        },
+        "evu/loaded/basic": {
+          "median_ns": 1238886.5,
+          "round_medians_ns": [
+            1277038.0,
+            1297296.0,
+            1078814.0,
+            1200735.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 46.92948790942789,
+          "sample_count": 124
+        },
+        "evu/full/map": {
+          "median_ns": 55091120.5,
+          "round_medians_ns": [
+            60418431.0,
+            56814929.0,
+            52050325.0,
+            53367312.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 68.1192903566189,
+          "sample_count": 124
+        },
+        "evu/loaded/map": {
+          "median_ns": 36659872.0,
+          "round_medians_ns": [
+            37112195.0,
+            38066280.0,
+            35037152.0,
+            36207549.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 68.87831305552922,
+          "sample_count": 124
+        },
+        "evu/full/reduce": {
+          "median_ns": 75836077.0,
+          "round_medians_ns": [
+            74930438.0,
+            76741716.0,
+            73047087.0,
+            76847786.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 68.38611532196862,
+          "sample_count": 124
+        },
+        "evu/loaded/reduce": {
+          "median_ns": 1486430.0,
+          "round_medians_ns": [
+            1421607.0,
+            1554114.0,
+            1474039.0,
+            1498821.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 17.043433725243823,
+          "sample_count": 124
+        }
+      }
+    },
+    "python-optimized": {
+      "head": "707da1d1d13ec82bf61840549cc96eaec974b769",
+      "backend": "python",
+      "rss_kib_median": 191532.0,
+      "cases": {
+        "link/ping": {
+          "median_ns": 135123.5,
+          "round_medians_ns": [
+            149425.0,
+            129601.0,
+            137568.0,
+            132679.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 21.575542877218602,
+          "sample_count": 804
+        },
+        "link/status": {
+          "median_ns": 129623.5,
+          "round_medians_ns": [
+            124662.0,
+            129072.0,
+            157103.0,
+            130175.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 19.156367107259456,
+          "sample_count": 804
+        },
+        "link/nop": {
+          "median_ns": 134830.5,
+          "round_medians_ns": [
+            131161.0,
+            135559.0,
+            151099.0,
+            134102.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 22.406745545131336,
+          "sample_count": 804
+        },
+        "memory/roundtrip/1": {
+          "median_ns": 294257.5,
+          "round_medians_ns": [
+            289038.0,
+            273003.0,
+            344515.0,
+            299477.0
+          ],
+          "MBps": 0.022102436057451023,
+          "round_MBps": [
+            0.02303754815440442,
+            0.024631150037450818,
+            0.0050551538972839075,
+            0.021167323960497624
+          ],
+          "cpu_percent": 29.438815529625757,
+          "sample_count": 204
+        },
+        "memory/roundtrip/255": {
+          "median_ns": 673775.5,
+          "round_medians_ns": [
+            601930.0,
+            673786.0,
+            692013.0,
+            673765.0
+          ],
+          "MBps": 2.693186933239237,
+          "round_MBps": [
+            3.1017759038461397,
+            2.760641038680312,
+            2.469446591654576,
+            2.625732827798162
+          ],
+          "cpu_percent": 24.538674069796304,
+          "sample_count": 204
+        },
+        "memory/roundtrip/256": {
+          "median_ns": 973643.0,
+          "round_medians_ns": [
+            881356.0,
+            919205.0,
+            1028081.0,
+            1056573.0
+          ],
+          "MBps": 1.8849366736000301,
+          "round_MBps": [
+            2.1133098519778684,
+            2.017869957121809,
+            1.752003390078251,
+            1.4623594081465439
+          ],
+          "cpu_percent": 24.353405563460754,
+          "sample_count": 204
+        },
+        "memory/roundtrip/4096": {
+          "median_ns": 11542248.0,
+          "round_medians_ns": [
+            11253456.0,
+            11867104.0,
+            11714099.0,
+            11370397.0
+          ],
+          "MBps": 2.5598278504205583,
+          "round_MBps": [
+            2.5969590354485685,
+            2.544799272289202,
+            2.4983273279592058,
+            2.574856428551915
+          ],
+          "cpu_percent": 20.19213930470662,
+          "sample_count": 204
+        },
+        "sustained/write/4096": {
+          "median_ns": 5846166.0,
+          "round_medians_ns": [
+            5670038.0,
+            6001260.5,
+            5806772.0,
+            5885560.0
+          ],
+          "MBps": 2.562016839280015,
+          "round_MBps": [
+            2.659026771536911,
+            2.521888659998377,
+            2.4506027056763,
+            2.6021450185616537
+          ],
+          "cpu_percent": 22.86216893370238,
+          "sample_count": 3749
+        },
+        "sustained/read/4096": {
+          "median_ns": 5152175.75,
+          "round_medians_ns": [
+            5152798.0,
+            5254688.0,
+            5151553.5,
+            5122861.5
+          ],
+          "MBps": 2.8628051280325115,
+          "round_MBps": [
+            2.9160697608980173,
+            2.8351194409749474,
+            2.8485318691141024,
+            2.877078386950921
+          ],
+          "cpu_percent": 16.398445423865702,
+          "sample_count": 4205
+        },
+        "sustained/roundtrip/4096": {
+          "median_ns": 11251535.5,
+          "round_medians_ns": [
+            11015543.5,
+            11054104.0,
+            11594505.0,
+            11448967.0
+          ],
+          "MBps": 2.6263875944643167,
+          "round_MBps": [
+            2.7392856762581705,
+            2.7967585693720785,
+            2.3135271924947483,
+            2.513489512670463
+          ],
+          "cpu_percent": 20.371218549365317,
+          "sample_count": 1900
+        },
+        "sustained/write/32768": {
+          "median_ns": 44770737.0,
+          "round_medians_ns": [
+            44015082.5,
+            47300013.0,
+            44639682.0,
+            44901792.0
+          ],
+          "MBps": 2.8064316356216654,
+          "round_MBps": [
+            2.8827532875552206,
+            2.6643420520591907,
+            2.8108584013722147,
+            2.8020048698711166
+          ],
+          "cpu_percent": 23.735101396396992,
+          "sample_count": 512
+        },
+        "sustained/read/32768": {
+          "median_ns": 40206586.5,
+          "round_medians_ns": [
+            40744680.0,
+            39668493.0,
+            39345750.5,
+            43283293.0
+          ],
+          "MBps": 3.0827082163287507,
+          "round_MBps": [
+            3.064125785008008,
+            3.1012906476494932,
+            3.1331426115578136,
+            2.812550995643809
+          ],
+          "cpu_percent": 15.881863413869498,
+          "sample_count": 557
+        },
+        "sustained/roundtrip/32768": {
+          "median_ns": 85600424.5,
+          "round_medians_ns": [
+            87019360.5,
+            91444032.0,
+            84181488.5,
+            78105743.5
+          ],
+          "MBps": 2.9568551700282995,
+          "round_MBps": [
+            2.8645559697421596,
+            2.7123740104705956,
+            3.0491543703144393,
+            3.212957398922811
+          ],
+          "cpu_percent": 19.930436366279338,
+          "sample_count": 273
+        },
+        "fpu/ADD": {
+          "median_ns": 1118406.0,
+          "round_medians_ns": [
+            1149034.0,
+            1243574.0,
+            1075606.0,
+            1087778.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 28.645057480016064,
+          "sample_count": 124
+        },
+        "fpu/DIV": {
+          "median_ns": 1167258.5,
+          "round_medians_ns": [
+            1158629.0,
+            1325836.0,
+            1175888.0,
+            1077508.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 29.656242616423018,
+          "sample_count": 124
+        },
+        "fpu/SIN": {
+          "median_ns": 1095435.5,
+          "round_medians_ns": [
+            1098799.0,
+            1332087.0,
+            1092072.0,
+            1071226.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 28.75513627925436,
+          "sample_count": 124
+        },
+        "evu/full/basic": {
+          "median_ns": 998013.5,
+          "round_medians_ns": [
+            1004594.0,
+            1433516.0,
+            946266.0,
+            991433.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 34.34240069155037,
+          "sample_count": 124
+        },
+        "evu/loaded/basic": {
+          "median_ns": 720651.0,
+          "round_medians_ns": [
+            699046.0,
+            819496.0,
+            662905.0,
+            742256.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 29.88588473395151,
+          "sample_count": 124
+        },
+        "evu/full/map": {
+          "median_ns": 19238095.5,
+          "round_medians_ns": [
+            17685226.0,
+            21876189.0,
+            16942714.0,
+            20790965.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 27.35655847923225,
+          "sample_count": 124
+        },
+        "evu/loaded/map": {
+          "median_ns": 14207745.0,
+          "round_medians_ns": [
+            12693588.0,
+            15701540.0,
+            12713950.0,
+            15908477.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 25.83763082890807,
+          "sample_count": 124
+        },
+        "evu/full/reduce": {
+          "median_ns": 26767091.0,
+          "round_medians_ns": [
+            25388240.0,
+            29704681.0,
+            23940193.0,
+            28145942.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 27.038664145163246,
+          "sample_count": 124
+        },
+        "evu/loaded/reduce": {
+          "median_ns": 1561671.5,
+          "round_medians_ns": [
+            1586751.0,
+            1536592.0,
+            1383711.0,
+            1588365.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 13.626271373622185,
+          "sample_count": 124
+        }
+      }
+    },
+    "rust-hybrid": {
+      "head": "6e6a99d40393c6ecf3b48acf6c13c90880233e00",
+      "backend": "rust",
+      "rss_kib_median": 191736.0,
+      "cases": {
+        "link/ping": {
+          "median_ns": 131168.5,
+          "round_medians_ns": [
+            133628.0,
+            142903.0,
+            128709.0,
+            122959.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 17.750400711128997,
+          "sample_count": 804
+        },
+        "link/status": {
+          "median_ns": 130520.5,
+          "round_medians_ns": [
+            131899.0,
+            131802.0,
+            129239.0,
+            119847.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 17.458934934335755,
+          "sample_count": 804
+        },
+        "link/nop": {
+          "median_ns": 133872.0,
+          "round_medians_ns": [
+            137582.0,
+            131095.0,
+            132041.0,
+            135703.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 18.623433332516946,
+          "sample_count": 804
+        },
+        "memory/roundtrip/1": {
+          "median_ns": 287997.0,
+          "round_medians_ns": [
+            307750.0,
+            290486.0,
+            271203.0,
+            285508.0
+          ],
+          "MBps": 0.022300690593491383,
+          "round_MBps": [
+            0.021526872580700053,
+            0.012301641681218332,
+            0.02475773374258838,
+            0.023074508606282712
+          ],
+          "cpu_percent": 27.74117970887633,
+          "sample_count": 204
+        },
+        "memory/roundtrip/255": {
+          "median_ns": 582829.5,
+          "round_medians_ns": [
+            560748.0,
+            589869.0,
+            584524.0,
+            581135.0
+          ],
+          "MBps": 2.9807865934705626,
+          "round_MBps": [
+            3.248829419030983,
+            2.9686161292584083,
+            2.9929570576827174,
+            2.1082052344685316
+          ],
+          "cpu_percent": 17.748973324372106,
+          "sample_count": 204
+        },
+        "memory/roundtrip/256": {
+          "median_ns": 904123.0,
+          "round_medians_ns": [
+            936345.0,
+            906582.0,
+            901664.0,
+            822261.0
+          ],
+          "MBps": 1.983497651538578,
+          "round_MBps": [
+            1.8965612570601502,
+            1.7929931336232046,
+            2.070434046017006,
+            2.2147543248650705
+          ],
+          "cpu_percent": 19.021453063248238,
+          "sample_count": 204
+        },
+        "memory/roundtrip/4096": {
+          "median_ns": 10463518.0,
+          "round_medians_ns": [
+            10495576.0,
+            10765235.0,
+            10431460.0,
+            9993276.0
+          ],
+          "MBps": 2.86208655092425,
+          "round_MBps": [
+            2.9276298074502245,
+            2.828880981506566,
+            2.757669687135162,
+            2.8952921203419337
+          ],
+          "cpu_percent": 13.693675170700079,
+          "sample_count": 204
+        },
+        "sustained/write/4096": {
+          "median_ns": 4737661.0,
+          "round_medians_ns": [
+            4780011.0,
+            4993630.0,
+            4631154.0,
+            4695311.0
+          ],
+          "MBps": 3.0014030852067095,
+          "round_MBps": [
+            3.0327591919410875,
+            2.9700469784723316,
+            3.1626853926349794,
+            2.8576537317013875
+          ],
+          "cpu_percent": 12.86619192427819,
+          "sample_count": 4405
+        },
+        "sustained/read/4096": {
+          "median_ns": 5088264.5,
+          "round_medians_ns": [
+            5159408.0,
+            5283099.0,
+            5017121.0,
+            4918050.0
+          ],
+          "MBps": 2.8596580647649064,
+          "round_MBps": [
+            2.788978412176891,
+            2.7366484257927093,
+            3.012238691001012,
+            2.9303377173529217
+          ],
+          "cpu_percent": 14.348461651919175,
+          "sample_count": 4204
+        },
+        "sustained/roundtrip/4096": {
+          "median_ns": 10028060.0,
+          "round_medians_ns": [
+            9759942.0,
+            10760834.5,
+            10117064.0,
+            9939056.0
+          ],
+          "MBps": 2.9788940935377877,
+          "round_MBps": [
+            3.049321894750687,
+            2.725471135563576,
+            2.908466292324888,
+            3.099686153193041
+          ],
+          "cpu_percent": 14.150821916074769,
+          "sample_count": 2162
+        },
+        "sustained/write/32768": {
+          "median_ns": 38091582.0,
+          "round_medians_ns": [
+            37608970.0,
+            41079561.5,
+            38574194.0,
+            37235431.0
+          ],
+          "MBps": 3.21525034817469,
+          "round_MBps": [
+            3.2027939072468645,
+            3.03947179957405,
+            3.2277067891025153,
+            3.4634702003028273
+          ],
+          "cpu_percent": 13.047328705851351,
+          "sample_count": 594
+        },
+        "sustained/read/32768": {
+          "median_ns": 40483858.0,
+          "round_medians_ns": [
+            40022120.5,
+            41993267.5,
+            37834002.5,
+            40945595.5
+          ],
+          "MBps": 3.0763778526312615,
+          "round_MBps": [
+            3.1754232785882817,
+            2.8705146144176497,
+            3.2723249086195554,
+            2.977332426674242
+          ],
+          "cpu_percent": 12.903705001456984,
+          "sample_count": 566
+        },
+        "sustained/roundtrip/32768": {
+          "median_ns": 76595380.0,
+          "round_medians_ns": [
+            78194588.0,
+            79296680.0,
+            73044572.0,
+            74996172.0
+          ],
+          "MBps": 3.309418895280531,
+          "round_MBps": [
+            3.2137421128517594,
+            3.25615520429598,
+            3.3906622180891572,
+            3.362682586265082
+          ],
+          "cpu_percent": 12.895074494532185,
+          "sample_count": 304
+        },
+        "fpu/ADD": {
+          "median_ns": 1062409.5,
+          "round_medians_ns": [
+            1116221.0,
+            1008598.0,
+            920528.0,
+            1145825.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 21.17125906379031,
+          "sample_count": 124
+        },
+        "fpu/DIV": {
+          "median_ns": 1017432.5,
+          "round_medians_ns": [
+            1200782.0,
+            1028882.0,
+            987487.0,
+            1005983.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 21.769883005027445,
+          "sample_count": 124
+        },
+        "fpu/SIN": {
+          "median_ns": 1012496.5,
+          "round_medians_ns": [
+            1078099.0,
+            1008564.0,
+            953368.0,
+            1016429.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 21.733003469715776,
+          "sample_count": 124
+        },
+        "evu/full/basic": {
+          "median_ns": 967718.5,
+          "round_medians_ns": [
+            1005967.0,
+            929470.0,
+            894469.0,
+            1049393.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 31.27698659231453,
+          "sample_count": 124
+        },
+        "evu/loaded/basic": {
+          "median_ns": 685925.0,
+          "round_medians_ns": [
+            706353.0,
+            675062.0,
+            594255.0,
+            696788.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 26.8793275347791,
+          "sample_count": 124
+        },
+        "evu/full/map": {
+          "median_ns": 15685677.0,
+          "round_medians_ns": [
+            16447048.0,
+            16183452.0,
+            15140594.0,
+            15187902.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 16.68506825995867,
+          "sample_count": 124
+        },
+        "evu/loaded/map": {
+          "median_ns": 10406502.0,
+          "round_medians_ns": [
+            10867559.0,
+            10514993.0,
+            10298011.0,
+            10268760.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 14.195450572337243,
+          "sample_count": 124
+        },
+        "evu/full/reduce": {
+          "median_ns": 22543867.0,
+          "round_medians_ns": [
+            23487390.0,
+            23456291.0,
+            20917622.0,
+            21631443.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 18.317185930321962,
+          "sample_count": 124
+        },
+        "evu/loaded/reduce": {
+          "median_ns": 1477036.5,
+          "round_medians_ns": [
+            1465287.0,
+            1488786.0,
+            1355601.0,
+            1499514.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 13.944086839941761,
+          "sample_count": 124
+        }
+      }
+    },
+    "c-hybrid": {
+      "head": "09f291cef9690c251f49b802701c2f3e949960bc",
+      "backend": "c",
+      "rss_kib_median": 191554.0,
+      "cases": {
+        "link/ping": {
+          "median_ns": 130399.5,
+          "round_medians_ns": [
+            153187.0,
+            133747.0,
+            127052.0,
+            122741.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 18.740528888886598,
+          "sample_count": 804
+        },
+        "link/status": {
+          "median_ns": 129368.0,
+          "round_medians_ns": [
+            169187.0,
+            128650.0,
+            130086.0,
+            123427.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 16.842068235442724,
+          "sample_count": 804
+        },
+        "link/nop": {
+          "median_ns": 129474.5,
+          "round_medians_ns": [
+            173734.0,
+            129108.0,
+            129841.0,
+            125655.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 17.490693423674745,
+          "sample_count": 804
+        },
+        "memory/roundtrip/1": {
+          "median_ns": 302329.5,
+          "round_medians_ns": [
+            352956.0,
+            313120.0,
+            285769.0,
+            291539.0
+          ],
+          "MBps": 0.01924472992934763,
+          "round_MBps": [
+            0.013956268170513852,
+            0.01623489214958209,
+            0.023460351201457487,
+            0.022254567709113163
+          ],
+          "cpu_percent": 24.534755879781365,
+          "sample_count": 204
+        },
+        "memory/roundtrip/255": {
+          "median_ns": 597459.5,
+          "round_medians_ns": [
+            602767.0,
+            597270.0,
+            597649.0,
+            577145.0
+          ],
+          "MBps": 3.0518807448384186,
+          "round_MBps": [
+            2.723090155589373,
+            3.0427365865151437,
+            3.0610249031616936,
+            3.2420749279538907
+          ],
+          "cpu_percent": 17.195544750920014,
+          "sample_count": 204
+        },
+        "memory/roundtrip/256": {
+          "median_ns": 842858.0,
+          "round_medians_ns": [
+            845708.0,
+            840008.0,
+            907398.0,
+            821572.0
+          ],
+          "MBps": 2.118002677395399,
+          "round_MBps": [
+            2.0658844834962435,
+            2.170120871294554,
+            2.0410867989905093,
+            2.2007287174764993
+          ],
+          "cpu_percent": 18.436486004902154,
+          "sample_count": 204
+        },
+        "memory/roundtrip/4096": {
+          "median_ns": 10523047.5,
+          "round_medians_ns": [
+            9621536.0,
+            10870829.0,
+            10277057.0,
+            10769038.0
+          ],
+          "MBps": 2.6749515145327223,
+          "round_MBps": [
+            2.7912551654993134,
+            2.558647863566131,
+            2.9742823481850644,
+            2.353279908021831
+          ],
+          "cpu_percent": 13.054882576735192,
+          "sample_count": 204
+        },
+        "sustained/write/4096": {
+          "median_ns": 4653176.5,
+          "round_medians_ns": [
+            4633073.0,
+            4673280.0,
+            4571270.0,
+            4800998.5
+          ],
+          "MBps": 3.00362218514533,
+          "round_MBps": [
+            2.9344309255255467,
+            3.070961801990909,
+            3.2835284164612886,
+            2.936282568299752
+          ],
+          "cpu_percent": 12.738890211632686,
+          "sample_count": 4479
+        },
+        "sustained/read/4096": {
+          "median_ns": 4924023.75,
+          "round_medians_ns": [
+            5140268.5,
+            4706584.0,
+            4990372.0,
+            4857675.5
+          ],
+          "MBps": 2.9545389224363134,
+          "round_MBps": [
+            2.729930826097181,
+            3.040114308075186,
+            2.927593096647793,
+            2.9814847482248332
+          ],
+          "cpu_percent": 13.724762206486133,
+          "sample_count": 4279
+        },
+        "sustained/roundtrip/4096": {
+          "median_ns": 10014668.25,
+          "round_medians_ns": [
+            10136240.0,
+            10007947.5,
+            10021389.0,
+            9951018.0
+          ],
+          "MBps": 2.8283412361805014,
+          "round_MBps": [
+            2.8114169649241725,
+            3.075420719510794,
+            2.8158592846714217,
+            2.840823187689581
+          ],
+          "cpu_percent": 13.179266642089836,
+          "sample_count": 2116
+        },
+        "sustained/write/32768": {
+          "median_ns": 37874673.5,
+          "round_medians_ns": [
+            38246389.0,
+            37874918.0,
+            37874429.0,
+            36712424.5
+          ],
+          "MBps": 3.243435295555477,
+          "round_MBps": [
+            3.1911707302057066,
+            3.295699860905247,
+            3.0765123123239944,
+            3.449584761578927
+          ],
+          "cpu_percent": 12.15624279123588,
+          "sample_count": 597
+        },
+        "sustained/read/32768": {
+          "median_ns": 39512148.0,
+          "round_medians_ns": [
+            39823730.0,
+            38299425.0,
+            39712933.0,
+            39311363.0
+          ],
+          "MBps": 3.0502834119701934,
+          "round_MBps": [
+            3.062357645700148,
+            3.2343728707473267,
+            3.0382091782402383,
+            3.029680717153843
+          ],
+          "cpu_percent": 12.594735229198957,
+          "sample_count": 569
+        },
+        "sustained/roundtrip/32768": {
+          "median_ns": 77206755.25,
+          "round_medians_ns": [
+            75069905.0,
+            79343605.5,
+            83354359.5,
+            71909063.0
+          ],
+          "MBps": 3.1728012501695195,
+          "round_MBps": [
+            3.215156143102817,
+            3.130446357236222,
+            2.917320497995457,
+            3.5313865684780286
+          ],
+          "cpu_percent": 12.3898819944346,
+          "sample_count": 295
+        },
+        "fpu/ADD": {
+          "median_ns": 1036467.0,
+          "round_medians_ns": [
+            1021302.0,
+            1051632.0,
+            1167945.0,
+            901692.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 21.23260727002184,
+          "sample_count": 124
+        },
+        "fpu/DIV": {
+          "median_ns": 994736.0,
+          "round_medians_ns": [
+            930843.0,
+            1058629.0,
+            1168690.0,
+            874093.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 20.208279341428817,
+          "sample_count": 124
+        },
+        "fpu/SIN": {
+          "median_ns": 1048146.5,
+          "round_medians_ns": [
+            1084243.0,
+            1012050.0,
+            1116108.0,
+            882286.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 20.20689748753261,
+          "sample_count": 124
+        },
+        "evu/full/basic": {
+          "median_ns": 968444.0,
+          "round_medians_ns": [
+            855434.0,
+            1002861.0,
+            1067335.0,
+            934027.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 29.957507802718943,
+          "sample_count": 124
+        },
+        "evu/loaded/basic": {
+          "median_ns": 632592.0,
+          "round_medians_ns": [
+            589299.0,
+            642044.0,
+            673243.0,
+            623140.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 23.361295917032386,
+          "sample_count": 124
+        },
+        "evu/full/map": {
+          "median_ns": 15513929.5,
+          "round_medians_ns": [
+            15040361.0,
+            15987498.0,
+            16430344.0,
+            14861890.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 15.882862220686018,
+          "sample_count": 124
+        },
+        "evu/loaded/map": {
+          "median_ns": 10420107.0,
+          "round_medians_ns": [
+            9972487.0,
+            10867727.0,
+            11058700.0,
+            9946680.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 14.17831496421957,
+          "sample_count": 124
+        },
+        "evu/full/reduce": {
+          "median_ns": 21888189.0,
+          "round_medians_ns": [
+            21693698.0,
+            21686595.0,
+            22473115.0,
+            22082680.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 18.46752449830262,
+          "sample_count": 124
+        },
+        "evu/loaded/reduce": {
+          "median_ns": 1342785.5,
+          "round_medians_ns": [
+            1345693.0,
+            1339878.0,
+            1330017.0,
+            1406913.0
+          ],
+          "MBps": 0.0,
+          "round_MBps": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "cpu_percent": 13.184315910594298,
+          "sample_count": 124
+        }
+      }
+    }
+  }
+}

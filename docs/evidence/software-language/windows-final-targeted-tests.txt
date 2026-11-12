@@ -1,0 +1,9 @@
+........................................................................ [ 50%]
+.......................................................................  [100%]
+============================== warnings summary ===============================
+sw/tests/test_calc.py::test_cli_refuses_a_huge_run
+  C:\Users\Symok\Documents\hardware-projects\Mathematical_Accelerator\worktrees\python-optimized\sw\mathaccel\calc.py:335: UserWarning: this run takes at least 1351.7 s and can't be cancelled
+    reply = _reduce(dev, run, max_seconds)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+143 passed, 1 warning in 5.58s
