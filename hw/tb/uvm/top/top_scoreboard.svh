@@ -28,8 +28,8 @@ class top_ref_model extends uvm_object;
   // unit_cycles below copies). Every divider experiment changes the DIV_
   // numbers here together with model.py and evu_ref.c.
   localparam int unsigned FPU_FETCH = 4, FPU_PIPE_TAIL = 9;
-  localparam int unsigned DIV_LANES = 1, DIV_INTERVAL = 1, DIV_LAST = 32;
-  localparam int unsigned SQRT_LANES = 1, SQRT_INTERVAL = 1, SQRT_LAST = 32;
+  localparam int unsigned DIV_LANES = 1, DIV_INTERVAL = 1, DIV_LAST = 30;
+  localparam int unsigned SQRT_LANES = 1, SQRT_INTERVAL = 33, SQRT_LAST = 39;
   localparam int unsigned CORDIC_TAIL = FPU_PIPE_TAIL + 47;
 
   // Scratchpad words. An associative array only stores words that were

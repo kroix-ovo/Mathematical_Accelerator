@@ -325,11 +325,11 @@ def long_mixed(dev: Device) -> int:
 
 
 def divide_runs(dev: Device) -> int:
-    """Divide-heavy and square-root-heavy runs big enough to show a unit's steady rate.
+    """Divide-heavy runs big enough to show a divider's steady rate on the board.
 
-    These are the same six runs EvuProfileTest simulates. The class list's
+    These are the same three runs EvuProfileTest simulates. The class list's
     divide-only rules have 32 to 64 points, where setting up the run takes most of
-    the clocks, so they can't tell my divider or square-root candidates apart."""
+    the clocks, so they can't tell my divider candidates apart."""
     # I time each run the same way as the class problems (fastest of REPEATS with
     # the image loaded), so the kernel clocks and the wall time line up with the
     # simulated profile in docs/divider-comparison.md.
@@ -337,15 +337,10 @@ def divide_runs(dev: Device) -> int:
     fermi = next(p for p in PROBLEMS if p.name == "fermi_half")
     runs = [("fermi_large", integral_run(fermi.expr, fermi.axes([(1024, 16)]))),
             ("lorentz_large", integral_run(1 / (1 + x**2), [Axis(x, -4, 4, 1024, 16)])),
-            ("two_divides", integral_run(x / (1 + x**2) + 1 / (2 + x), [Axis(x, 0, 1, 1024, 16)])),
-            # The square-root study's runs: one root, two independent roots, and a
-            # root feeding a divide.
-            ("root_large", integral_run(sp.sqrt(1 + x**2), [Axis(x, 0, 1, 1024, 16)])),
-            ("two_roots", integral_run(sp.sqrt(x) + sp.sqrt(1 + x), [Axis(x, 0, 1, 1024, 16)])),
-            ("root_divide", integral_run(x / sp.sqrt(1 + x**2), [Axis(x, 0, 1, 1024, 16)]))]
+            ("two_divides", integral_run(x / (1 + x**2) + 1 / (2 + x), [Axis(x, 0, 1, 1024, 16)]))]
     failures = 0
     say()
-    say("| large run | points | match | cycles | low..high | clocks/pt | in bounds | kernel ms | repeat ms |")
+    say("| divide run | points | match | cycles | low..high | clocks/pt | in bounds | kernel ms | repeat ms |")
     say("|---|---|---|---|---|---|---|---|---|")
     for name, run in runs:
         want = evu_model.execute(run)

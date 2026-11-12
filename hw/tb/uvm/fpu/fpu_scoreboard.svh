@@ -41,10 +41,10 @@ class fpu_scoreboard extends uvm_scoreboard;
   // monitors see them (the response monitor samples one clock after the DUT
   // registers its output, which the constants include).
   localparam int LAT_PIPE   = 7;
-  localparam int LAT_DIV_MIN  = 26;
-  localparam int LAT_SQRT_MIN = 26;
+  localparam int LAT_DIV_MIN  = 24;
+  localparam int LAT_SQRT_MIN = 30;
   localparam int LAT_CORD   = 54;
-  // AGE_MAX (32) + 10 + DQ (32): promised divides and roots go first
+  // AGE_MAX (32) + 10 + DQ (32): every promised divide result may go first
   localparam int LAT_CORD_MAX = 128;
 
   uvm_analysis_imp_req #(fpu_req_item, fpu_scoreboard) req_imp;

@@ -105,13 +105,11 @@ The FPU has one request port (valid/ready handshake) and one result port
   FPGA's DSP48 multipliers and add the exponents. Six stages.
 - [`fp_misc.sv`](../hw/rtl/fp/fp_misc.sv): integer conversions, min/max and
   compares, also six stages so all three pipelines finish in step.
-- [`fp_divsqrt.sv`](../hw/rtl/fp/fp_divsqrt.sv): my S3 shared divide/root
-  pipeline. I select either reciprocal or reciprocal-root arithmetic at each
-  stage and keep the operation bit beside the data. It accepts one combined
-  operation per clock when its reserved-slot queue has room; both operations
-  have 26-clock free-port FPU latency. This reuses the original module name,
-  but does not restore the old one-operation-at-a-time recurrence. I walk
-  through the data and queue in [the S3 reading guide](sqrt-shared-reading-guide.md).
+- [`fp_div.sv`](../hw/rtl/fp/fp_div.sv): binary long division, one quotient
+  bit per clock, one divide at a time.
+- [`fp_sqrt.sv`](../hw/rtl/fp/fp_sqrt.sv): digit-by-digit square root, one root
+  bit per clock, one at a time. It is separate from `fp_div`, so a square root
+  can run while a divide is in progress.
 - [`fp_cordic.sv`](../hw/rtl/fp/fp_cordic.sv): the six phase 3 functions,
   using a pipeline of shifts and additions with argument reduction at the input.
 

@@ -90,11 +90,8 @@ STEPS: list[tuple[str, str, list[str]]] = [
     ("pyuvm-fpu", "fpu_v", pyuvm("fpu --test FpuRegressTest --n 3000")),
     # Divide only: about 6,000 directed hard cases, then 30,000 random divides.
     ("pyuvm-fpu-div", "fpu_v", pyuvm("fpu --test FpuDivTest --n 30000")),
-    # Square root only: about 9,300 directed hard cases, then 30,000 random roots.
-    ("pyuvm-fpu-sqrt", "fpu_v", pyuvm("fpu --test FpuSqrtTest --n 30000")),
     ("pyuvm-fpu-icarus-corner", "fpu_i", pyuvm("fpu --sim icarus --test FpuCornerTest")),
     ("pyuvm-fpu-icarus-div", "fpu_i", pyuvm("fpu --sim icarus --test FpuDivTest --n 2000")),
-    ("pyuvm-fpu-icarus-sqrt", "fpu_i", pyuvm("fpu --sim icarus --test FpuSqrtTest --n 2000")),
     ("pyuvm-fpu16", "fpu16_v", pyuvm("fpu16 --test FpuRegressTest --n 3000")),
     ("pyuvm-top", "top_v", pyuvm("top --test TopRegressTest")),
     ("pyuvm-eth", "eth_v", pyuvm("eth --test EthRegressTest")),

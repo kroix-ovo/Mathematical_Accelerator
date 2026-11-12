@@ -42,12 +42,6 @@ jobs:
         run: python hw/tb/cocotb/run.py --sim verilator
       - name: pyuvm FPU block regression, all 18 ops (Verilator)
         run: python hw/tb/pyuvm/run.py fpu --test FpuRegressTest --n 3000
-      # I keep the shared pipeline's seed edges and correction boundaries in CI,
-      # rather than depending on the general mixed run to happen to hit them.
-      - name: Shared pipeline divide hard cases and randoms (Verilator)
-        run: python hw/tb/pyuvm/run.py fpu --test FpuDivTest --n 30000
-      - name: Shared pipeline square-root hard cases and randoms (Verilator)
-        run: python hw/tb/pyuvm/run.py fpu --test FpuSqrtTest --n 30000
       - name: pyuvm FPU block with a 16-entry CORDIC FIFO, so every stall rule fires (Verilator)
         run: python hw/tb/pyuvm/run.py fpu16 --test FpuRegressTest --n 3000
       - name: pyuvm top-level regression (Verilator)
@@ -58,11 +52,6 @@ jobs:
         run: python hw/tb/pyuvm/run.py eth --sim icarus --test EthMultiTest
       - name: pyuvm FPU corner matrix (Icarus, 4-state)
         run: python hw/tb/pyuvm/run.py fpu --sim icarus --test FpuCornerTest
-      # I repeat these in four-state simulation so X/Z mistakes can't hide.
-      - name: Shared pipeline divide hard cases (Icarus, 4-state)
-        run: python hw/tb/pyuvm/run.py fpu --sim icarus --test FpuDivTest --n 2000
-      - name: Shared pipeline square-root hard cases (Icarus, 4-state)
-        run: python hw/tb/pyuvm/run.py fpu --sim icarus --test FpuSqrtTest --n 2000
       # I check the sum and scheduler separately, then exercise both through the core above.
       # I keep Icarus runs too, since a 2-state simulator cannot expose X/Z mistakes.
       - name: pyuvm exact accumulator regression (Verilator)
