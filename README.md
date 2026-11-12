@@ -13,7 +13,7 @@ Phases 1 and 2 implement the communication and memory system and a hand-written 
 - `FPU` applies one operation to every element of two arrays in the scratchpad and writes the results and the IEEE exception flags for each element. The operations are add, subtract, multiply, divide, square root, integer-to-float and float-to-integer conversion, min, max, three compares, sin, cos, atan2, hypot, exp and ln.
 - `EVU` runs a small bytecode program once per point of a grid, using the same FPU, and either adds every point's result into one exactly rounded sum or writes one result per point. See [Phase 4](#phase-4-expression-unit-and-integrals).
 
-The FPU rounds to nearest even, handles subnormal numbers without flushing them to zero, returns one canonical NaN, and reports the five IEEE flags (invalid, divide by zero, overflow, underflow, inexact). [Numerics](docs/numerics.md) defines every rule. Add, multiply, conversions and compares are pipelined and accept one operation per clock; my reciprocal divider accepts one operation per clock with 24-clock FPU output latency, while square root still uses the original 33-clock recurrence.
+The FPU rounds to nearest even, handles subnormal numbers without flushing them to zero, returns one canonical NaN, and reports the five IEEE flags (invalid, divide by zero, overflow, underflow, inexact). [Numerics](docs/numerics.md) defines every rule. Add, multiply, conversions and compares are pipelined and accept one operation per clock; my shared divide/root pipeline accepts one combined operation per clock while its result queue has room. Either operation reaches the FPU output in 26 clocks when the result port is free.
 
 The design has a 256 KiB scratchpad, a command processor, a UART link configured for 2 Mbaud at a 100 MHz clock, and a second link over the board's Ethernet port (described below). Packets use COBS framing and CRC-16 checks. Commands with invalid lengths or addresses receive an error response; corrupted packets are dropped and counted. Replies include a tag so the host can match them to requests.
 
@@ -74,11 +74,11 @@ The CLI's `fp` and `fptest` cover all eighteen operations; `fptest --op phase3` 
 ## My divider update (2026-11-10)
 
 I split divide and square root into separate units, then tried five divider
-architectures. I'm bringing in E, the reciprocal-multiply pipeline. It starts
+architectures. I brought in E, the reciprocal-multiply pipeline, before the square-root study below. It starts
 with a 512-entry seed table, refines the reciprocal, multiplies out the quotient,
 and checks the exact remainder to correct the last bit. So I get the throughput
-without changing the result bits or IEEE flags. Square root stays on its own
-original datapath for now.
+without changing the result bits or IEEE flags. At that point square root stayed on its own
+original datapath; S3 below replaces both units with one shared pipeline.
 
 The interesting part is that E and my fully pipelined binary divider B perform
 about the same on the board, but E's divider uses 598 LUTs instead of 2,047.
@@ -105,6 +105,51 @@ error counters stayed at zero. The integration branch keeps E's tested RTL
 unchanged. I keep the [comparison](docs/divider-comparison.md) and the
 [board reports and bitstream manifests](docs/evidence/divider-board/README.md)
 so the measurements can be traced back to the experiment that ran them.
+
+## My square-root update (2026-11-11)
+
+Once E made division pipelined, my old 33-clock square root became the limit.
+I tried an unrolled exact recurrence (S1), a multiplicative root (S2), and a
+pipeline sharing divide and root arithmetic (S3). I'm bringing in **S3**.
+I can feed it a root, then a divide, then another root on consecutive clocks,
+as long as its shared result queue has room. Each takes 26 clocks to the FPU
+output with a free result port; it is one combined issue lane, not two.
+
+What surprised me is how little the different pipeline latencies matter with
+31 EVU contexts. The recorded board runs look like this:
+
+| run | E plus original root | S3 | what I take from it |
+| --- | ---: | ---: | --- |
+| plate_potential, 1,048,576 points | 34.3 clocks/point | 13.8 | the old root no longer holds up every point |
+| loop_bfield, 64 points | 39.4 | 17.2 | independent points hide the pipeline latency |
+| two_roots, 16,384 points | 66.0 | 8.2 | two roots per point can overlap across contexts |
+| root_divide, 16,384 points | 34.0 | 8.0 | I can keep dependent root/divide chains in flight across points |
+
+For the million-point plate_potential run, recorded kernel time falls from
+359.3 ms to 145.1 ms, about 2.48x faster. Ethernet repeat time is 145.7 ms,
+including starting the loaded program and reading the answer. NumPy float64
+on this laptop still takes about 15 ms, so I haven't overtaken the CPU here.
+The next thing I need to measure is where EVU instruction issue is stalling.
+
+S3 uses 982 divide-and-root LUTs versus the baseline's 1,056, and 32 total
+DSPs versus 27. S2 uses 36, so keeping the units separate costs more DSPs in
+this comparison. The original S3 full-design route met 100 MHz with +0.237 ns
+setup and +0.033 ns hold slack. S2's isolated root has more arithmetic margin;
+full-design WNS alone isn't a universal ranking of the units.
+
+All four study designs passed the board suite over Ethernet and UART, with
+bit-exact answers, cycle counts inside their own bounds and zero link errors.
+The software arithmetic check covers both exponent parities and all 2^23
+normalized significands; the RTL tests separately check special values,
+rounding, flags and pipeline behavior. I kept the
+[study and its limits](docs/sqrt-comparison.md),
+[board evidence](docs/evidence/sqrt-board/README.md), and a
+[block-by-block S3 reading guide](docs/sqrt-shared-reading-guide.md).
+
+There is a small cost: division now takes 26 rather than 24 clocks. I see about
+0.1 extra clock per point on dipole_power. The CORDIC bound stays at 128 with
+one shared result queue. I haven't measured power, and the proposed shared-queue
+explanation for S3's small speed advantage still needs a clock-by-clock trace.
 
 ## Phase 4: expression unit and integrals
 
@@ -136,7 +181,7 @@ I put the lowest clock count in each row in bold.
 
 - **My FPU uses fewer clocks per point than the NumPy FP64 baseline on 8 of 10 large rules,** and fewer than compiled Numba on every program built around a sine or an exponential: 4.4x fewer on `sin`.
 - **Why:** the CORDIC unit is fully pipelined, so a sine costs one issue slot, the same as an add, while the CPU runs a library routine for each one. 31 contexts hide the 52-clock latency, so the FPU issues on 88% to 100% of clocks on divide-free programs. I can feed the exact sum one term per clock, then pay a fixed 29 clocks to finish it. Grid points come from counters and tables sit in block RAM, so nothing ever waits on a cache.
-- **Where the CPU won clock for clock in that original Phase 4 comparison:** divides and square roots, because the old shared unit took 33 clocks and handled one at a time, and work the compiler could move out of the inner loop, because the EVU runs every instruction at every point. My divider update above measures the newer pipeline separately; square root still has that limit.
+- **Where the CPU won clock for clock in that original Phase 4 comparison:** divides and square roots, because the old shared unit took 33 clocks and handled one at a time, and work the compiler could move out of the inner loop, because the EVU runs every instruction at every point. The divider and square-root updates above measure the newer pipelines separately; the old 33-clock limit no longer describes the current source.
 - **Accuracy:** the board's answer is the same on every run and in any order. A plain fp32 loop on the CPU drifted up to 16,379 ULP on the same rules and changed with the thread count. NumPy's pairwise sum stays within 2 ULP, close to the board.
 - **Real time:** repeat runs on the board were 14x to 495x slower than single-threaded Numba. The clock gap explains most of it: on `sin` a 41x clock gap shrinks to 9.3x in kernel time, because the FPU needs about a quarter of the clocks per point.
 
@@ -189,26 +234,27 @@ python tools/evu_board.py --port udpsim --random 60
 
 ### which bitstream I'm programming
 
-My main checkout's existing `build/vivado/nexys_top.bit` is still the old
-split-baseline build. Updating the source or merging the divider PR doesn't
-rebuild that file. `program.tcl` only loads the existing bitstream from the
-checkout containing the script, so running main's script before rebuilding
-would put the split baseline back on the board.
+Updating source or merging a PR doesn't rebuild any existing bitstream.
+`program.tcl` loads `build/vivado/nexys_top.bit` from the checkout containing
+the script. I check that checkout and its build evidence before programming;
+main's existing file can still contain the older E-plus-iterative-root design.
 
-Until I rebuild on main, my board-tested E bitstream is
-`worktrees/div-multiplicative/build/vivado/nexys_top.bit`. From the main folder,
-I program that exact worktree's build like this:
+My board-tested S3 file from the study is
+`worktrees/divsqrt-shared/build/vivado/nexys_top.bit`. From the main folder I
+program that experiment's exact file with:
 
 ```bash
-vivado -mode batch -source worktrees/div-multiplicative/hw/scripts/program.tcl
+vivado -mode batch -source worktrees/divsqrt-shared/hw/scripts/program.tcl
 ```
 
-The recorded E bitstream SHA-256 is
-`398a07521aa69eb84e7b91bee7d380ca6f641db0ae572a340e7bcd31ac7e755a`.
-I keep its [board manifest](docs/evidence/divider-board/div-multiplicative-20261110-011723/manifest.json)
-with the results. That worktree and generated bitstream are local artifacts;
-a fresh clone needs a build. Once I run the build command below on main,
-main's programming command loads that new build instead.
+Its recorded SHA-256 is
+`d6df14da5ae3392965c60eff07330073691d04ed9276cccbd28ee2fa9358840c`.
+I keep its [board manifest](docs/evidence/sqrt-board/divsqrt-shared-20261111-144840/manifest.json)
+with the results. The `sqrt-shared` integration worktree has its own fresh
+build and [integration evidence](docs/evidence/sqrt-integration/), separate
+from that board-tested file. I haven't programmed the integration build as
+part of this documentation change. Worktrees and bitstreams are local
+artifacts; a fresh clone needs to build before programming.
 
 To build and program the Nexys A7-100T with Vivado 2023.2:
 

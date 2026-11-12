@@ -45,11 +45,25 @@ Underflow uses the "after rounding" tininess rule, the one x86 SSE and RISC-V us
 | fp_addsub | ADD, SUB | 1 per clock | 7 clocks |
 | fp_mul | MUL | 1 per clock | 7 clocks |
 | fp_misc | I2F, F2I, MIN, MAX, EQ, LT, LE | 1 per clock | 7 clocks |
-| fp_div | DIV | 1 per clock (pipelined) | 24 clocks with a free result port |
-| fp_sqrt | SQRT | 1 at a time, independent of fp_div | 33 clocks or more (fixed iteration count) |
-| fp_cordic | SIN, COS, ATAN2, HYPOT, EXP, LN | 1 per clock while reserved FIFO space is available | 54 clocks with a free result port; at most 128 when mixed ops make it wait (up to 32 queued divide results can go first) |
+| fp_divsqrt | DIV, SQRT | 1 combined operation per clock while queue space is reserved | 26 clocks with a free result port; contention can delay delivery |
+| fp_cordic | SIN, COS, ATAN2, HYPOT, EXP, LN | 1 per clock while reserved FIFO space is available | 54 clocks with a free result port; at most 128 when mixed ops make it wait (up to 32 reserved divide or square-root results can go first) |
 
-The FPU kernel reads two operands per element through one RAM port, so it issues one element every 4 clocks. Divide and square root issue every 33 clocks. Until 2026-11-08 one fp_divsqrt unit did both; I split it so a divide and a square root can run at the same time, which matters to EVU programs that need both per point. The arithmetic, results and clock counts of each operation are unchanged. At 100 MHz the kernel computes 25 million pipelined operations per second, or 3 million divides. Moving the data over the 2 Mbaud UART takes far longer than the arithmetic, so wall time on the board is set by the link.
+I now use S3's shared multiplicative divide/root pipeline. This has the same
+module name as the original iterative `fp_divsqrt`, but it is different hardware:
+it can have many operations in flight and shares a 32-entry result queue.
+DIV and SQRT keep their exact numerical rules above. I use a reciprocal estimate
+or reciprocal-root estimate, then an exact remainder correction, before the
+common round-to-nearest-even path.
+
+The FPU array kernel reads both operand words through one RAM port, including
+for a unary operation, so its steady issue interval is 4 clocks per element.
+With pipelined DIV and SQRT that's now their interval too, rather than the old
+33-clock square-root service interval. At 100 MHz that is a theoretical
+25 million array elements per second before fixed startup/drain overhead and
+host transfer time. The EVU has a different instruction-fetch/issue schedule;
+its clocks per grid point depend on the program. I keep those measured profiles
+in [the square-root study](sqrt-comparison.md).
+
 
 ## Verification evidence
 

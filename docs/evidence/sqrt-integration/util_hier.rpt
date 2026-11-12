@@ -1,0 +1,66 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2023.2 (win64) Build 4029153 Fri Oct 13 20:14:34 MDT 2023
+| Date         : Wed Nov 11 15:26:53 2026
+| Host         : KroixLaptop running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -file C:/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/sqrt-shared/build/vivado/util_hier.rpt
+| Design       : nexys_top
+| Device       : xc7a100tcsg324-1
+| Speed File   : -1
+| Design State : Routed
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++------------------+--------------------------+------------+------------+---------+------+-------+--------+--------+------------+
+|     Instance     |          Module          | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs  | RAMB36 | RAMB18 | DSP Blocks |
++------------------+--------------------------+------------+------------+---------+------+-------+--------+--------+------------+
+| nexys_top        |                    (top) |      20121 |      18430 |    1230 |  461 | 13880 |     71 |      4 |         32 |
+|   (nexys_top)    |                    (top) |        194 |        194 |       0 |    0 |   135 |      0 |      0 |          0 |
+|   u_core         |               accel_core |      19927 |      18236 |    1230 |  461 | 13745 |     71 |      4 |         32 |
+|     (u_core)     |               accel_core |        400 |        206 |     194 |    0 |     8 |      0 |      0 |          0 |
+|     u_cmd        |                 cmd_proc |       1284 |       1284 |       0 |    0 |   497 |      0 |      0 |          0 |
+|     u_dec        |             cobs_decoder |         21 |         21 |       0 |    0 |    22 |      0 |      0 |          0 |
+|     u_edec       |           cobs_decoder_0 |         21 |         21 |       0 |    0 |    22 |      0 |      0 |          0 |
+|     u_efrx       |                 frame_rx |        579 |        195 |     384 |    0 |   115 |      0 |      0 |          0 |
+|     u_enc        |             cobs_encoder |        124 |         76 |      48 |    0 |    29 |      0 |      0 |          0 |
+|     u_eth        |                eth_stack |       1278 |       1278 |       0 |    0 |  1468 |      2 |      1 |          0 |
+|       (u_eth)    |                eth_stack |         53 |         53 |       0 |    0 |   207 |      0 |      0 |          0 |
+|       u_rmii_rx  |                  rmii_rx |         69 |         69 |       0 |    0 |    23 |      0 |      0 |          0 |
+|       u_rmii_tx  |                  rmii_tx |         21 |         21 |       0 |    0 |    22 |      0 |      0 |          0 |
+|       u_rx       |                   eth_rx |        568 |        568 |       0 |    0 |   798 |      2 |      0 |          0 |
+|       u_tx       |                   eth_tx |        568 |        568 |       0 |    0 |   418 |      0 |      1 |          0 |
+|     u_frx        |               frame_rx_1 |        576 |        192 |     384 |    0 |   115 |      0 |      0 |          0 |
+|     u_ftx        |                 frame_tx |        100 |        100 |       0 |    0 |    64 |      0 |      0 |          0 |
+|     u_kern       |            kernel_engine |      15450 |      14769 |     220 |  461 | 11314 |      5 |      3 |         32 |
+|       (u_kern)   |            kernel_engine |        108 |        108 |       0 |    0 |   376 |      0 |      0 |          0 |
+|       u_evu      |                 evu_core |       4021 |       3891 |     112 |   18 |  1680 |      5 |      1 |          0 |
+|         (u_evu)  |                 evu_core |       2598 |       2524 |      56 |   18 |   845 |      5 |      1 |          0 |
+|         u_accum  |                 fp_accum |       1270 |       1270 |       0 |    0 |   799 |      0 |      0 |          0 |
+|         u_out    | evu_fifo__parameterized0 |         83 |         47 |      36 |    0 |    12 |      0 |      0 |          0 |
+|         u_ready  |                 evu_fifo |         38 |         28 |      10 |    0 |    12 |      0 |      0 |          0 |
+|         u_retry  |               evu_fifo_2 |         36 |         26 |      10 |    0 |    12 |      0 |      0 |          0 |
+|       u_fpu      |                      fpu |      11325 |      10774 |     108 |  443 |  9258 |      0 |      2 |         32 |
+|         (u_fpu)  |                      fpu |        169 |         97 |      72 |    0 |    78 |      0 |      0 |          0 |
+|         u_add    |                fp_addsub |        498 |        489 |       0 |    9 |   277 |      0 |      0 |          0 |
+|         u_cord   |                fp_cordic |       8871 |       8613 |       0 |  258 |  7504 |      0 |      0 |         18 |
+|         u_ds     |               fp_divsqrt |        982 |        799 |      36 |  147 |   861 |      0 |      2 |         12 |
+|           (u_ds) |               fp_divsqrt |        119 |         83 |      36 |    0 |    31 |      0 |      0 |          0 |
+|           u_core |          fp_divsqrt_core |        863 |        716 |       0 |  147 |   830 |      0 |      2 |         12 |
+|         u_misc   |                  fp_misc |        232 |        208 |       0 |   24 |   290 |      0 |      0 |          0 |
+|         u_mul    |                   fp_mul |        581 |        576 |       0 |    5 |   248 |      0 |      0 |          2 |
+|     u_mem        |              scratch_mem |         78 |         78 |       0 |    0 |    32 |     64 |      0 |          0 |
+|     u_rs         |               stream_reg |          3 |          3 |       0 |    0 |    10 |      0 |      0 |          0 |
+|     u_uart_rx    |                  uart_rx |         24 |         24 |       0 |    0 |    30 |      0 |      0 |          0 |
+|     u_uart_tx    |                  uart_tx |         22 |         22 |       0 |    0 |    19 |      0 |      0 |          0 |
++------------------+--------------------------+------------+------------+---------+------+-------+--------+--------+------------+
+* Note: The sum of lower-level cells may be larger than their parent cells total, due to cross-hierarchy LUT combining
+
+

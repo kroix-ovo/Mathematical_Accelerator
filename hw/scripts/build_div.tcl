@@ -1,17 +1,21 @@
 # Standalone timing build of the divider (my divider experiments).
 #   vivado -mode batch -source hw/scripts/build_div.tcl                       (from the repo root)
-#   vivado -mode batch -source hw/scripts/build_div.tcl -tclargs STEPS=1      (with a parameter)
+#   vivado -mode batch -source hw/scripts/build_div.tcl -tclargs DQ=16      (with a parameter)
 #
 # The full Nexys build (build.tcl) is what decides whether a divider fits: it
 # times the divider together with everything else. But a full build's worst
 # path can be anywhere, and a different divider moves the placement of
 # unrelated logic too, so its WNS doesn't say how much margin the divider
-# itself has. This build places and routes fp_div alone, "out of context",
-# on the same part with a 100 MHz clock, the way build_cordic.tcl measures the
-# CORDIC unit. Inputs and outputs get 2 ns of delay budget each, as if a
+# itself has. This build places and routes the divide unit alone, "out of
+# context", on the same part with a 100 MHz clock, the way build_cordic.tcl
+# measures the CORDIC unit. In this experiment the divide unit is the shared
+# divide and square-root unit, fp_divsqrt. Inputs and outputs get 2 ns of
+# delay budget each, as if a
 # register sits on the other side with some routing.
 #
-# Any -tclargs of the form NAME=VALUE become parameters of fp_div.
+# I pass NAME=VALUE arguments to fp_divsqrt; DQ changes queue depth, not
+# the arithmetic stages. I keep it a power of two. There is no STEPS knob
+# in this shared multiplicative pipeline.
 # Outputs in build/vivado_div/: timing and utilisation reports.
 
 set root [file normalize [file dirname [info script]]/../..]
@@ -20,7 +24,7 @@ file mkdir $out
 
 set part xc7a100tcsg324-1
 
-foreach f {hw/rtl/pkg/accel_pkg.sv hw/rtl/fp/fp_pkg.sv hw/rtl/fp/fp_div.sv} {
+foreach f {hw/rtl/pkg/accel_pkg.sv hw/rtl/fp/fp_pkg.sv hw/rtl/fp/fp_divsqrt.sv} {
     read_verilog -sv $root/$f
 }
 
@@ -28,7 +32,7 @@ set generics {}
 # cmd.exe splits an unquoted argument at "=", so a quoted one may arrive with its
 # quotes; I strip them.
 foreach arg $argv { lappend generics -generic [string trim $arg {"}] }
-synth_design -top fp_div -part $part -mode out_of_context {*}$generics
+synth_design -top fp_divsqrt -part $part -mode out_of_context {*}$generics
 
 create_clock -name clk -period 10.000 [get_ports clk]
 set ins [get_ports -filter {DIRECTION == IN && NAME != clk}]
