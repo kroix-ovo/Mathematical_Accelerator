@@ -1,0 +1,76 @@
+{
+ "track": "sqrt-multiplicative",
+ "root": "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\sqrt-multiplicative",
+ "branch": "experiment/sqrt-multiplicative",
+ "head": "3a23915139d0f625cea3bbb7abe23f45666e8781",
+ "rtl_commit": "2ecf1932d68cf61e1fc1411af0e7ada73b886a21",
+ "rtl_dirty": false,
+ "bitstream": "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\sqrt-multiplicative\\build\\vivado\\nexys_top.bit",
+ "bitstream_sha256": "6cd545803badec225ab00f75a80bfcca8bf8c27b5a662b9a3e6eb361cafa6be2",
+ "bitstream_time": "2026-11-11T11:17:10",
+ "bitstream_newer_than_rtl": true,
+ "routed_wns_whs": [
+  0.211,
+  0.019
+ ],
+ "started": "2026-11-11T14:50:59",
+ "finished": "2026-11-11T14:53:18",
+ "port": "udp:192.168.10.2",
+ "uart": "COM3",
+ "steps": [
+  {
+   "step": "program",
+   "cmd": [
+    "C:\\Xilinx\\Vivado\\2023.2\\bin\\vivado.bat",
+    "-mode",
+    "batch",
+    "-nojournal",
+    "-nolog",
+    "-source",
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\sqrt-multiplicative\\hw\\scripts\\program.tcl"
+   ],
+   "exit": 0,
+   "log": "program.log"
+  },
+  {
+   "step": "eth-bringup",
+   "cmd": [
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\sqrt-multiplicative\\.venv\\Scripts\\python.exe",
+    "hw/scripts/eth_bringup.py",
+    "--fptest",
+    "5000",
+    "--uart",
+    "COM3"
+   ],
+   "exit": 0,
+   "log": "eth_bringup.log"
+  },
+  {
+   "step": "evu-udp",
+   "cmd": [
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\sqrt-multiplicative\\.venv\\Scripts\\python.exe",
+    "tools/evu_board.py",
+    "--port",
+    "udp:192.168.10.2",
+    "--out",
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\build\\board\\sqrt-multiplicative-20261111-145059\\evu_udp.md"
+   ],
+   "exit": 0,
+   "log": "evu_udp.log"
+  },
+  {
+   "step": "evu-uart",
+   "cmd": [
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\worktrees\\sqrt-multiplicative\\.venv\\Scripts\\python.exe",
+    "tools/evu_board.py",
+    "--port",
+    "COM3",
+    "--out",
+    "C:\\Users\\Symok\\Documents\\hardware-projects\\Mathematical_Accelerator\\build\\board\\sqrt-multiplicative-20261111-145059\\evu_uart.md"
+   ],
+   "exit": 0,
+   "log": "evu_uart.log"
+  }
+ ],
+ "passed": true
+}

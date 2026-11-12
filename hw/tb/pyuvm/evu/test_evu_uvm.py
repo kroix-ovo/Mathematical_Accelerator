@@ -868,6 +868,13 @@ class EvuProfileTest(uvm_test):
         runs.append(("fermi_large", integral_run(fermi.expr, fermi.axes([(1024, 16)]))))
         runs.append(("lorentz_large", integral_run(1 / (1 + x**2), [Axis(x, -4, 4, 1024, 16)])))
         runs.append(("two_divides", integral_run(x / (1 + x**2) + 1 / (2 + x), [Axis(x, 0, 1, 1024, 16)])))
+        # Square-root-heavy runs at the same size, for the square-root study.
+        # root_large has one root per point, two_roots has two independent ones,
+        # and root_divide feeds a root into a divide, which is what plate_potential
+        # and loop_bfield do on every point.
+        runs.append(("root_large", integral_run(sp.sqrt(1 + x**2), [Axis(x, 0, 1, 1024, 16)])))
+        runs.append(("two_roots", integral_run(sp.sqrt(x) + sp.sqrt(1 + x), [Axis(x, 0, 1, 1024, 16)])))
+        runs.append(("root_divide", integral_run(x / sp.sqrt(1 + x**2), [Axis(x, 0, 1, 1024, 16)])))
         for name, run in runs:
             if run.points > limit:
                 continue

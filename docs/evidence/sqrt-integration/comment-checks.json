@@ -1,0 +1,10 @@
+{
+  "rtl_tokens_unchanged": true,
+  "python_executable_ast_unchanged": true,
+  "files": [
+    "hw/rtl/fp/fp_divsqrt.sv",
+    "hw/rtl/fp/fpu.sv",
+    "sw/tests/test_sqrt_multiplicative.py",
+    "hw/tb/pyuvm/fpu/test_fpu_uvm.py"
+  ]
+}
