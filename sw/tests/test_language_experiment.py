@@ -1,9 +1,8 @@
 """Differential framing against the pinned control, plus transport boundaries."""
 from __future__ import annotations
 
+import hashlib
 import random
-import runpy
-import subprocess
 import types
 from collections import deque
 from pathlib import Path
@@ -18,15 +17,15 @@ from mathaccel.driver.protocol import Frame, FrameError
 from mathaccel.driver.transport import UartTransport, UdpTransport
 
 BASELINE = "98be2be8e8b0fd9e1f600631fb54dae9638ce726"
+CONTROL_SHA256 = "3bb2385fc9007d7c16ee91e505bd6102be48f571d1ee016d3c5e2e9d08dae753"
 
 
 @pytest.fixture(scope="module")
 def control():
-    root = Path(__file__).resolve().parents[2]
-    git_env = runpy.run_path(str(root / "tools/language_git.py"))["git_env"]
-    source = subprocess.check_output(
-        ["git", "-C", str(root), "show", f"{BASELINE}:sw/mathaccel/driver/framing.py"],
-        env=git_env(root), text=True)
+    # Keep the exact original source available in shallow CI checkouts, even
+    # after a commit-metadata rewrite changes the surrounding history.
+    source = Path(__file__).with_name("fixtures").joinpath("framing_control.py").read_text()
+    assert hashlib.sha256(source.encode()).hexdigest() == CONTROL_SHA256
     module = types.ModuleType("control_framing")
     exec(compile(source, "control_framing.py", "exec"), module.__dict__)
     return module
