@@ -2,7 +2,7 @@
 
 I started this project to help with quick algebra and calculus calculations in my semiconductor physics, electromagnetics, and RF classes. I want a tool that is faster to use than a calculator and lets me check numerical results while I work through the problem myself. Using generative AI to solve those problems would take over work I am supposed to do. My goal here is to build a calculation tool I understand and can use within my classes' rules.
 
-The project combines SystemVerilog hardware for a Digilent Nexys A7-100T FPGA with a Python driver. The FPGA is intended to perform the numerical operations, while the host provides a way to enter calculations, move data, and read results. The calculation workflow will use explicit operations rather than an AI model generating solutions.
+The project combines SystemVerilog hardware for a Digilent Nexys A7-100T FPGA with a Python driver and an optional Rust framing backend. The FPGA is intended to perform the numerical operations, while the host provides a way to enter calculations, move data, and read results. The calculation workflow will use explicit operations rather than an AI model generating solutions.
 
 ## What works now
 
@@ -35,6 +35,25 @@ Before the board test, two new UVM environments (SystemVerilog in xsim and pyuvm
 
 On 2026-10-21 I tested it on the board over a direct cable to the laptop. Ping, ARP, the full 256 KiB memory test, and 60,000 FPU vectors over UDP all passed with no mismatches and no link errors. The median NOP round trip measured 97 µs over UDP and 998 µs over the UART in the same run. Memory moved at 873 kB/s over UDP, against 143 kB/s over the UART. Some replies at first took seconds to arrive. Debug LEDs in the FPGA showed that the board had sent them on time and the laptop's network adapter was holding them. Disabling the adapter's Receive Side Scaling and updating its Realtek driver fixed that: 0 late replies in 10,000 requests. [Verification](docs/verification.md#ethernet-board-results) has the measurements and the steps that found the cause. One issue is left: after the laptop's adapter resets, the link only comes back when the cable is replugged, because the FPGA does not watch the PHY's link status.
 
+## Host software: Python with optional Rust framing
+
+I compared the original Python host, optimized Python, Python with Rust, and Python with C on the physical board. For sustained-transfer stress testing I chose the Rust hybrid. Python still handles SymPy, compilation, NumPy, the CLI and device orchestration; Rust accelerates CRC-16 and COBS framing. The protocol, generated programs, numerical results and EVU RUN recovery are unchanged.
+
+For a 32,768-word write/read transaction, the median useful payload throughput over four rotated rounds was:
+
+| Host implementation | Useful payload throughput |
+| --- | ---: |
+| Original Python | 0.87 MB/s |
+| Optimized Python | 2.96 MB/s |
+| Python + Rust | 3.31 MB/s |
+| Python + C | 3.17 MB/s |
+
+This counts payload in both directions. The tests used WSL2 and a 100 Mbps Ethernet link with one fixed bitstream. Rust was about 12% faster than optimized Python on this transaction and about 9% ahead across the six sustained workloads. Rust and C were effectively tied overall; read-only throughput was also essentially tied with optimized Python. A basic equation showed a much smaller absolute difference, and no language change reduced FPGA kernel cycles.
+
+All 16 retained board runs matched the reference results and flags, including all 18 FPU operations and 22 mathematical rules. The [physical-board report](docs/software-language-board-experiment.md) records the measured bitstream, timing distributions, RUN timeout recovery checks and raw-data archive. Those host measurements used an earlier divider bitstream; the current S3 hardware results are recorded separately below. The [software-only comparison](docs/software-language-experiment.md) separates compiler and packet-processing costs.
+
+Rust is optional. A normal Python install uses optimized Python framing until I build the extension. The default `auto` selection uses a local extension when available; for stress tests I explicitly select `native` so a missing build fails instead of silently falling back. [Build and selection instructions](#optional-rust-framing) are below.
+
 ## What the repository contains
 
 ```text
@@ -51,6 +70,7 @@ sw/mathaccel/   Python driver, UART/UDP/simulator transports, fp32,
                 compiler (compiler/), calculus tools (calc.py), CLI
 sw/tests/       Driver, framing, Ethernet, reference-model, compiler,
                 calc and CPU-benchmark tests
+native/rust/    Optional CRC/COBS backend, PyO3 bindings and native tests
 spec/accel.toml Protocol constants shared by hardware and software
 tools/          Spec and CORDIC table generators, ULP measurement, board
                 comparison, CPU benchmark and report generator
@@ -206,6 +226,35 @@ mathaccel --port sim bench
 ```
 
 On Windows PowerShell, create the environment with `python -m venv .venv` and activate it with `.venv\Scripts\Activate.ps1`, then run the same install, test, and CLI commands.
+
+### Optional Rust framing
+
+After installing the Python package above, use a Rust toolchain and maturin to build the extension for the active Python environment:
+
+```bash
+python -m pip install maturin==1.16.0
+python tools/build_framing_native.py
+python -c "from mathaccel.driver.framing import BACKEND; print(BACKEND)"
+```
+
+The last command should print `rust`. Rebuild after changing Python interpreters or starting with a fresh checkout. Linux/WSL builds were validated; native Windows builds also need the MSVC build tools and were not part of the measured comparison.
+
+To require Rust for a board benchmark on macOS/Linux/WSL:
+
+```bash
+MATHACCEL_FRAMING=native mathaccel --port udp:192.168.10.2 bench
+```
+
+On PowerShell:
+
+```powershell
+$env:MATHACCEL_FRAMING = "native"
+mathaccel --port udp:192.168.10.2 bench
+```
+
+`MATHACCEL_FRAMING=python` forces optimized Python; `auto` permits fallback. The selection happens when the process imports the driver. The [Rust backend guide](native/rust/README.md) covers builds and native unit tests. The C comparison backend remains on the [experiment/c-hybrid branch](https://github.com/kroix-ovo/Mathematical_Accelerator/tree/experiment/c-hybrid/native/c).
+
+### RTL simulation
 
 For RTL simulation, use one of the included runners:
 
