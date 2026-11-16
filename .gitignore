@@ -14,3 +14,6 @@ sim_build/
 results.xml
 # I keep the linked experiment checkouts inside this folder, outside the tracked sources.
 /worktrees/
+# Native extension builds stay local to each experimental checkout.
+*.so
+*.pyd

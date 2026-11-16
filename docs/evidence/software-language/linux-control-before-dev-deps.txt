@@ -1,0 +1,283 @@
+........................................................................ [ 15%]
+........................................................................ [ 31%]
+........................................................................ [ 47%]
+........................................................................ [ 62%]
+........................................................................ [ 78%]
+........................................................................ [ 94%]
+.....................FFFFF                                               [100%]
+=================================== FAILURES ===================================
+__________________ test_report_controls_exit_status[1-0-0-0] ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x762138220d50>
+tmp_path = PosixPath('/tmp/pytest-of-kroix/pytest-0/test_report_controls_exit_stat0')
+tests = 1, failures = 0, errors = 0, expected = 0
+
+    @pytest.mark.parametrize(("tests", "failures", "errors", "expected"), [
+        (1, 0, 0, 0),
+        (1, 1, 0, 1),
+        (1, 0, 1, 1),
+        (0, 0, 0, 1),
+    ])
+    def test_report_controls_exit_status(monkeypatch, tmp_path, tests, failures, errors, expected):
+        """Pass completed tests, but reject failed, errored, or empty test reports."""
+        report = tmp_path / "results.xml"
+        report.write_text(
+            f'<testsuites><testsuite tests="{tests}" failures="{failures}" '
+            f'errors="{errors}" /></testsuites>'
+        )
+>       assert invoke_runner(monkeypatch, report) == expected
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+sw/tests/test_sim_runner.py:41: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+sw/tests/test_sim_runner.py:21: in invoke_runner
+    main = runpy.run_path(str(ROOT / "hw/tb/cocotb/run.py"))["main"]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen runpy>:291: in run_path
+    ???
+<frozen runpy>:98: in _run_module_code
+    ???
+<frozen runpy>:88: in _run_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """Build and run the cocotb tests (no Makefiles needed).
+    
+    I compile the same ordered RTL source list used by xsim, then load the Python
+    test module into the selected simulator. This runner connects the HDL compiler
+    to cocotb; the actual stimulus and assertions are in test_accel_core.py.
+    
+        python hw/tb/cocotb/run.py --sim verilator
+    """
+    
+    from __future__ import annotations
+    
+    import argparse
+    import sys
+    from pathlib import Path
+    
+>   from cocotb_tools.check_results import get_results
+E   ModuleNotFoundError: No module named 'cocotb_tools'
+
+hw/tb/cocotb/run.py:16: ModuleNotFoundError
+__________________ test_report_controls_exit_status[1-1-0-1] ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x762138393d50>
+tmp_path = PosixPath('/tmp/pytest-of-kroix/pytest-0/test_report_controls_exit_stat1')
+tests = 1, failures = 1, errors = 0, expected = 1
+
+    @pytest.mark.parametrize(("tests", "failures", "errors", "expected"), [
+        (1, 0, 0, 0),
+        (1, 1, 0, 1),
+        (1, 0, 1, 1),
+        (0, 0, 0, 1),
+    ])
+    def test_report_controls_exit_status(monkeypatch, tmp_path, tests, failures, errors, expected):
+        """Pass completed tests, but reject failed, errored, or empty test reports."""
+        report = tmp_path / "results.xml"
+        report.write_text(
+            f'<testsuites><testsuite tests="{tests}" failures="{failures}" '
+            f'errors="{errors}" /></testsuites>'
+        )
+>       assert invoke_runner(monkeypatch, report) == expected
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+sw/tests/test_sim_runner.py:41: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+sw/tests/test_sim_runner.py:21: in invoke_runner
+    main = runpy.run_path(str(ROOT / "hw/tb/cocotb/run.py"))["main"]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen runpy>:291: in run_path
+    ???
+<frozen runpy>:98: in _run_module_code
+    ???
+<frozen runpy>:88: in _run_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """Build and run the cocotb tests (no Makefiles needed).
+    
+    I compile the same ordered RTL source list used by xsim, then load the Python
+    test module into the selected simulator. This runner connects the HDL compiler
+    to cocotb; the actual stimulus and assertions are in test_accel_core.py.
+    
+        python hw/tb/cocotb/run.py --sim verilator
+    """
+    
+    from __future__ import annotations
+    
+    import argparse
+    import sys
+    from pathlib import Path
+    
+>   from cocotb_tools.check_results import get_results
+E   ModuleNotFoundError: No module named 'cocotb_tools'
+
+hw/tb/cocotb/run.py:16: ModuleNotFoundError
+__________________ test_report_controls_exit_status[1-0-1-1] ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7621383e6750>
+tmp_path = PosixPath('/tmp/pytest-of-kroix/pytest-0/test_report_controls_exit_stat2')
+tests = 1, failures = 0, errors = 1, expected = 1
+
+    @pytest.mark.parametrize(("tests", "failures", "errors", "expected"), [
+        (1, 0, 0, 0),
+        (1, 1, 0, 1),
+        (1, 0, 1, 1),
+        (0, 0, 0, 1),
+    ])
+    def test_report_controls_exit_status(monkeypatch, tmp_path, tests, failures, errors, expected):
+        """Pass completed tests, but reject failed, errored, or empty test reports."""
+        report = tmp_path / "results.xml"
+        report.write_text(
+            f'<testsuites><testsuite tests="{tests}" failures="{failures}" '
+            f'errors="{errors}" /></testsuites>'
+        )
+>       assert invoke_runner(monkeypatch, report) == expected
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+sw/tests/test_sim_runner.py:41: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+sw/tests/test_sim_runner.py:21: in invoke_runner
+    main = runpy.run_path(str(ROOT / "hw/tb/cocotb/run.py"))["main"]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen runpy>:291: in run_path
+    ???
+<frozen runpy>:98: in _run_module_code
+    ???
+<frozen runpy>:88: in _run_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """Build and run the cocotb tests (no Makefiles needed).
+    
+    I compile the same ordered RTL source list used by xsim, then load the Python
+    test module into the selected simulator. This runner connects the HDL compiler
+    to cocotb; the actual stimulus and assertions are in test_accel_core.py.
+    
+        python hw/tb/cocotb/run.py --sim verilator
+    """
+    
+    from __future__ import annotations
+    
+    import argparse
+    import sys
+    from pathlib import Path
+    
+>   from cocotb_tools.check_results import get_results
+E   ModuleNotFoundError: No module named 'cocotb_tools'
+
+hw/tb/cocotb/run.py:16: ModuleNotFoundError
+__________________ test_report_controls_exit_status[0-0-0-1] ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7621383923d0>
+tmp_path = PosixPath('/tmp/pytest-of-kroix/pytest-0/test_report_controls_exit_stat3')
+tests = 0, failures = 0, errors = 0, expected = 1
+
+    @pytest.mark.parametrize(("tests", "failures", "errors", "expected"), [
+        (1, 0, 0, 0),
+        (1, 1, 0, 1),
+        (1, 0, 1, 1),
+        (0, 0, 0, 1),
+    ])
+    def test_report_controls_exit_status(monkeypatch, tmp_path, tests, failures, errors, expected):
+        """Pass completed tests, but reject failed, errored, or empty test reports."""
+        report = tmp_path / "results.xml"
+        report.write_text(
+            f'<testsuites><testsuite tests="{tests}" failures="{failures}" '
+            f'errors="{errors}" /></testsuites>'
+        )
+>       assert invoke_runner(monkeypatch, report) == expected
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+sw/tests/test_sim_runner.py:41: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+sw/tests/test_sim_runner.py:21: in invoke_runner
+    main = runpy.run_path(str(ROOT / "hw/tb/cocotb/run.py"))["main"]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen runpy>:291: in run_path
+    ???
+<frozen runpy>:98: in _run_module_code
+    ???
+<frozen runpy>:88: in _run_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """Build and run the cocotb tests (no Makefiles needed).
+    
+    I compile the same ordered RTL source list used by xsim, then load the Python
+    test module into the selected simulator. This runner connects the HDL compiler
+    to cocotb; the actual stimulus and assertions are in test_accel_core.py.
+    
+        python hw/tb/cocotb/run.py --sim verilator
+    """
+    
+    from __future__ import annotations
+    
+    import argparse
+    import sys
+    from pathlib import Path
+    
+>   from cocotb_tools.check_results import get_results
+E   ModuleNotFoundError: No module named 'cocotb_tools'
+
+hw/tb/cocotb/run.py:16: ModuleNotFoundError
+__________________________ test_missing_report_fails ___________________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7621383cee90>
+tmp_path = PosixPath('/tmp/pytest-of-kroix/pytest-0/test_missing_report_fails0')
+
+    def test_missing_report_fails(monkeypatch, tmp_path):
+        """A backend returning a nonexistent report must not produce successful main()."""
+        with pytest.raises(RuntimeError, match="not found"):
+>           invoke_runner(monkeypatch, tmp_path / "missing.xml")
+
+sw/tests/test_sim_runner.py:47: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+sw/tests/test_sim_runner.py:21: in invoke_runner
+    main = runpy.run_path(str(ROOT / "hw/tb/cocotb/run.py"))["main"]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen runpy>:291: in run_path
+    ???
+<frozen runpy>:98: in _run_module_code
+    ???
+<frozen runpy>:88: in _run_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """Build and run the cocotb tests (no Makefiles needed).
+    
+    I compile the same ordered RTL source list used by xsim, then load the Python
+    test module into the selected simulator. This runner connects the HDL compiler
+    to cocotb; the actual stimulus and assertions are in test_accel_core.py.
+    
+        python hw/tb/cocotb/run.py --sim verilator
+    """
+    
+    from __future__ import annotations
+    
+    import argparse
+    import sys
+    from pathlib import Path
+    
+>   from cocotb_tools.check_results import get_results
+E   ModuleNotFoundError: No module named 'cocotb_tools'
+
+hw/tb/cocotb/run.py:16: ModuleNotFoundError
+=============================== warnings summary ===============================
+sw/tests/test_calc.py::test_cli_refuses_a_huge_run
+  /mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/software-control/sw/mathaccel/calc.py:335: UserWarning: this run takes at least 1351.7 s and can't be cancelled
+    reply = _reduce(dev, run, max_seconds)
+
+sw/tests/test_cpu_bench.py::test_parallel_numba_gives_a_close_answer
+  /tmp/mathaccel-language-py311/lib/python3.11/site-packages/numba/np/ufunc/parallel.py:373: NumbaWarning: The TBB threading layer requires TBB version 2021 update 6 or later i.e., TBB_INTERFACE_VERSION >= 12060. Found TBB_INTERFACE_VERSION = 12050. The TBB threading layer is disabled.
+    warnings.warn(problem)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED sw/tests/test_sim_runner.py::test_report_controls_exit_status[1-0-0-0]
+FAILED sw/tests/test_sim_runner.py::test_report_controls_exit_status[1-1-0-1]
+FAILED sw/tests/test_sim_runner.py::test_report_controls_exit_status[1-0-1-1]
+FAILED sw/tests/test_sim_runner.py::test_report_controls_exit_status[0-0-0-1]
+FAILED sw/tests/test_sim_runner.py::test_missing_report_fails - ModuleNotFoun...
+5 failed, 453 passed, 2 warnings in 72.44s (0:01:12)

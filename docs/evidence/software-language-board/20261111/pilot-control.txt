@@ -1,0 +1,22 @@
+link/ping: 201 samples, 667.7 us
+link/status: 201 samples, 146.8 us
+link/nop: 201 samples, 160.3 us
+memory/roundtrip/1: 51 samples, 378.8 us
+memory/roundtrip/255: 51 samples, 2164.3 us
+memory/roundtrip/256: 51 samples, 2530.7 us
+memory/roundtrip/4096: 51 samples, 36669.2 us
+sustained/write/4096: 11 samples, 17117.6 us
+sustained/read/4096: 11 samples, 17158.3 us
+sustained/roundtrip/4096: 11 samples, 36423.0 us
+sustained/write/32768: 11 samples, 148409.0 us
+sustained/read/32768: 11 samples, 152698.1 us
+sustained/roundtrip/32768: 11 samples, 287562.5 us
+Traceback (most recent call last):
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/tools/board_language_bench.py", line 262, in <module>
+    main()
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/tools/board_language_bench.py", line 138, in main
+    verify(reply)
+  File "/mnt/c/Users/Symok/Documents/hardware-projects/Mathematical_Accelerator/worktrees/python-optimized/tools/board_language_bench.py", line 133, in verify
+    np.testing.assert_array_equal(reply.results, expected.values)
+                                                 ^^^^^^^^^^^^^^^
+AttributeError: 'EvuResult' object has no attribute 'values'
